@@ -29,8 +29,14 @@ public:
    * @param port The port number.
    */
   Endpoint(const std::string &address, int port);
-
   Endpoint(const rix::msg::mediator::Endpoint &msg);
+
+  /**
+   * @brief Constructs a Endpoint from a string representation.
+   * @param str The string representation of the Endpoint in the format
+   * "address:port".
+   */
+  Endpoint(const std::string &str);
 
   Endpoint(const Endpoint &other) = default;
   Endpoint &operator=(const Endpoint &other) = default;
