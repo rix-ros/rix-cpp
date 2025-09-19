@@ -2,31 +2,52 @@
 
 namespace rix::core {
 
-Publisher::Publisher(const rix::msg::mediator::PubInfo &info,
-                     std::shared_ptr<rix::ipc::Server> server,
-                     ClientFactory factory, rix::ipc::Endpoint rixhub_endpoint)
-    : info_(info), server_(server), factory_(factory),
-      rixhub_endpoint_(rixhub_endpoint), shutdown_flag_(false) {
+Publisher::Publisher(const rix::msg::mediator::PubInfo &info, SocketFactory factory, rix::ipc::Endpoint rixhub_endpoint)
+    : info_(info), socket_factory_(factory), rixhub_endpoint_(rixhub_endpoint), shutdown_flag_(true),
+      registered_flag_(false) {
+
+  server_ = socket_factory_();
+  server_->set_reuse_address(true);
+  server_->bind(rix::ipc::Endpoint(info_.endpoint.address, info_.endpoint.port));
+  server_->listen(rix::ipc::MAX_CONN);
+
   // Ensure server was intitialized properly
-  if (server_->is_exception()) {
-    rix::util::Log::error << "Server invalid!" << std::endl;
-    shutdown();
+  if (server_->is_exception())
     return;
-  }
+
+  auto server_endpoint = server_->local_endpoint();
+  // Update the endpoint in case the port was set to 0 (ephemeral)
+  info_.endpoint.address = server_endpoint.address;
+  info_.endpoint.port = server_endpoint.port;
 
   // Register publisher with rixhub
-  if (!send_message_with_opcode(factory_(), info_, OPCODE::PUB_REGISTER,
-                                rixhub_endpoint_)) {
-    shutdown();
-  }
+  auto client = socket_factory_();
+  if (!client->connect(rixhub_endpoint_))
+    return;
+  if (!client->send_message(OPCODE::PUB_REGISTER, info_))
+    return;
+
+  rix::msg::mediator::Operation op;
+  rix::msg::mediator::Status status;
+  if (!client->recv_message(op, status))
+    return;
+  if (status.error)
+    return;
+
+  shutdown_flag_ = false;
+  registered_flag_ = true;
 }
 
 Publisher::~Publisher() {
   shutdown();
 
   // Deregister publisher with rixhub
-  send_message_with_opcode_no_response(
-      factory_(), info_, OPCODE::PUB_DEREGISTER, rixhub_endpoint_);
+  if (registered_flag_) {
+    auto client = socket_factory_();
+    if (client->connect(rixhub_endpoint_)) {
+      client->send_message(OPCODE::PUB_DEREGISTER, info_);
+    }
+  }
 }
 
 bool Publisher::ok() const { return !shutdown_flag_; }
@@ -41,14 +62,6 @@ void Publisher::publish(const rix::msg::Message &msg) {
     return;
   }
 
-  // Serialize the message with size prefix
-  rix::msg::standard::UInt32 size;
-  size.data = msg.size();
-  std::vector<uint8_t> buffer(size.size() + size.data);
-  size_t offset = 0;
-  size.serialize(buffer.data(), offset);
-  msg.serialize(buffer.data(), offset);
-
   // Send the message to each current connection
   std::lock_guard<std::mutex> lock(connections_mutex_);
   auto it = connections_.begin();
@@ -62,15 +75,11 @@ void Publisher::publish(const rix::msg::Message &msg) {
     }
 
     // Send the message to the subscriber
-    size_t bytes_written = 0;
-    while (bytes_written < buffer.size()) {
-      ssize_t bytes = conn->write(buffer.data() + bytes_written,
-                                  buffer.size() - bytes_written);
-      if (bytes <= 0) {
-        break;
-      }
-      bytes_written += bytes;
+    if (!conn->send_message(OPCODE::PUB_MESSAGE, msg)) {
+      it = connections_.erase(it);
+      continue;
     }
+
     it++;
   }
 }
@@ -82,12 +91,12 @@ size_t Publisher::get_subscriber_count() const {
 
 void Publisher::spin_once() {
   // Check to see if a subscriber has made a connection
-  if (!server_->wait_acceptable(rix::util::Duration(0.0))) {
+  if (!server_->wait_readable(rix::util::Duration(0.0))) {
     return;
   }
 
   // Accept a connection from a subscriber
-  std::shared_ptr<rix::ipc::Connection> conn = server_->accept();
+  auto conn = server_->accept();
   if (!conn) {
     return;
   }

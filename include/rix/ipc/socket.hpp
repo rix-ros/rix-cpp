@@ -19,8 +19,6 @@ using Socket = rix::ipc::POSIXSocket;
 
 #endif
 
-static inline std::unique_ptr<GenericSocket> create_socket() {
-  return std::make_unique<Socket>();
-}
+static inline std::shared_ptr<GenericSocket> create_socket() { return std::make_shared<Socket>(); }
 
 } // namespace rix::ipc

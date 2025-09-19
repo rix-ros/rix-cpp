@@ -2,10 +2,36 @@
 
 namespace rix::core {
 
+Node::Node(const std::string &name, const rix::ipc::Endpoint &rixhub_endpoint, SocketFactory socket_factory)
+    : rixhub_endpoint_(rixhub_endpoint), socket_factory_(socket_factory), shutdown_flag_(true),
+      registered_flag_(false) {
+  info_.id = generate_id();
+  info_.name = name;
+
+  auto client = socket_factory_();
+  if (!client->connect(rixhub_endpoint_))
+    return;
+  if (!client->send_message(OPCODE::NODE_REGISTER, info_))
+    return;
+
+  rix::msg::mediator::Operation op;
+  rix::msg::mediator::Status status;
+  if (!client->recv_message(op, status))
+    return;
+  if (status.error)
+    return;
+
+  shutdown_flag_ = false;
+  registered_flag_ = true;
+}
+
 Node::~Node() {
-  shutdown();
-  send_message_with_opcode_no_response(
-      client_factory_(), info_, OPCODE::NODE_DEREGISTER, rixhub_endpoint_);
+  if (registered_flag_) {
+    auto client = socket_factory_();
+    if (client->connect(rixhub_endpoint_)) {
+      client->send_message(OPCODE::NODE_DEREGISTER, info_);
+    }
+  }
 }
 
 bool Node::ok() const { return !shutdown_flag_; }
@@ -26,8 +52,11 @@ void Node::spin_once() {
   }
 }
 
-std::shared_ptr<Timer> Node::create_timer(const rix::util::Duration &d,
-                                          Timer::Callback callback) {
+std::shared_ptr<Timer> Node::create_timer(const rix::util::Duration &d, Timer::Callback callback) {
+  if (!ok()) {
+    rix::util::Log::error << "Node is shutdown, cannot create timer." << std::endl;
+    return nullptr;
+  }
   auto timer = std::make_shared<rix::core::Timer>(d, callback);
   components_.push_back(timer);
   return timer;
@@ -40,70 +69,63 @@ uint64_t Node::generate_id() {
   return dis(gen);
 }
 
-std::shared_ptr<Publisher>
-Node::create_publisher(const rix::msg::mediator::TopicInfo &topic_info,
-                       const rix::ipc::Endpoint &endpoint) {
+std::shared_ptr<Publisher> Node::create_publisher(const rix::msg::mediator::TopicInfo &topic_info,
+                                                  const rix::ipc::Endpoint &rixhub_endpoint,
+                                                  const rix::ipc::Endpoint &endpoint) {
   rix::msg::mediator::PubInfo pub_info;
   pub_info.id = generate_id();
   pub_info.node_id = info_.id;
   pub_info.topic_info = topic_info;
-  auto server = server_factory_(endpoint);
-  auto server_endpoint = server->local_endpoint();
-  pub_info.endpoint.address = server_endpoint.address;
-  pub_info.endpoint.port = server_endpoint.port;
-  auto pub = std::shared_ptr<Publisher>(
-      new Publisher(pub_info, server, client_factory_, rixhub_endpoint_));
+  pub_info.endpoint.address = endpoint.address;
+  pub_info.endpoint.port = endpoint.port;
+  auto pub = std::shared_ptr<Publisher>(new Publisher(pub_info, socket_factory_, rixhub_endpoint_));
   components_.push_back(pub);
   return pub;
 }
 
-std::shared_ptr<Subscriber>
-Node::create_subscriber(const rix::msg::mediator::TopicInfo &topic_info,
-                        const rix::ipc::Endpoint &endpoint) {
+std::shared_ptr<Subscriber> Node::create_subscriber(const rix::msg::mediator::TopicInfo &topic_info,
+                                                    const rix::ipc::Endpoint &rixhub_endpoint,
+                                                    const rix::ipc::Endpoint &endpoint) {
   rix::msg::mediator::SubInfo sub_info;
   sub_info.id = generate_id();
   sub_info.node_id = info_.id;
   sub_info.topic_info = topic_info;
-  auto server = server_factory_(endpoint);
-  auto server_endpoint = server->local_endpoint();
-  sub_info.endpoint.address = server_endpoint.address;
-  sub_info.endpoint.port = server_endpoint.port;
-  auto sub = std::shared_ptr<Subscriber>(
-      new Subscriber(sub_info, server, client_factory_, rixhub_endpoint_));
+  sub_info.endpoint.address = endpoint.address;
+  sub_info.endpoint.port = endpoint.port;
+  auto sub = std::shared_ptr<Subscriber>(new Subscriber(sub_info, socket_factory_, rixhub_endpoint_));
   components_.push_back(sub);
   return sub;
 }
 
-Node::Node(const std::string &name, const rix::ipc::Endpoint &rixhub_endpoint,
-           ServerFactory server_factory, ClientFactory client_factory)
-    : rixhub_endpoint_(rixhub_endpoint), server_factory_(server_factory),
-      client_factory_(client_factory), shutdown_flag_(false) {
-  info_.id = generate_id();
-  info_.name = name;
-  if (!send_message_with_opcode(client_factory_(), info_, OPCODE::NODE_REGISTER,
-                                rixhub_endpoint_)) {
-    shutdown();
-  }
-}
-
-std::shared_ptr<Service>
-Node::create_service(rix::msg::mediator::SrvInfo &service_info,
-                     const rix::ipc::Endpoint &endpoint) {
+std::shared_ptr<Service> Node::create_service(rix::msg::mediator::SrvInfo &service_info,
+                                              const rix::ipc::Endpoint &rixhub_endpoint,
+                                              const rix::ipc::Endpoint &endpoint) {
   service_info.id = generate_id();
   service_info.node_id = info_.id;
-  auto server = server_factory_(endpoint);
-  auto server_endpoint = server->local_endpoint();
-  service_info.endpoint.address = server_endpoint.address;
-  service_info.endpoint.port = server_endpoint.port;
-  auto srv = std::shared_ptr<Service>(
-      new Service(service_info, server, client_factory_, rixhub_endpoint_));
+  service_info.endpoint.address = endpoint.address;
+  service_info.endpoint.port = endpoint.port;
+  auto srv = std::shared_ptr<Service>(new Service(service_info, socket_factory_, rixhub_endpoint_));
   components_.push_back(srv);
   return srv;
 }
 
 bool Node::get_system_info(rix::msg::mediator::SystemInfo &info) {
-  return send_opcode_with_response(
-      client_factory_(), info, OPCODE::SYSTEM_GET_REQUEST, rixhub_endpoint_);
+  auto client = socket_factory_();
+  if (!client->connect(rixhub_endpoint_))
+    return false;
+
+  if (!client->send_message(OPCODE::SYSTEM_GET_REQUEST, rix::msg::standard::Void())) {
+    return false;
+  }
+
+  rix::msg::mediator::Operation op;
+  if (!client->recv_message(op, info)) {
+    return false;
+  }
+  if (op.opcode != OPCODE::SYSTEM_GET_RESPONSE) {
+    return false;
+  }
+  return true;
 }
 
 } // namespace rix::core
