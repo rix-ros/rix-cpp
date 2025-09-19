@@ -119,10 +119,23 @@ void Mediator::spin_once() {
     }
     status.id = info.id;
 
+    // Ensure that the subscriber has a existing node ID
+    if (nodes_.find(info.node_id) == nodes_.end()) {
+      status.error = -1;
+      conn->send_message(OPCODE::STATUS_RESPONSE, status);
+      break;
+    }
+
+    // Ensure that the subscriber ID is not already registered
+    if (subscribers_.find(info.id) != subscribers_.end()) {
+      status.error = -1;
+      conn->send_message(OPCODE::STATUS_RESPONSE, status);
+      break;
+    }
+
     // Ensure that the topic hash matches the record, or is new
     if (!validate_topic_info(info.topic_info)) {
       status.error = -1;
-      rix::util::Log::warn << "Topic message type mismatch!" << std::endl;
       conn->send_message(OPCODE::STATUS_RESPONSE, status);
       break;
     }
@@ -153,8 +166,22 @@ void Mediator::spin_once() {
     }
     status.id = info.id;
 
-    // Ensure that the topic hash matches the record, or is new
+    // Ensure that the service has a existing node ID
+    if (nodes_.find(info.node_id) == nodes_.end()) {
+      status.error = -1;
+      conn->send_message(OPCODE::STATUS_RESPONSE, status);
+      break;
+    }
+
+    // Ensure that the service ID is not already registered
     if (services_.find(info.id) != services_.end()) {
+      status.error = -1;
+      conn->send_message(OPCODE::STATUS_RESPONSE, status);
+      break;
+    }
+
+    // Ensure that the service hash matches the record, or is new
+    if (!validate_service_info(info)) {
       status.error = -1;
       conn->send_message(OPCODE::STATUS_RESPONSE, status);
       break;
@@ -224,25 +251,24 @@ void Mediator::spin_once() {
       break;
     }
 
-    // Ensure that the topic hash matches the record, or is new
-    bool service_exists = false;
-    rix::msg::mediator::SrvInfo info;
-    for (const auto &srv : services_) {
-      if (srv.second.name == request.name && srv.second.request_hash == request.request_hash &&
-          srv.second.response_hash == request.response_hash) {
-        service_exists = true;
-        info = srv.second;
-        break;
-      }
-    }
-
-    if (!service_exists) {
+    // Ensure that the requester has a existing node ID
+    if (nodes_.find(request.node_id) == nodes_.end()) {
       response.error = -1;
       conn->send_message(OPCODE::SRV_RESPONSE, response);
       break;
     }
 
-    response.srv_info = info;
+    auto it = std::find_if(services_.begin(), services_.end(), [&](const auto &srv) {
+      return srv.second.name == request.name && srv.second.request_hash == request.request_hash &&
+             srv.second.response_hash == request.response_hash;
+    });
+    if (it == services_.end()) {
+      response.error = -1;
+      conn->send_message(OPCODE::SRV_RESPONSE, response);
+      break;
+    }
+
+    response.srv_info = it->second;
     conn->send_message(OPCODE::SRV_RESPONSE, response);
     break;
   }
@@ -348,6 +374,14 @@ bool Mediator::validate_topic_info(const rix::msg::mediator::TopicInfo &info) {
     return false;
   }
   return true;
+}
+
+bool Mediator::validate_service_info(const rix::msg::mediator::SrvInfo &info) {
+  // return true if the service name does not exist
+  const auto &service_name = info.name;
+  auto it = std::find_if(services_.begin(), services_.end(),
+                         [&](const auto &srv) { return srv.second.name == service_name; });
+  return it == services_.end();
 }
 
 bool Mediator::set_parameter(const rix::msg::mediator::ParamInfo &info) {

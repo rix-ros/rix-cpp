@@ -53,6 +53,7 @@ private:
                           const std::vector<rix::msg::mediator::PubInfo> &publishers);
 
   bool validate_topic_info(const rix::msg::mediator::TopicInfo &info);
+  bool validate_service_info(const rix::msg::mediator::SrvInfo &info);
   bool set_parameter(const rix::msg::mediator::ParamInfo &info);
   bool get_parameter(rix::msg::mediator::ParamInfo &info);
 };
