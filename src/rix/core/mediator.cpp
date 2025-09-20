@@ -326,6 +326,15 @@ void Mediator::spin_once() {
   }
   case OPCODE::SYSTEM_GET_REQUEST: {
     rix::msg::mediator::SystemInfo info;
+    rix::msg::standard::UInt64 node_id;
+    if (!conn->recv_message(node_id, op.len)) {
+      break;
+    }
+
+    // Ensure that the requester has a existing node ID
+    if (nodes_.find(node_id.data) == nodes_.end()) {
+      break;
+    }
 
     for (const auto &node : nodes_) {
       info.nodes.push_back(node.second);

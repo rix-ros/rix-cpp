@@ -114,7 +114,9 @@ bool Node::get_system_info(rix::msg::mediator::SystemInfo &info) {
   if (!client->connect(rixhub_endpoint_))
     return false;
 
-  if (!client->send_message(OPCODE::SYSTEM_GET_REQUEST, rix::msg::standard::Void())) {
+  rix::msg::standard::UInt64 node_id;
+  node_id.data = info_.id;
+  if (!client->send_message(OPCODE::SYSTEM_GET_REQUEST, node_id)) {
     return false;
   }
 

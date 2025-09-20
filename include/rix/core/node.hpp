@@ -17,6 +17,7 @@
 #include "rix/msg/mediator/NodeInfo.hpp"
 #include "rix/msg/mediator/ParamInfo.hpp"
 #include "rix/msg/mediator/SystemInfo.hpp"
+#include "rix/msg/standard/UInt64.hpp"
 #include "rix/util/log.hpp"
 
 namespace rix::core {
@@ -178,6 +179,7 @@ template <typename TParam> bool Node::set_parameter(const std::string &name, con
   }
 
   rix::msg::mediator::ParamInfo info;
+  info.id = info_.id;
   info.name = name;
   info.message_hash = parameter.hash();
   info.data.resize(parameter.size());
@@ -192,8 +194,13 @@ template <typename TParam> bool Node::set_parameter(const std::string &name, con
     return false;
   }
 
+  rix::msg::mediator::Operation op;
   rix::msg::mediator::Status status;
-  if (!client->recv_message(status, status.size())) {
+  if (!client->recv_message(op, status)) {
+    return false;
+  }
+
+  if (op.opcode != OPCODE::STATUS_RESPONSE) {
     return false;
   }
 
@@ -208,6 +215,7 @@ template <typename TParam> bool Node::get_parameter(const std::string &name, TPa
   }
 
   rix::msg::mediator::ParamInfo info;
+  info.id = info_.id;
   info.name = name;
   info.message_hash = parameter.hash();
   rix::msg::mediator::ParamInfo info_received;

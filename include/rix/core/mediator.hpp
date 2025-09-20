@@ -19,6 +19,7 @@
 #include "rix/msg/mediator/SubNotify.hpp"
 #include "rix/msg/mediator/SystemInfo.hpp"
 #include "rix/msg/standard/UInt32.hpp"
+#include "rix/msg/standard/UInt64.hpp"
 
 namespace rix::core {
 

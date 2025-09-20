@@ -3,7 +3,7 @@
 #include "rix/ipc/mock_socket.hpp"
 #include <gtest/gtest.h>
 
-#include "helper_functions.hpp"
+#include "mediator_helper_functions.hpp"
 
 std::vector<std::shared_ptr<rix::ipc::MockSocket>> sockets;
 int socket_index;
@@ -873,7 +873,7 @@ TEST(RegistrationTests, MediatorGetSystemInfo) {
   init_srv_register_socket_med(sockets[i], srv_info, false);
   i++;
 
-  init_sys_info_request_socket_med(sockets[i], sys_info);
+  init_sys_info_request_socket_med(sockets[i], sys_info, 1);
   i++;
 
   {
