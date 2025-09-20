@@ -284,6 +284,15 @@ void Mediator::spin_once() {
       break;
     }
 
+    status.id = info.id;
+
+    // Ensure that the requester has a existing node ID
+    if (nodes_.find(info.id) == nodes_.end()) {
+      status.error = -1;
+      conn->send_message(OPCODE::STATUS_RESPONSE, status);
+      break;
+    }
+
     if (!set_parameter(info)) {
       status.error = -1;
       conn->send_message(OPCODE::STATUS_RESPONSE, status);
@@ -297,6 +306,12 @@ void Mediator::spin_once() {
     rix::msg::mediator::ParamInfo info;
 
     if (!conn->recv_message(info, op.len)) {
+      conn->send_message(OPCODE::PARAM_GET_RESPONSE, info);
+      break;
+    }
+
+    // Ensure that the requester has a existing node ID
+    if (nodes_.find(info.id) == nodes_.end()) {
       conn->send_message(OPCODE::PARAM_GET_RESPONSE, info);
       break;
     }

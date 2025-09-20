@@ -6,9 +6,7 @@
 #include "helper_functions.hpp"
 
 std::vector<std::shared_ptr<rix::ipc::MockSocket>> sockets;
-int socket_index = 0;
-
-std::shared_ptr<rix::ipc::GenericSocket> mock_create_socket() { return sockets[socket_index++]; }
+int socket_index;
 
 TEST(RegistrationTests, MediatorRegisterAndDeregisterNode) {
   sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Mediator server
@@ -22,22 +20,7 @@ TEST(RegistrationTests, MediatorRegisterAndDeregisterNode) {
   rix::ipc::Endpoint rixhub_endpoint("127.0.0.1", 0);
   rix::ipc::Endpoint rixhub_bound_endpoint("127.0.0.1", 8000);
 
-  EXPECT_CALL(*sockets[0], set_reuse_address(true)).Times(1);
-  EXPECT_CALL(*sockets[0], bind)
-      .With(::testing::Args<0>(::testing::Truly([&rixhub_endpoint](const auto &args) {
-        return std::get<0>(args).address == rixhub_endpoint.address && std::get<0>(args).port == rixhub_endpoint.port;
-      })))
-      .Times(1);
-  EXPECT_CALL(*sockets[0], listen).Times(1);
-  EXPECT_CALL(*sockets[0], local_endpoint).Times(1).WillOnce(::testing::Return(rixhub_bound_endpoint));
-  EXPECT_CALL(*sockets[0], wait_exception).Times(1);
-  EXPECT_CALL(*sockets[0], wait_readable).Times(6).WillRepeatedly(::testing::Return(true));
-  EXPECT_CALL(*sockets[0], accept).Times(6).WillRepeatedly(::testing::Invoke([](rix::ipc::Endpoint &ep) {
-    ep = rix::ipc::Endpoint("127.0.0.1", 1234);
-    return mock_create_socket();
-  }));
-  EXPECT_CALL(*sockets[0], close()).Times(1);
-
+  init_med_server_socket(sockets[0], rixhub_endpoint, rixhub_bound_endpoint, 6);
   rix::msg::mediator::NodeInfo node_info;
   node_info.name = "test_node_1";
   node_info.id = 1;
@@ -108,21 +91,7 @@ TEST(RegistrationTests, MediatorRegisterAndDeregisterPublisher) {
   size_t i = 0;
 
   // 0  8000 Mediator server
-  EXPECT_CALL(*sockets[i], set_reuse_address(true)).Times(1);
-  EXPECT_CALL(*sockets[i], bind)
-      .With(::testing::Args<0>(::testing::Truly([&rixhub_endpoint](const auto &args) {
-        return std::get<0>(args).address == rixhub_endpoint.address && std::get<0>(args).port == rixhub_endpoint.port;
-      })))
-      .Times(1);
-  EXPECT_CALL(*sockets[i], listen).Times(1);
-  EXPECT_CALL(*sockets[i], local_endpoint).Times(1).WillOnce(::testing::Return(rixhub_bound_endpoint));
-  EXPECT_CALL(*sockets[i], wait_exception).Times(1);
-  EXPECT_CALL(*sockets[i], wait_readable).Times(17).WillRepeatedly(::testing::Return(true));
-  EXPECT_CALL(*sockets[i], accept).Times(17).WillRepeatedly(::testing::Invoke([](rix::ipc::Endpoint &ep) {
-    ep = rix::ipc::Endpoint("127.0.0.1", 1234);
-    return mock_create_socket();
-  }));
-  EXPECT_CALL(*sockets[i], close()).Times(1);
+  init_med_server_socket(sockets[i], rixhub_endpoint, rixhub_bound_endpoint, 17);
   i++;
 
   // 1  8001 Node register connection (id 1)
@@ -353,21 +322,7 @@ TEST(RegistrationTests, MediatorRegisterAndDeregisterSubscriber) {
   size_t i = 0;
 
   // 0  8000 Mediator server
-  EXPECT_CALL(*sockets[i], set_reuse_address(true)).Times(1);
-  EXPECT_CALL(*sockets[i], bind)
-      .With(::testing::Args<0>(::testing::Truly([&rixhub_endpoint](const auto &args) {
-        return std::get<0>(args).address == rixhub_endpoint.address && std::get<0>(args).port == rixhub_endpoint.port;
-      })))
-      .Times(1);
-  EXPECT_CALL(*sockets[i], listen).Times(1);
-  EXPECT_CALL(*sockets[i], local_endpoint).Times(1).WillOnce(::testing::Return(rixhub_bound_endpoint));
-  EXPECT_CALL(*sockets[i], wait_exception).Times(1);
-  EXPECT_CALL(*sockets[i], wait_readable).Times(17).WillRepeatedly(::testing::Return(true));
-  EXPECT_CALL(*sockets[i], accept).Times(17).WillRepeatedly(::testing::Invoke([](rix::ipc::Endpoint &ep) {
-    ep = rix::ipc::Endpoint("127.0.0.1", 1234);
-    return mock_create_socket();
-  }));
-  EXPECT_CALL(*sockets[i], close()).Times(1);
+  init_med_server_socket(sockets[i], rixhub_endpoint, rixhub_bound_endpoint, 17);
   i++;
 
   // 1  8001 Node register connection (id 1)
@@ -586,7 +541,7 @@ TEST(RegistrationTests, MediatorRegisterAndDeregisterService) {
   // 13 8002 Service deregister connection (service A, id 2)
   // 14 8003 Service deregister connection (service B, id 3)
   // 15 8010 Service Client request connection (service B, id 9, service not registered)
-  
+
   sockets.resize(18, nullptr);
   for (auto &s : sockets) {
     s = std::make_shared<rix::ipc::MockSocket>();
@@ -598,21 +553,7 @@ TEST(RegistrationTests, MediatorRegisterAndDeregisterService) {
   size_t i = 0;
 
   // 0  8000 Mediator server
-  EXPECT_CALL(*sockets[i], set_reuse_address(true)).Times(1);
-  EXPECT_CALL(*sockets[i], bind)
-      .With(::testing::Args<0>(::testing::Truly([&rixhub_endpoint](const auto &args) {
-        return std::get<0>(args).address == rixhub_endpoint.address && std::get<0>(args).port == rixhub_endpoint.port;
-      })))
-      .Times(1);
-  EXPECT_CALL(*sockets[i], listen).Times(1);
-  EXPECT_CALL(*sockets[i], local_endpoint).Times(1).WillOnce(::testing::Return(rixhub_bound_endpoint));
-  EXPECT_CALL(*sockets[i], wait_exception).Times(1);
-  EXPECT_CALL(*sockets[i], wait_readable).Times(17).WillRepeatedly(::testing::Return(true));
-  EXPECT_CALL(*sockets[i], accept).Times(17).WillRepeatedly(::testing::Invoke([](rix::ipc::Endpoint &ep) {
-    ep = rix::ipc::Endpoint("127.0.0.1", 1234);
-    return mock_create_socket();
-  }));
-  EXPECT_CALL(*sockets[i], close()).Times(1);
+  init_med_server_socket(sockets[i], rixhub_endpoint, rixhub_bound_endpoint, 17);
   i++;
 
   // 1  8001 Node register connection (id 1)
@@ -833,6 +774,213 @@ TEST(RegistrationTests, MediatorRegisterAndDeregisterService) {
     EXPECT_EQ(med.get_service_count(), 0);
     med.spin_once(); // 15 8010 Service Client request connection (service B, id 9, service not registered)
     EXPECT_EQ(med.get_service_count(), 0);
+  }
+
+  sockets.clear();
+  socket_index = 0;
+}
+
+TEST(RegistrationTests, MediatorGetSystemInfo) {
+  sockets.resize(10, nullptr);
+  for (auto &s : sockets) {
+    s = std::make_shared<rix::ipc::MockSocket>();
+  }
+
+  rix::ipc::Endpoint rixhub_endpoint("127.0.0.1", 0);
+  rix::ipc::Endpoint rixhub_bound_endpoint("127.0.0.1", 8000);
+  int i = 0;
+
+  init_med_server_socket(sockets[i], rixhub_endpoint, rixhub_bound_endpoint, 9);
+  i++;
+
+  rix::msg::mediator::SystemInfo sys_info;
+
+  rix::msg::mediator::NodeInfo node_info;
+  node_info.name = "test_node_1";
+  node_info.id = 1;
+  sys_info.nodes.push_back(node_info);
+  init_node_register_socket_med(sockets[i], node_info, false);
+  i++;
+
+  rix::msg::mediator::PubInfo pub_info;
+  pub_info.id = 2;
+  pub_info.node_id = 1;
+  pub_info.topic_info.name = "topic_A";
+  pub_info.topic_info.message_hash = rix::msg::standard::UInt32().hash();
+  pub_info.endpoint.address = "127.0.0.1";
+  pub_info.endpoint.port = 8002;
+  sys_info.publishers.push_back(pub_info);
+  init_pub_register_socket_med(sockets[i], pub_info, false);
+  i++;
+
+  rix::msg::mediator::SubInfo sub_info;
+  sub_info.id = 3;
+  sub_info.node_id = 1;
+  sub_info.topic_info.name = "topic_B";
+  sub_info.topic_info.message_hash = rix::msg::standard::Time().hash();
+  sub_info.endpoint.address = "127.0.0.1";
+  sub_info.endpoint.port = 8003;
+  sys_info.subscribers.push_back(sub_info);
+  init_sub_register_socket_med(sockets[i], sub_info, false);
+  i++;
+
+  rix::msg::mediator::SrvInfo srv_info;
+  srv_info.id = 4;
+  srv_info.node_id = 1;
+  srv_info.name = "service_A";
+  srv_info.request_hash = rix::msg::standard::UInt32().hash();
+  srv_info.response_hash = rix::msg::standard::Time().hash();
+  srv_info.endpoint.address = "127.0.0.1";
+  srv_info.endpoint.port = 8004;
+  sys_info.services.push_back(srv_info);
+  init_srv_register_socket_med(sockets[i], srv_info, false);
+  i++;
+
+  node_info.name = "test_node_2";
+  node_info.id = 5;
+  sys_info.nodes.push_back(node_info);
+  init_node_register_socket_med(sockets[i], node_info, false);
+  i++;
+
+  pub_info.id = 6;
+  pub_info.node_id = 5;
+  pub_info.topic_info.name = "topic_A";
+  pub_info.topic_info.message_hash = rix::msg::standard::UInt32().hash();
+  pub_info.endpoint.address = "127.0.0.1";
+  pub_info.endpoint.port = 8005;
+  sys_info.publishers.push_back(pub_info);
+  init_pub_register_socket_med(sockets[i], pub_info, false);
+  i++;
+
+  sub_info.id = 7;
+  sub_info.node_id = 5;
+  sub_info.topic_info.name = "topic_B";
+  sub_info.topic_info.message_hash = rix::msg::standard::Time().hash();
+  sub_info.endpoint.address = "127.0.0.1";
+  sub_info.endpoint.port = 8006;
+  sys_info.subscribers.push_back(sub_info);
+  init_sub_register_socket_med(sockets[i], sub_info, false);
+  i++;
+
+  srv_info.id = 8;
+  srv_info.node_id = 5;
+  srv_info.name = "service_B";
+  srv_info.request_hash = rix::msg::standard::Time().hash();
+  srv_info.response_hash = rix::msg::standard::UInt32().hash();
+  srv_info.endpoint.address = "127.0.0.1";
+  srv_info.endpoint.port = 8007;
+  sys_info.services.push_back(srv_info);
+  init_srv_register_socket_med(sockets[i], srv_info, false);
+  i++;
+
+  init_sys_info_request_socket_med(sockets[i], sys_info);
+  i++;
+
+  {
+    auto med = rix::core::Mediator(rixhub_endpoint, mock_create_socket);
+    med.spin_once();
+    EXPECT_EQ(med.get_node_count(), 1);
+    med.spin_once();
+    EXPECT_EQ(med.get_publisher_count(), 1);
+    med.spin_once();
+    EXPECT_EQ(med.get_subscriber_count(), 1);
+    med.spin_once();
+    EXPECT_EQ(med.get_service_count(), 1);
+    med.spin_once();
+
+    EXPECT_EQ(med.get_node_count(), 2);
+    med.spin_once();
+    EXPECT_EQ(med.get_publisher_count(), 2);
+    med.spin_once();
+    EXPECT_EQ(med.get_subscriber_count(), 2);
+    med.spin_once();
+    EXPECT_EQ(med.get_service_count(), 2);
+
+    med.spin_once();
+  }
+
+  sockets.clear();
+  socket_index = 0;
+}
+
+TEST(RegistrationTests, MediatorParameterGetAndSet) {
+  sockets.resize(9, nullptr);
+  for (auto &s : sockets) {
+    s = std::make_shared<rix::ipc::MockSocket>();
+  }
+
+  rix::ipc::Endpoint rixhub_endpoint("127.0.0.1", 8000);
+  rix::ipc::Endpoint rixhub_bound_endpoint("127.0.0.1", 8001);
+
+  int i = 0;
+  init_med_server_socket(sockets[i], rixhub_endpoint, rixhub_bound_endpoint, 8);
+  i++;
+
+  rix::msg::mediator::NodeInfo node_info;
+  node_info.name = "test_node_1";
+  node_info.id = 1;
+  init_node_register_socket_med(sockets[i], node_info, false);
+  i++;
+
+  rix::msg::standard::UInt32 param_value;
+  param_value.data = 42;
+
+  rix::msg::mediator::ParamInfo param_info;
+  param_info.id = 1;
+  param_info.name = "param_1";
+  param_info.message_hash = rix::msg::standard::UInt32().hash();
+  param_info.data.resize(param_value.size());
+  size_t offset = 0;
+  param_value.serialize(param_info.data.data(), offset);
+  init_param_set_request_socket_med(sockets[i], param_info, false);
+  i++;
+
+  rix::msg::mediator::ParamInfo param_get_req;
+  param_get_req.id = 1;
+  param_get_req.name = "param_1";
+  param_get_req.message_hash = rix::msg::standard::UInt32().hash();
+  init_param_get_request_socket_med(sockets[i], param_get_req, param_info, false);
+  i++;
+
+  param_info.id = 2; // Node not registered
+  init_param_set_request_socket_med(sockets[i], param_info, true);
+  i++;
+
+  param_get_req.id = 3; // Node not registered
+  init_param_get_request_socket_med(sockets[i], param_get_req, param_info, true);
+  i++;
+
+  rix::msg::standard::Time wrong_param_value;
+  wrong_param_value.sec = 1234;
+  wrong_param_value.nsec = 5678;
+  param_info.id = 1;
+  param_info.name = "param_1";
+  param_info.message_hash = rix::msg::standard::Time().hash(); // Wrong hash
+  param_info.data.resize(wrong_param_value.size());
+  offset = 0;
+  wrong_param_value.serialize(param_info.data.data(), offset);
+  init_param_set_request_socket_med(sockets[i], param_info, true);
+  i++;
+
+  param_get_req.id = 1;
+  param_get_req.name = "param_1";
+  param_get_req.message_hash = rix::msg::standard::Time().hash(); // Wrong hash
+  init_param_get_request_socket_med(sockets[i], param_get_req, param_info, true);
+  i++;
+
+  param_get_req.id = 1;
+  param_get_req.name = "param_2"; // Param not set
+  param_get_req.message_hash = rix::msg::standard::UInt32().hash();
+  init_param_get_request_socket_med(sockets[i], param_get_req, param_info, true);
+  i++;
+
+  {
+    auto med = rix::core::Mediator(rixhub_endpoint, mock_create_socket);
+    med.spin_once();
+    EXPECT_EQ(med.get_node_count(), 1);
+    for (int j = 0; j < 7; j++) {
+      med.spin_once();
+    }
   }
 
   sockets.clear();

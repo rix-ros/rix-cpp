@@ -8,7 +8,13 @@
 #include "rix/msg/mediator/SrvResponse.hpp"
 #include "rix/msg/mediator/Status.hpp"
 #include "rix/msg/mediator/SubInfo.hpp"
+#include "rix/msg/standard/Void.hpp"
 #include <gmock/gmock.h>
+
+extern std::vector<std::shared_ptr<rix::ipc::MockSocket>> sockets;
+extern int socket_index;
+
+std::shared_ptr<rix::ipc::GenericSocket> mock_create_socket() { return sockets[socket_index++]; }
 
 void init_node_register_socket(std::shared_ptr<rix::ipc::MockSocket> socket, const rix::ipc::Endpoint &rixhub_endpoint,
                                const rix::msg::mediator::NodeInfo &node_info, uint64_t &node_id, uint8_t op,
@@ -364,6 +370,25 @@ void init_srvcli_socket(std::shared_ptr<rix::ipc::MockSocket> socket, const rix:
   EXPECT_CALL(*socket, close()).Times(1);
 }
 
+void init_med_server_socket(std::shared_ptr<rix::ipc::MockSocket> socket, const rix::ipc::Endpoint &rixhub_endpoint,
+                            const rix::ipc::Endpoint &rixhub_bound_endpoint, int expected_spin_count) {
+  EXPECT_CALL(*socket, set_reuse_address(true)).Times(1);
+  EXPECT_CALL(*socket, bind)
+      .With(::testing::Args<0>(::testing::Truly([&rixhub_endpoint](const auto &args) {
+        return std::get<0>(args).address == rixhub_endpoint.address && std::get<0>(args).port == rixhub_endpoint.port;
+      })))
+      .Times(1);
+  EXPECT_CALL(*socket, listen).Times(1);
+  EXPECT_CALL(*socket, local_endpoint).Times(1).WillOnce(::testing::Return(rixhub_bound_endpoint));
+  EXPECT_CALL(*socket, wait_exception).Times(1);
+  EXPECT_CALL(*socket, wait_readable).Times(expected_spin_count).WillRepeatedly(::testing::Return(true));
+  EXPECT_CALL(*socket, accept).Times(expected_spin_count).WillRepeatedly(::testing::Invoke([](rix::ipc::Endpoint &ep) {
+    ep = rix::ipc::Endpoint("127.0.0.1", 1234);
+    return mock_create_socket();
+  }));
+  EXPECT_CALL(*socket, close()).Times(1);
+}
+
 void init_pub_register_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
                                   const rix::msg::mediator::PubInfo &pub_info, bool error) {
   EXPECT_CALL(*socket, recv_message)
@@ -562,6 +587,146 @@ void init_srvcli_request_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket
             EXPECT_EQ(response->srv_info.endpoint.port, srv_response.srv_info.endpoint.port);
           } else {
             EXPECT_NE(response->error, 0);
+          }
+          return true;
+        }
+        return false;
+      }));
+  EXPECT_CALL(*socket, close()).Times(1);
+}
+
+void init_sys_info_request_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
+                                      const rix::msg::mediator::SystemInfo &sys_info) {
+  EXPECT_CALL(*socket, recv_message).Times(1).WillOnce(::testing::Invoke([](rix::msg::Message &msg, size_t len) {
+    auto op = dynamic_cast<rix::msg::mediator::Operation *>(&msg);
+    if (op) {
+      op->len = 0;
+      op->opcode = rix::core::OPCODE::SYSTEM_GET_REQUEST;
+      return true;
+    }
+    return false;
+  }));
+  EXPECT_CALL(*socket, send_message)
+      .Times(1)
+      .WillOnce(::testing::Invoke([sys_info](uint8_t opcode, const rix::msg::Message &msg) {
+        EXPECT_EQ(opcode, rix::core::OPCODE::SYSTEM_GET_RESPONSE);
+        auto info = dynamic_cast<const rix::msg::mediator::SystemInfo *>(&msg);
+        if (info) {
+          EXPECT_EQ(info->publishers.size(), sys_info.publishers.size());
+          for (int i = 0; i < info->publishers.size(); ++i) {
+            EXPECT_EQ(info->publishers[i].id, sys_info.publishers[i].id);
+            EXPECT_EQ(info->publishers[i].node_id, sys_info.publishers[i].node_id);
+            EXPECT_EQ(info->publishers[i].topic_info.name, sys_info.publishers[i].topic_info.name);
+            EXPECT_EQ(info->publishers[i].topic_info.message_hash, sys_info.publishers[i].topic_info.message_hash);
+            EXPECT_EQ(info->publishers[i].endpoint.address, sys_info.publishers[i].endpoint.address);
+            EXPECT_EQ(info->publishers[i].endpoint.port, sys_info.publishers[i].endpoint.port);
+          }
+          EXPECT_EQ(info->subscribers.size(), sys_info.subscribers.size());
+          for (int i = 0; i < info->subscribers.size(); ++i) {
+            EXPECT_EQ(info->subscribers[i].id, sys_info.subscribers[i].id);
+            EXPECT_EQ(info->subscribers[i].node_id, sys_info.subscribers[i].node_id);
+            EXPECT_EQ(info->subscribers[i].topic_info.name, sys_info.subscribers[i].topic_info.name);
+            EXPECT_EQ(info->subscribers[i].topic_info.message_hash, sys_info.subscribers[i].topic_info.message_hash);
+            EXPECT_EQ(info->subscribers[i].endpoint.address, sys_info.subscribers[i].endpoint.address);
+            EXPECT_EQ(info->subscribers[i].endpoint.port, sys_info.subscribers[i].endpoint.port);
+          }
+          EXPECT_EQ(info->services.size(), sys_info.services.size());
+          for (int i = 0; i < info->services.size(); ++i) {
+            EXPECT_EQ(info->services[i].id, sys_info.services[i].id);
+            EXPECT_EQ(info->services[i].node_id, sys_info.services[i].node_id);
+            EXPECT_EQ(info->services[i].name, sys_info.services[i].name);
+            EXPECT_EQ(info->services[i].request_hash, sys_info.services[i].request_hash);
+            EXPECT_EQ(info->services[i].response_hash, sys_info.services[i].response_hash);
+            EXPECT_EQ(info->services[i].endpoint.address, sys_info.services[i].endpoint.address);
+            EXPECT_EQ(info->services[i].endpoint.port, sys_info.services[i].endpoint.port);
+          }
+          EXPECT_EQ(info->nodes.size(), sys_info.nodes.size());
+          for (int i = 0; i < info->nodes.size(); ++i) {
+            EXPECT_EQ(info->nodes[i].id, sys_info.nodes[i].id);
+            EXPECT_EQ(info->nodes[i].name, sys_info.nodes[i].name);
+          }
+          return true;
+        }
+        return false;
+      }));
+  EXPECT_CALL(*socket, close()).Times(1);
+}
+
+void init_param_set_request_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
+                                       const rix::msg::mediator::ParamInfo &param_info, bool error) {
+  EXPECT_CALL(*socket, recv_message)
+      .Times(2)
+      .WillOnce(::testing::Invoke([param_info](rix::msg::Message &msg, size_t len) {
+        auto op = dynamic_cast<rix::msg::mediator::Operation *>(&msg);
+        if (op) {
+          op->len = param_info.size();
+          op->opcode = rix::core::OPCODE::PARAM_SET_REQUEST;
+          return true;
+        }
+        return false;
+      }))
+      .WillOnce(::testing::Invoke([param_info](rix::msg::Message &msg, size_t len) {
+        auto response = dynamic_cast<rix::msg::mediator::ParamInfo *>(&msg);
+        if (response) {
+          *response = param_info;
+          return true;
+        }
+        return false;
+      }));
+  EXPECT_CALL(*socket, send_message)
+      .Times(1)
+      .WillOnce(::testing::Invoke([param_info, error](uint8_t opcode, const rix::msg::Message &msg) {
+        EXPECT_EQ(opcode, rix::core::OPCODE::STATUS_RESPONSE);
+        auto status = dynamic_cast<const rix::msg::mediator::Status *>(&msg);
+        if (status) {
+          EXPECT_EQ(status->id, param_info.id);
+          if (!error) {
+            EXPECT_EQ(status->error, 0);
+          } else {
+            EXPECT_NE(status->error, 0);
+          }
+          return true;
+        }
+        return false;
+      }));
+  EXPECT_CALL(*socket, close()).Times(1);
+}
+
+void init_param_get_request_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
+                                       const rix::msg::mediator::ParamInfo &param_get_request,
+                                       const rix::msg::mediator::ParamInfo &param_info, bool error) {
+  EXPECT_CALL(*socket, recv_message)
+      .Times(2)
+      .WillOnce(::testing::Invoke([param_get_request](rix::msg::Message &msg, size_t len) {
+        auto op = dynamic_cast<rix::msg::mediator::Operation *>(&msg);
+        if (op) {
+          op->len = param_get_request.size();
+          op->opcode = rix::core::OPCODE::PARAM_GET_REQUEST;
+          return true;
+        }
+        return false;
+      }))
+      .WillOnce(::testing::Invoke([param_get_request](rix::msg::Message &msg, size_t len) {
+        auto response = dynamic_cast<rix::msg::mediator::ParamInfo *>(&msg);
+        if (response) {
+          *response = param_get_request;
+          return true;
+        }
+        return false;
+      }));
+  EXPECT_CALL(*socket, send_message)
+      .Times(1)
+      .WillOnce(::testing::Invoke([param_get_request, param_info, error](uint8_t opcode, const rix::msg::Message &msg) {
+        EXPECT_EQ(opcode, rix::core::OPCODE::PARAM_GET_RESPONSE);
+        auto info = dynamic_cast<const rix::msg::mediator::ParamInfo *>(&msg);
+        if (info) {
+          EXPECT_EQ(info->id, param_get_request.id);
+          if (!error) {
+            EXPECT_EQ(info->name, param_info.name);
+            EXPECT_EQ(info->message_hash, param_info.message_hash);
+            EXPECT_EQ(info->data, param_info.data);
+          } else {
+            EXPECT_TRUE(info->data.empty());
           }
           return true;
         }

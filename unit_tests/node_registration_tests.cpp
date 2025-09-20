@@ -8,8 +8,6 @@
 std::vector<std::shared_ptr<rix::ipc::MockSocket>> sockets;
 int socket_index = 0;
 
-std::shared_ptr<rix::ipc::GenericSocket> mock_create_socket() { return sockets[socket_index++]; }
-
 TEST(RegistrationTests, RegisterAndDeregisterNode) {
   sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Node register
   sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Node deregister
