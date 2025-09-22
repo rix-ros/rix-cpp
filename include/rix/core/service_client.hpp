@@ -23,10 +23,13 @@ class ServiceClient : Spinner {
 public:
   ServiceClient(const ServiceClient &) = delete;
   ServiceClient &operator=(const ServiceClient &) = delete;
+  ServiceClient(ServiceClient &&) = delete;
+  ServiceClient &operator=(ServiceClient &&) = delete;
+
   ~ServiceClient();
 
-  virtual bool ok() const override;
-  virtual void shutdown() override;
+  bool ok() const override;
+  void shutdown() override;
   bool call(const rix::msg::Message &request, rix::msg::Message &response);
 
 private:
@@ -36,7 +39,7 @@ private:
   rix::ipc::Endpoint endpoint_;
 
   using Spinner::spin;
-  virtual void spin_once() override;
+  void spin_once() override;
 
   ServiceClient(const rix::msg::mediator::SrvRequest &request, SocketFactory factory,
                 const rix::ipc::Endpoint &rixhub_endpoint);

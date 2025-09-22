@@ -24,10 +24,12 @@ public:
 
   Service(const Service &) = delete;
   Service &operator=(const Service &) = delete;
+  Service(Service &&) = delete;
+  Service &operator=(Service &&) = delete;
   ~Service();
 
-  virtual bool ok() const override;
-  virtual void shutdown() override;
+  bool ok() const override;
+  void shutdown() override;
 
   template <typename TRequest, typename TResponse>
   void set_callback(std::function<void(const TRequest &, TResponse &)> callback);
@@ -48,7 +50,7 @@ private:
           const rix::ipc::Endpoint &rixhub_endpoint);
 
   using Spinner::spin;
-  virtual void spin_once() override;
+  void spin_once() override;
 };
 
 template <typename TRequest, typename TResponse>

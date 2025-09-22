@@ -11,15 +11,15 @@ namespace rix::ipc {
 
 class MockSocket : public GenericSocket {
 public:
-  mutable Endpoint local_endpoint_;
-  mutable Endpoint remote_endpoint_;
+  mutable Endpoint local_endpoint_{};
+  mutable Endpoint remote_endpoint_{};
   mutable bool is_listening = false;
   mutable bool is_connected = false;
   mutable bool blocking = true;
   mutable bool reuse_address = false;
   mutable int backlog = 0;
-  mutable std::vector<std::shared_ptr<rix::msg::Message>> recv_buffer;
-  mutable std::vector<std::shared_ptr<GenericSocket>> accepted_sockets;
+  mutable std::vector<std::shared_ptr<rix::msg::Message>> recv_buffer{};
+  mutable std::vector<std::shared_ptr<GenericSocket>> accepted_sockets{};
 
   MockSocket() {
     ON_CALL(*this, bind).WillByDefault([this](const Endpoint &endpoint) -> bool {
@@ -78,6 +78,11 @@ public:
     ON_CALL(*this, local_endpoint).WillByDefault([this]() -> Endpoint { return this->local_endpoint_; });
     ON_CALL(*this, remote_endpoint).WillByDefault([this]() -> Endpoint { return this->remote_endpoint_; });
   }
+
+  MockSocket(const MockSocket &) = delete;
+  MockSocket &operator=(const MockSocket &) = delete;
+  MockSocket(MockSocket &&) = delete;
+  MockSocket &operator=(MockSocket &&) = delete;
 
   ~MockSocket() { close(); }
 

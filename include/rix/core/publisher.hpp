@@ -23,10 +23,12 @@ class Publisher : public Spinner {
 public:
   Publisher(const Publisher &) = delete;
   Publisher &operator=(const Publisher &) = delete;
+  Publisher(Publisher &&) = delete;
+  Publisher &operator=(Publisher &&) = delete;
   ~Publisher();
 
-  virtual bool ok() const override;
-  virtual void shutdown() override;
+  bool ok() const override;
+  void shutdown() override;
   void publish(const rix::msg::Message &msg);
   size_t get_subscriber_count() const;
 
@@ -43,7 +45,7 @@ private:
   Publisher(const rix::msg::mediator::PubInfo &info, SocketFactory factory, rix::ipc::Endpoint rixhub_endpoint);
 
   using Spinner::spin;
-  virtual void spin_once() override;
+  void spin_once() override;
 };
 
 } // namespace rix::core

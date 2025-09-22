@@ -49,6 +49,8 @@ public:
   virtual Endpoint local_endpoint() const = 0;
   virtual Endpoint remote_endpoint() const = 0;
 
+  virtual int get_fd() const { return -1; }
+
   bool is_writable() const { return wait_writable(rix::util::Duration(0.0)); }
   bool is_readable() const { return wait_readable(rix::util::Duration(0.0)); }
   bool is_exception() const { return wait_exception(rix::util::Duration(0.0)); }

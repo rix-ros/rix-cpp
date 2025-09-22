@@ -138,4 +138,6 @@ Endpoint POSIXSocket::remote_endpoint() const {
   return ep;
 }
 
+int POSIXSocket::get_fd() const { return fd_; }
+
 } // namespace rix::ipc

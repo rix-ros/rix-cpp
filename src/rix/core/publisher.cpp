@@ -39,8 +39,6 @@ Publisher::Publisher(const rix::msg::mediator::PubInfo &info, SocketFactory fact
 }
 
 Publisher::~Publisher() {
-  shutdown();
-
   // Deregister publisher with rixhub
   if (registered_flag_) {
     auto client = socket_factory_();

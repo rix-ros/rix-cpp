@@ -28,9 +28,14 @@ public:
   Mediator(const rix::ipc::Endpoint &rixhub_endpoint, SocketFactory socket_factory = rix::ipc::create_socket);
   ~Mediator();
 
-  virtual bool ok() const override;
-  virtual void shutdown() override;
-  virtual void spin_once() override;
+  Mediator(const Mediator &) = delete;
+  Mediator &operator=(const Mediator &) = delete;
+  Mediator(Mediator &&) = delete;
+  Mediator &operator=(Mediator &&) = delete;
+
+  bool ok() const override;
+  void shutdown() override;
+  void spin_once() override;
 
   size_t get_node_count() const { return nodes_.size(); }
   size_t get_publisher_count() const { return publishers_.size(); }
@@ -38,15 +43,40 @@ public:
   size_t get_service_count() const { return services_.size(); }
 
 private:
-  std::shared_ptr<rix::ipc::GenericSocket> server_;
-  SocketFactory socket_factory_;
-  std::map<uint64_t, rix::msg::mediator::NodeInfo> nodes_;
-  std::map<uint64_t, rix::msg::mediator::PubInfo> publishers_;
-  std::map<uint64_t, rix::msg::mediator::SubInfo> subscribers_;
-  std::map<uint64_t, rix::msg::mediator::SrvInfo> services_;
-  std::map<std::string, std::array<uint64_t, 2>> topic_hashes_;
-  std::map<std::string, std::pair<std::array<uint64_t, 2>, std::vector<uint8_t>>> parameters_;
-  std::atomic<bool> shutdown_flag_;
+  std::shared_ptr<rix::ipc::GenericSocket> server_{};
+  SocketFactory socket_factory_{};
+  std::map<uint64_t, rix::msg::mediator::NodeInfo> nodes_{};
+  std::map<uint64_t, rix::msg::mediator::PubInfo> publishers_{};
+  std::map<uint64_t, rix::msg::mediator::SubInfo> subscribers_{};
+  std::map<uint64_t, rix::msg::mediator::SrvInfo> services_{};
+  std::map<std::string, std::array<uint64_t, 2>> topic_hashes_{};
+  std::map<std::string, std::pair<std::array<uint64_t, 2>, std::vector<uint8_t>>> parameters_{};
+  std::atomic<bool> shutdown_flag_{};
+
+  void handle_node_register(const rix::msg::mediator::Operation &operation,
+                            std::shared_ptr<rix::ipc::GenericSocket> conn);
+  void handle_pub_register(const rix::msg::mediator::Operation &operation,
+                           std::shared_ptr<rix::ipc::GenericSocket> conn);
+  void handle_sub_register(const rix::msg::mediator::Operation &operation,
+                           std::shared_ptr<rix::ipc::GenericSocket> conn);
+  void handle_srv_register(const rix::msg::mediator::Operation &operation,
+                           std::shared_ptr<rix::ipc::GenericSocket> conn);
+  void handle_node_deregister(const rix::msg::mediator::Operation &operation,
+                              std::shared_ptr<rix::ipc::GenericSocket> conn);
+  void handle_pub_deregister(const rix::msg::mediator::Operation &operation,
+                             std::shared_ptr<rix::ipc::GenericSocket> conn);
+  void handle_sub_deregister(const rix::msg::mediator::Operation &operation,
+                             std::shared_ptr<rix::ipc::GenericSocket> conn);
+  void handle_srv_deregister(const rix::msg::mediator::Operation &operation,
+                             std::shared_ptr<rix::ipc::GenericSocket> conn);
+  void handle_srv_request(const rix::msg::mediator::Operation &operation,
+                          std::shared_ptr<rix::ipc::GenericSocket> conn);
+  void handle_param_set_request(const rix::msg::mediator::Operation &operation,
+                                std::shared_ptr<rix::ipc::GenericSocket> conn);
+  void handle_param_get_request(const rix::msg::mediator::Operation &operation,
+                                std::shared_ptr<rix::ipc::GenericSocket> conn);
+  void handle_system_get_request(const rix::msg::mediator::Operation &operation,
+                                 std::shared_ptr<rix::ipc::GenericSocket> conn);
 
   void notify_subscribers(const std::vector<rix::msg::mediator::SubInfo> &subscribers,
                           const rix::msg::mediator::PubInfo &publisher);

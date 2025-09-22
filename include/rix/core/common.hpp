@@ -20,7 +20,7 @@ namespace rix::core {
 
 const uint16_t RIXHUB_PORT = 48104;
 
-enum OPCODE {
+enum OPCODE : uint8_t {
   STATUS_RESPONSE = 0,
 
   NODE_REGISTER = 80,

@@ -30,7 +30,7 @@ ServiceClient::ServiceClient(const rix::msg::mediator::SrvRequest &request, Sock
   shutdown_flag_ = false;
 }
 
-ServiceClient::~ServiceClient() { shutdown(); }
+ServiceClient::~ServiceClient() {}
 
 bool ServiceClient::ok() const { return !shutdown_flag_; }
 void ServiceClient::shutdown() { shutdown_flag_ = true; }

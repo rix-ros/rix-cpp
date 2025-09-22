@@ -29,6 +29,8 @@ public:
 
   Node(const Node &) = delete;
   Node &operator=(const Node &) = delete;
+  Node(Node &&) = delete;
+  Node &operator=(Node &&) = delete;
 
   virtual ~Node();
 
@@ -51,9 +53,9 @@ public:
                                           std::function<void(const TRequest &, TResponse &)> callback,
                                           const rix::ipc::Endpoint &endpoint = rix::ipc::Endpoint("127.0.0.1", 0));
 
-  virtual bool ok() const override;
-  virtual void shutdown() override;
-  virtual void spin_once() override;
+  bool ok() const override;
+  void shutdown() override;
+  void spin_once() override;
 
   template <typename TParam> bool set_parameter(const std::string &name, const TParam &parameter);
   template <typename TParam> bool get_parameter(const std::string &name, TParam &parameter);

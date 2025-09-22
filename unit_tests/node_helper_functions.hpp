@@ -1,5 +1,7 @@
 #pragma once
 
+#include <gmock/gmock.h>
+
 #include "rix/core/common.hpp"
 #include "rix/ipc/generic_socket.hpp"
 #include "rix/ipc/mock_socket.hpp"
@@ -11,7 +13,6 @@
 #include "rix/msg/mediator/Status.hpp"
 #include "rix/msg/mediator/SubInfo.hpp"
 #include "rix/msg/standard/Void.hpp"
-#include <gmock/gmock.h>
 
 extern std::vector<std::shared_ptr<rix::ipc::MockSocket>> sockets;
 extern int socket_index;
@@ -467,7 +468,7 @@ void init_param_get_request_socket(std::shared_ptr<rix::ipc::MockSocket> socket,
 
 void init_param_set_request_socket(std::shared_ptr<rix::ipc::MockSocket> socket,
                                    const rix::ipc::Endpoint &rixhub_endpoint, rix::msg::mediator::ParamInfo param_info,
-                                   uint64_t &node_id,bool error) {
+                                   uint64_t &node_id, bool error) {
   EXPECT_CALL(*socket, connect)
       .With(::testing::Args<0>(::testing::Truly([rixhub_endpoint](const auto &args) {
         return std::get<0>(args).address == rixhub_endpoint.address && std::get<0>(args).port == rixhub_endpoint.port;
@@ -510,4 +511,16 @@ void init_param_set_request_socket(std::shared_ptr<rix::ipc::MockSocket> socket,
         return false;
       }));
   EXPECT_CALL(*socket, close()).Times(1);
+}
+
+void init_pub_connection_socket(std::shared_ptr<rix::ipc::MockSocket> socket, int times, bool error) {
+  EXPECT_CALL(*socket, accept)
+      .Times(times)
+      .WillRepeatedly(
+          ::testing::Invoke([error](rix::ipc::Endpoint &remote_endpoint) -> std::shared_ptr<rix::ipc::GenericSocket> {
+            if (error) {
+              return nullptr;
+            }
+            return mock_create_socket();
+          }));
 }

@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
 project(rix)
 set(CMAKE_CXX_STANDARD 20)
+# set(CMAKE_CXX_CLANG_TIDY clang-tidy 
+#   -checks=cppcoreguidelines-*
+# )
 
 if(WIN32)
   set(SOCKET_SRC src/rix/ipc/windows_socket.cpp)
@@ -56,12 +59,12 @@ enable_testing()
 add_executable(node_registration_tests
   unit_tests/node_registration_tests.cpp
 )
-target_link_libraries(node_registration_tests rix GTest::gtest_main GTest::gmock)
+target_link_libraries(node_registration_tests GTest::gtest_main GTest::gmock rix)
 
 add_executable(mediator_registration_tests
   unit_tests/mediator_registration_tests.cpp
 )
-target_link_libraries(mediator_registration_tests rix GTest::gtest_main GTest::gmock)
+target_link_libraries(mediator_registration_tests GTest::gtest_main GTest::gmock rix)
 
 # Install library and headers
 install(TARGETS rix DESTINATION lib)

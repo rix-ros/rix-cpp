@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <memory>
+#include <set>
 #include <mutex>
 
 #include "rix/core/common.hpp"
@@ -41,7 +42,7 @@ private:
   SocketFactory socket_factory_;
   Callback callback_;
   mutable std::mutex callback_mutex_;
-  std::map<uint64_t, std::shared_ptr<rix::ipc::GenericSocket>> clients_;
+  std::set<std::shared_ptr<rix::ipc::GenericSocket>> clients_;
   rix::ipc::Endpoint rixhub_endpoint_;
   std::atomic<bool> shutdown_flag_;
   std::atomic<bool> registered_flag_;

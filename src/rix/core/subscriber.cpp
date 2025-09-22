@@ -84,34 +84,35 @@ void Subscriber::spin_once() {
       auto client = socket_factory_();
       client->set_blocking(false);
       client->connect(rix::ipc::Endpoint(pub.endpoint.address, pub.endpoint.port));
-      clients_.insert({pub.id, client});
+      clients_.insert(client);
     }
   }
 
-  auto it = clients_.begin();
-  while (it != clients_.end()) {
-    auto client = it->second;
-    // If client is not ok (hang up), erase it
-    if (client->is_exception()) {
-      it = clients_.erase(it);
-      continue;
-    }
+  std::vector<std::shared_ptr<rix::ipc::GenericSocket>> readable_clients;
+  std::vector<std::shared_ptr<rix::ipc::GenericSocket>> exception_clients;
+  rix::ipc::poll(readable_clients, exception_clients, clients_.begin(), clients_.end(), rix::util::Duration(0.0),
+                 rix::ipc::SelectFlag::READ);
 
-    // If the client is not connected or not readable, go to next
-    if (!client->is_writable() || !client->is_readable()) {
-      it++;
-      continue;
-    }
+  // Remove any clients that have exceptions
+  for (const auto &client : exception_clients) {
+    clients_.erase(client);
+  }
+
+  auto it = readable_clients.begin();
+  while (it != readable_clients.end()) {
+    auto client = *it;
 
     // Read a message from the publisher
     rix::msg::mediator::Operation op;
     if (!client->recv_message(op, *msg_instance_)) {
-      it = clients_.erase(it);
+      clients_.erase(*it);
+      it++;
       continue;
     }
 
     if (op.opcode != OPCODE::PUB_MESSAGE) {
-      it = clients_.erase(it);
+      clients_.erase(*it);
+      it++;
       continue;
     }
 

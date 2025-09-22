@@ -127,7 +127,7 @@ bool parse(char **argv, int argc, int &offset, std::string &value) {
   if (offset >= argc) {
     return false;
   }
-  value = argv[offset++];
+  value = std::string(argv[offset++]);
   return true;
 }
 

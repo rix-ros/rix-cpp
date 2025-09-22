@@ -1,6 +1,5 @@
 #pragma once
 
-#include <assert.h>
 #include <signal.h>
 #include <unistd.h>
 
@@ -13,19 +12,24 @@ namespace rix::ipc {
 class POSIXSignal : public GenericSignal {
 public:
   POSIXSignal(int signum);
-  virtual ~POSIXSignal();
+  POSIXSignal(const POSIXSignal &) = delete;
+  POSIXSignal &operator=(const POSIXSignal &) = delete;
+  POSIXSignal(POSIXSignal &&) = delete;
+  POSIXSignal &operator=(POSIXSignal &&) = delete;
+  ~POSIXSignal();
 
-  virtual bool ignore() const override;
-  virtual bool raise() const override;
-  virtual bool wait(const rix::util::Duration &d) const override;
+  bool ignore() const override;
+  bool raise() const override;
+  bool wait(const rix::util::Duration &d) const override;
 
 private:
   struct Notifier {
-    Notifier() : is_init(false) {};
+    Notifier() {};
     std::array<int, 2> pipe; /**< 0: read end, 1: write end */
-    bool is_init;            /**< false if Notifier has not been initialized */
+    bool is_init = false;            /**< false if Notifier has not been initialized */
   };
-  static std::array<Notifier, 32> notifier;
+  static const int MAX_SIGNALS = 32;
+  static std::array<Notifier, MAX_SIGNALS> notifier;
   static void handler(int signum);
 
   int signum_;
