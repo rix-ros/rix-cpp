@@ -66,6 +66,11 @@ add_executable(mediator_registration_tests
 )
 target_link_libraries(mediator_registration_tests GTest::gtest_main GTest::gmock rix)
 
+add_executable(message_tests
+  unit_tests/message_tests.cpp
+)
+target_link_libraries(message_tests GTest::gtest_main GTest::gmock rix)
+
 # Install library and headers
 install(TARGETS rix DESTINATION lib)
 install(DIRECTORY include/rix DESTINATION include)

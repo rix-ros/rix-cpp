@@ -513,14 +513,31 @@ void init_param_set_request_socket(std::shared_ptr<rix::ipc::MockSocket> socket,
   EXPECT_CALL(*socket, close()).Times(1);
 }
 
-void init_pub_connection_socket(std::shared_ptr<rix::ipc::MockSocket> socket, int times, bool error) {
+void init_pub_server_socket(std::shared_ptr<rix::ipc::MockSocket> socket, const rix::ipc::Endpoint &endpoint,
+                            const rix::ipc::Endpoint &bound_endpoint, int accept_count) {
+  init_server_socket(socket, endpoint, bound_endpoint);
+  EXPECT_CALL(*socket, wait_readable).Times(accept_count).WillRepeatedly(::testing::Return(true));
   EXPECT_CALL(*socket, accept)
-      .Times(times)
+      .Times(accept_count)
       .WillRepeatedly(
-          ::testing::Invoke([error](rix::ipc::Endpoint &remote_endpoint) -> std::shared_ptr<rix::ipc::GenericSocket> {
-            if (error) {
-              return nullptr;
-            }
+          ::testing::Invoke([](rix::ipc::Endpoint &remote_endpoint) -> std::shared_ptr<rix::ipc::GenericSocket> {
             return mock_create_socket();
           }));
+}
+
+template <typename TMsg>
+void init_pub_connection_socket(std::shared_ptr<rix::ipc::MockSocket> socket, int send_count,
+                                const std::vector<std::shared_ptr<TMsg>> &messages) {
+  static_assert(std::is_base_of<rix::msg::Message, TMsg>::value, "TMsg must be derived from rix::msg::Message");
+  EXPECT_CALL(*socket, wait_writable).Times(send_count).WillRepeatedly(::testing::Return(true));
+  EXPECT_CALL(*socket, send_message)
+      .Times(send_count)
+      .WillRepeatedly(::testing::Invoke([](uint8_t opcode, const rix::msg::Message &msg) {
+        EXPECT_EQ(opcode, rix::core::OPCODE::PUB_MESSAGE);
+        if (dynamic_cast<const TMsg *>(&msg)) {
+          return true;
+        }
+        return false;
+      }));
+  EXPECT_CALL(*socket, close()).Times(1);
 }

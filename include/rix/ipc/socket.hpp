@@ -23,9 +23,8 @@ template <typename Iterator, typename T = typename std::iterator_traits<Iterator
 bool select(std::vector<std::shared_ptr<GenericSocket>> &sockets,
             std::vector<std::shared_ptr<GenericSocket>> &exception_sockets, Iterator begin, Iterator end,
             const rix::util::Duration &duration, SelectFlag flag) {
-  static_assert(std::is_pointer<T>::value, "T must be a pointer type");
-  static_assert(std::is_base_of<GenericSocket, std::remove_pointer_t<T>>::value,
-                "T must be a pointer to a type derived from GenericSocket");
+  static_assert(std::is_same<T, std::shared_ptr<GenericSocket>>::value,
+                "T must be a shared_ptr to a type derived from GenericSocket");
   if (begin == end) {
     return true;
   }
