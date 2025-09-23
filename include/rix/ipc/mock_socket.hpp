@@ -46,15 +46,15 @@ public:
       this->is_connected = true;
       return true;
     });
-    ON_CALL(*this, close).WillByDefault([this]() -> void {});
+    ON_CALL(*this, close).WillByDefault([]() -> void {});
 
-    ON_CALL(*this, send).WillByDefault([this](const void *buf, size_t len, int flags) -> ssize_t { return -1; });
-    ON_CALL(*this, recv).WillByDefault([this](void *buf, size_t len, int flags) -> ssize_t { return -1; });
+    ON_CALL(*this, send).WillByDefault([](const void *buf, size_t len, int flags) -> ssize_t { return -1; });
+    ON_CALL(*this, recv).WillByDefault([](void *buf, size_t len, int flags) -> ssize_t { return -1; });
 
-    ON_CALL(*this, send_message).WillByDefault([this](uint8_t opcode, const rix::msg::Message &msg) -> bool {
+    ON_CALL(*this, send_message).WillByDefault([](uint8_t opcode, const rix::msg::Message &msg) -> bool {
       return true;
     });
-    ON_CALL(*this, recv_message).WillByDefault([this](rix::msg::Message &msg, size_t len) -> bool { return true; });
+    ON_CALL(*this, recv_message).WillByDefault([](rix::msg::Message &msg, size_t len) -> bool { return true; });
 
     ON_CALL(*this, wait_readable).WillByDefault([this](const rix::util::Duration &timeout) -> bool {
       return !this->recv_buffer.empty();
@@ -62,7 +62,7 @@ public:
     ON_CALL(*this, wait_writable).WillByDefault([this](const rix::util::Duration &timeout) -> bool {
       return this->is_connected;
     });
-    ON_CALL(*this, wait_exception).WillByDefault([this](const rix::util::Duration &timeout) -> bool { return false; });
+    ON_CALL(*this, wait_exception).WillByDefault([](const rix::util::Duration &timeout) -> bool { return false; });
 
     ON_CALL(*this, set_blocking).WillByDefault([this](bool blocking) -> bool {
       this->blocking = blocking;

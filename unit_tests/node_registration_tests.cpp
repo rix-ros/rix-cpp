@@ -718,7 +718,6 @@ TEST(RegistrationTests, ParameterGetAndSet) {
 
   rix::msg::mediator::NodeInfo node_info;
   node_info.name = "test_node";
-  node_info.id = node_id;
   init_node_register_socket(sockets[0], rixhub_endpoint, node_info, node_id, rix::core::OPCODE::NODE_REGISTER, false);
   
   rix::msg::mediator::ParamInfo parameter;

@@ -66,7 +66,7 @@ public:
     op.serialize(buffer.data(), offset);
     msg.serialize(buffer.data(), offset);
 
-    ssize_t bytes = 0;
+    size_t bytes = 0;
     while (bytes < buffer.size()) {
       ssize_t result = send(buffer.data() + bytes, buffer.size() - bytes, 0);
       if (result <= 0) {
@@ -81,7 +81,7 @@ public:
   virtual bool recv_message(rix::msg::Message &msg, size_t len) const {
     // Read the message body only
     std::vector<uint8_t> buffer(len);
-    ssize_t bytes = 0;
+    size_t bytes = 0;
     while (bytes < buffer.size()) {
       ssize_t result = recv(buffer.data() + bytes, buffer.size() - bytes, 0);
       if (result <= 0) {

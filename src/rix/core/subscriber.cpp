@@ -37,6 +37,10 @@ Subscriber::Subscriber(const rix::msg::mediator::SubInfo &info, SocketFactory so
 
   shutdown_flag_ = false;
   registered_flag_ = true;
+
+  producer_thread_ = std::thread(&Subscriber::producer_thread, this);
+
+  rix::util::Log::debug << "Subscriber created on topic \"" << info_.topic_info.name << "\"." << std::endl;
 }
 
 Subscriber::~Subscriber() {
@@ -45,6 +49,10 @@ Subscriber::~Subscriber() {
     if (client->connect(rixhub_endpoint_)) {
       client->send_message(OPCODE::SUB_DEREGISTER, info_);
     }
+  }
+  shutdown();
+  if (producer_thread_.joinable()) {
+    producer_thread_.join();
   }
 }
 
@@ -85,21 +93,13 @@ void Subscriber::spin_once() {
       client->set_blocking(false);
       client->connect(rix::ipc::Endpoint(pub.endpoint.address, pub.endpoint.port));
       clients_.insert(client);
+      rix::util::Log::debug << "Connected to publisher at \"" << pub.endpoint.address << ":" << pub.endpoint.port
+                            << "\" on topic \"" << pub.topic_info.name << "\"." << std::endl;
     }
   }
 
-  std::vector<std::shared_ptr<rix::ipc::GenericSocket>> readable_clients;
-  std::vector<std::shared_ptr<rix::ipc::GenericSocket>> exception_clients;
-  rix::ipc::poll(readable_clients, exception_clients, clients_.begin(), clients_.end(), rix::util::Duration(0.0),
-                 rix::ipc::SelectFlag::READ);
-
-  // Remove any clients that have exceptions
-  for (const auto &client : exception_clients) {
-    clients_.erase(client);
-  }
-
-  auto it = readable_clients.begin();
-  while (it != readable_clients.end()) {
+  auto it = readable_clients_.begin();
+  while (it != readable_clients_.end()) {
     auto client = *it;
 
     // Read a message from the publisher
@@ -119,6 +119,26 @@ void Subscriber::spin_once() {
     // Invoke the callback
     callback_(*msg_instance_);
     it++;
+  }
+  readable_clients_.clear();
+}
+
+void Subscriber::producer_thread() {
+  while (ok()) {
+    std::vector<std::shared_ptr<rix::ipc::GenericSocket>> readable_clients;
+    std::vector<std::shared_ptr<rix::ipc::GenericSocket>> exception_clients;
+    rix::ipc::poll(readable_clients, exception_clients, clients_.begin(), clients_.end(),
+                   rix::util::Duration::safe_forever(), rix::ipc::SelectFlag::READ);
+
+    std::lock_guard<std::mutex> guard(callback_mutex_);
+    // Remove any clients that have exceptions
+    for (const auto &client : exception_clients) {
+      clients_.erase(client);
+      rix::util::Log::debug << "Removed exceptional publisher from topic \"" << info_.topic_info.name << "\"."
+                            << std::endl;
+    }
+
+    readable_clients_ = std::move(readable_clients);
   }
 }
 

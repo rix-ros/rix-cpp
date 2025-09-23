@@ -11,7 +11,8 @@ int main(int argc, char **argv) {
   rix::util::Log::init(name);
 
   auto parser = rix::util::ArgumentParser(name, "A simple service example.");
-  parser.add<std::string>("rixhub", "The RixHub endpoint.", "127.0.0.1:48104");
+  parser.add_parser<rix::ipc::Endpoint>(rix::core::parse_endpoint);
+  parser.add<rix::ipc::Endpoint>("rixhub", "The RixHub endpoint.", rix::ipc::Endpoint("127.0.0.1", 48104));
   parser.add<double>("rate", "The call rate in Hz.", 'r', 1);
 
   if (!parser.parse(argc, argv)) {
@@ -19,8 +20,8 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  std::string rixhub_endpoint_string;
-  if (!parser.get<std::string>("rixhub", rixhub_endpoint_string)) {
+  rix::ipc::Endpoint rixhub_ep;
+  if (!parser.get<rix::ipc::Endpoint>("rixhub", rixhub_ep)) {
     rix::util::Log::error << "Failed to get rixhub argument." << std::endl;
     return 1;
   }
@@ -31,16 +32,13 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  Node node("simple_service_client",
-            rix::ipc::Endpoint(rixhub_endpoint_string));
+  Node node("simple_service_client", rixhub_ep);
   if (!node.ok()) {
     Log::error << "Failed to create node." << std::endl;
     return 1;
   }
 
-  auto srv_cli =
-      node.create_service_client<rix::msg::standard::UInt32,
-                                 rix::msg::standard::String>("/alphabet");
+  auto srv_cli = node.create_service_client<rix::msg::standard::UInt32, rix::msg::standard::String>("/alphabet");
   if (!srv_cli->ok()) {
     Log::error << "Failed to create service client." << std::endl;
     return 1;

@@ -36,6 +36,8 @@ Publisher::Publisher(const rix::msg::mediator::PubInfo &info, SocketFactory fact
 
   shutdown_flag_ = false;
   registered_flag_ = true;
+
+  rix::util::Log::debug << "Publisher created on topic \"" << info_.topic_info.name << "\"." << std::endl;
 }
 
 Publisher::~Publisher() {
@@ -60,21 +62,27 @@ void Publisher::publish(const rix::msg::Message &msg) {
     return;
   }
 
-  // Send the message to each current connection
-  std::lock_guard<std::mutex> lock(connections_mutex_);
-  auto it = connections_.begin();
-  while (it != connections_.end()) {
-    auto conn = *it;
+  std::vector<std::shared_ptr<rix::ipc::GenericSocket>> writable;
+  std::vector<std::shared_ptr<rix::ipc::GenericSocket>> exceptional;
+  rix::ipc::poll(writable, exceptional, connections_.begin(), connections_.end(), rix::util::Duration(0.0),
+                 rix::ipc::SelectFlag::WRITE);
 
-    // If the connection is not writable, erase from the list
-    if (!conn->is_writable()) {
-      it = connections_.erase(it);
-      continue;
-    }
+  std::lock_guard<std::mutex> lock(connections_mutex_);
+  // Remove any clients that have exceptions
+  for (const auto &conn : exceptional) {
+    connections_.erase(conn);
+    rix::util::Log::debug << "Removed exceptional subscriber from topic \"" << info_.topic_info.name << "\"."
+                          << std::endl;
+  }
+
+  // Send the message to each current connection
+  auto it = writable.begin();
+  while (it != writable.end()) {
+    auto conn = *it;
 
     // Send the message to the subscriber
     if (!conn->send_message(OPCODE::PUB_MESSAGE, msg)) {
-      it = connections_.erase(it);
+      it = writable.erase(it);
       continue;
     }
 
@@ -94,13 +102,16 @@ void Publisher::spin_once() {
   }
 
   // Accept a connection from a subscriber
-  auto conn = server_->accept();
+  rix::ipc::Endpoint remote_endpoint;
+  auto conn = server_->accept(remote_endpoint);
   if (!conn) {
     return;
   }
 
   // Store the connection
   std::lock_guard<std::mutex> guard(connections_mutex_);
+  rix::util::Log::debug << "Accepted new subscriber at \"" << remote_endpoint.address << ":" << remote_endpoint.port
+                        << "\" on topic \"" << info_.topic_info.name << "\"." << std::endl;
   connections_.insert(conn);
 }
 

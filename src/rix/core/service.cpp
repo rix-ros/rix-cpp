@@ -38,6 +38,8 @@ Service::Service(const rix::msg::mediator::SrvInfo &info, SocketFactory socket_f
 
   shutdown_flag_ = false;
   registered_flag_ = true;
+
+  rix::util::Log::debug << "Service created for \"" << info_.name << "\"." << std::endl;
 }
 
 Service::~Service() {
@@ -78,6 +80,8 @@ void Service::spin_once() {
 
   // Send response back
   conn->send_message(OPCODE::SRV_RESPONSE_MESSAGE, *response_instance_);
+
+  rix::util::Log::debug << "Processed service request for \"" << info_.name << "\"." << std::endl;
 }
 
 } // namespace rix::core

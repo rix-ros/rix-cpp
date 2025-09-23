@@ -1,5 +1,6 @@
 #pragma once
 
+#include <any>
 #include <atomic>
 #include <functional>
 #include <map>
@@ -57,5 +58,14 @@ enum OPCODE : uint8_t {
 };
 
 using SocketFactory = std::function<std::shared_ptr<rix::ipc::GenericSocket>(void)>;
+
+static inline bool parse_endpoint(const std::string &str, std::any &value) {
+  rix::ipc::Endpoint endpoint(str);
+  if (endpoint.port < 0) {
+    return false;
+  }
+  value = endpoint;
+  return true;
+}
 
 } // namespace rix::core

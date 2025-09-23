@@ -353,7 +353,7 @@ void init_srvcli_socket(std::shared_ptr<rix::ipc::MockSocket> socket, const rix:
       }));
   EXPECT_CALL(*socket, recv_message)
       .Times(2)
-      .WillOnce(::testing::Invoke([&node_id, &srv_response](rix::msg::Message &msg, size_t len) {
+      .WillOnce(::testing::Invoke([&srv_response](rix::msg::Message &msg, size_t len) {
         auto op = dynamic_cast<rix::msg::mediator::Operation *>(&msg);
         if (op) {
           op->len = srv_response.size();
@@ -394,7 +394,7 @@ void init_sys_info_request_socket(std::shared_ptr<rix::ipc::MockSocket> socket,
       }));
   EXPECT_CALL(*socket, recv_message)
       .Times(2)
-      .WillOnce(::testing::Invoke([&node_id, sys_info](rix::msg::Message &msg, size_t len) {
+      .WillOnce(::testing::Invoke([sys_info](rix::msg::Message &msg, size_t len) {
         auto op = dynamic_cast<rix::msg::mediator::Operation *>(&msg);
         if (op) {
           op->len = sys_info.size();
@@ -424,7 +424,7 @@ void init_param_get_request_socket(std::shared_ptr<rix::ipc::MockSocket> socket,
       .Times(1);
   EXPECT_CALL(*socket, send_message)
       .Times(1)
-      .WillOnce(::testing::Invoke([parameter, error, &node_id](uint8_t opcode, const rix::msg::Message &msg) {
+      .WillOnce(::testing::Invoke([parameter, &node_id](uint8_t opcode, const rix::msg::Message &msg) {
         EXPECT_EQ(opcode, rix::core::OPCODE::PARAM_GET_REQUEST);
         auto info = dynamic_cast<const rix::msg::mediator::ParamInfo *>(&msg);
         if (info) {

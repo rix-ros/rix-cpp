@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD 20)
 #   -checks=cppcoreguidelines-*
 # )
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wpedantic -Werror -Ofast")
+
 if(WIN32)
   set(SOCKET_SRC src/rix/ipc/windows_socket.cpp)
   set(SIGNAL_SRC src/rix/ipc/windows_signal.cpp)

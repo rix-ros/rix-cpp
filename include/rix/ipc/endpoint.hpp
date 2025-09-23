@@ -15,9 +15,6 @@ namespace rix::ipc {
  */
 class Endpoint {
 public:
-  std::string address;
-  int port;
-
   /**
    * @brief Default constructor. Initializes an empty Endpoint.
    */
@@ -91,7 +88,11 @@ public:
     std::size_t operator()(const Endpoint &endpoint) const {
       return std::hash<std::string>{}(endpoint.to_string());
     }
+
   };
+
+  std::string address;
+  int port;
 };
 
 } // namespace rix::ipc
