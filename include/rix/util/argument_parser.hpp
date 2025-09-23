@@ -9,6 +9,7 @@
 #include <string>
 #include <typeindex>
 #include <vector>
+#include <cstdint>
 
 namespace rix::util {
 

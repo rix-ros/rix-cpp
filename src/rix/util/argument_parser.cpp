@@ -238,7 +238,8 @@ bool ArgumentParser::parse_arg(char **argv, int argc, int &offset, Arg &arg) {
 }
 
 bool ArgumentParser::parse(int argc, char **argv) {
-  if (argc - 1 < required_arg_names_.size()) {
+  size_t required_size = argc - 1;
+  if (required_size < required_arg_names_.size()) {
     return false;
   }
 

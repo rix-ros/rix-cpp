@@ -18,7 +18,11 @@ POSIXSignal::POSIXSignal(int signum) : signum_(signum) {
   }
   if (!notifier[signum_ - 1].is_init) {
     notifier[signum_ - 1].is_init = true;
-    ::pipe(notifier[signum_ - 1].pipe.data());
+    int ret = ::pipe(notifier[signum_ - 1].pipe.data());
+    if (ret < 0) {
+      signum_ = -1;
+      return;
+    }
     ::signal(signum_, handler);
   }
 }
@@ -73,7 +77,8 @@ bool POSIXSignal::wait(const rix::util::Duration &d) const {
 
 void POSIXSignal::handler(int signum) {
   if (notifier[signum - 1].is_init) {
-    write(notifier[signum - 1].pipe[1], (uint8_t *)&signum, sizeof(int));
+    int ret = write(notifier[signum - 1].pipe[1], (uint8_t *)&signum, sizeof(int));
+    if (ret < 0) return;
   }
 }
 

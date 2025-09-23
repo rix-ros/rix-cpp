@@ -199,7 +199,7 @@ template <Log::Level level> inline std::string Log::LogStream<level>::create_pla
 
   // Name field
   if (is_init_) {
-    ss << "[" << name << "] ";
+    ss << "[" << name_ << "] ";
   }
 
   return ss.str();
