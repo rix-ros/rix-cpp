@@ -2,10 +2,10 @@
 
 #include <functional>
 #include <memory>
-#include <set>
 #include <mutex>
-#include <thread>
 #include <queue>
+#include <set>
+#include <thread>
 
 #include "rix/core/common.hpp"
 #include "rix/core/spinner.hpp"
@@ -49,15 +49,11 @@ private:
   std::atomic<bool> shutdown_flag_;
   std::atomic<bool> registered_flag_;
   std::shared_ptr<rix::msg::Message> msg_instance_;
-  std::vector<std::shared_ptr<rix::ipc::GenericSocket>> readable_clients_;
 
   Subscriber(const rix::msg::mediator::SubInfo &info, SocketFactory factory, const rix::ipc::Endpoint &rixhub_endpoint);
 
   using Spinner::spin;
   virtual void spin_once() override;
-
-  std::thread producer_thread_;
-  void producer_thread();
 };
 
 template <typename TMsg> void Subscriber::set_callback(std::function<void(const TMsg &)> callback) {

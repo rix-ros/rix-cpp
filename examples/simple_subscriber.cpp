@@ -32,35 +32,37 @@ public:
 
 private:
   void callback(const rix::msg::standard::Header &msg) {
-    // static uint32_t prev_seq = 0;
-    // static size_t msg_count = 0;
-    // static size_t lost_count = 0;
+    static uint32_t prev_seq = 0;
+    static size_t msg_count = 0;
+    static size_t lost_count = 0;
 
-    // msg_count++;
+    msg_count++;
 
-    // if (prev_seq == 0) {
-    //   prev_seq = msg.seq;
-    //   return;
-    // }
+    if (prev_seq == 0) {
+      prev_seq = msg.seq;
+      return;
+    }
 
-    // if (msg.seq > prev_seq + 1) {
-    //   lost_count += (msg.seq - prev_seq - 1);
-    //   rix::util::Log::warn << "Lost " << lost_count << " / " << msg_count << " messages." << std::endl;
-    // }
+    if (msg.seq > prev_seq + 1) {
+      lost_count += (msg.seq - prev_seq - 1);
+      rix::util::Log::warn << "Lost " << lost_count << " / " << msg_count << " messages "
+                           << (lost_count * 100.0 / msg_count) << "%." << std::endl;
+    }
 
-    // prev_seq = msg.seq;
+    prev_seq = msg.seq;
 
-    std::stringstream ss;
-    ss << "Received message: \n"
-       << "seq: " << msg.seq << "\n"
-       << "stamp: " << msg.stamp.sec << "." << msg.stamp.nsec << "\n"
-       << "frame_id: " << msg.frame_id << "\n";
-    rix::util::Log::info << ss.str() << std::endl;
+    // std::stringstream ss;
+    // ss << "Received message: \n"
+    //    << "seq: " << msg.seq << "\n"
+    //    << "stamp: " << msg.stamp.sec << "." << msg.stamp.nsec << "\n"
+    //    << "frame_id: " << msg.frame_id << "\n";
+    // rix::util::Log::info << ss.str() << std::endl;
   }
 };
 
 int main(int argc, char **argv) {
   rix::util::Log::init(name);
+  rix::util::Log::set_log_level(rix::util::Log::Level::DEBUG);
 
   auto parser = rix::util::ArgumentParser(name, "A simple subscriber example.");
   parser.add_parser<rix::ipc::Endpoint>(rix::core::parse_endpoint);
