@@ -426,6 +426,12 @@ void Mediator::handle_system_get_request(const rix::msg::mediator::Operation &op
   for (const auto &service : services_) {
     info.services.push_back(service.second);
   }
+  for (const auto &topic : topic_hashes_) {
+    rix::msg::mediator::TopicInfo topic_info;
+    topic_info.name = topic.first;
+    topic_info.message_hash = topic.second;
+    info.topics.push_back(topic_info);
+  }
 
   conn->send_message(OPCODE::SYSTEM_GET_RESPONSE, info);
 }
