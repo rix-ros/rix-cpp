@@ -48,6 +48,7 @@ Subscriber::~Subscriber() {
       client->send_message(OPCODE::SUB_DEREGISTER, info_);
     }
   }
+  rix::util::Log::debug << "Subscriber on topic \"" << info_.topic_info.name << "\" destroyed." << std::endl;
 }
 
 bool Subscriber::ok() const { return !shutdown_flag_; }
@@ -115,6 +116,7 @@ void Subscriber::spin_once() {
       continue;
     }
 
+    rix::util::Log::debugv << "Received message on topic \"" << info_.topic_info.name << "\"." << std::endl;
     // Invoke the callback
     callback_(*msg_instance_);
     it++;

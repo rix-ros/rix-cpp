@@ -48,6 +48,7 @@ Publisher::~Publisher() {
       client->send_message(OPCODE::PUB_DEREGISTER, info_);
     }
   }
+  rix::util::Log::debug << "Publisher on topic \"" << info_.topic_info.name << "\" destroyed." << std::endl;
 }
 
 bool Publisher::ok() const { return !shutdown_flag_; }
@@ -85,6 +86,7 @@ void Publisher::publish(const rix::msg::Message &msg) {
       it = writable.erase(it);
       continue;
     }
+    rix::util::Log::debugv << "Published message on topic \"" << info_.topic_info.name << "\"." << std::endl;
 
     it++;
   }

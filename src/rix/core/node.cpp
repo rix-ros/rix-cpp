@@ -127,6 +127,7 @@ bool Node::get_system_info(rix::msg::mediator::SystemInfo &info) {
   if (op.opcode != OPCODE::SYSTEM_GET_RESPONSE) {
     return false;
   }
+  rix::util::Log::debug << "Retrieved system info from RIXHub." << std::endl;
   return true;
 }
 

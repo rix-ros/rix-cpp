@@ -234,6 +234,8 @@ inline std::string Log::get_color_code(Level level) {
 
 inline std::string Log::get_level_string(Level level) {
   switch (level) {
+  case Level::DEBUGV:
+    return "DEBUGV"; // Blue
   case Level::DEBUG:
     return "DEBUG"; // Cyan
   case Level::INFO:

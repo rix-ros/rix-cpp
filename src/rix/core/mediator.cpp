@@ -38,6 +38,8 @@ void Mediator::spin_once() {
     return;
   }
 
+  rix::util::Log::debug << "Received opcode: " << static_cast<int>(operation.opcode) << std::endl;
+
   switch (operation.opcode) {
   case OPCODE::NODE_REGISTER: {
     handle_node_register(operation, conn);
