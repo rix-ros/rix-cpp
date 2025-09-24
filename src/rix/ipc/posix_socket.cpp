@@ -121,6 +121,7 @@ Endpoint POSIXSocket::local_endpoint() const {
   Endpoint ep;
   ep.address.resize(INET_ADDRSTRLEN);
   inet_ntop(AF_INET, &addr.sin_addr, ep.address.data(), INET_ADDRSTRLEN);
+  ep.address.resize(strlen(ep.address.c_str()));
   ep.port = ntohs(addr.sin_port);
   return ep;
 }
@@ -134,6 +135,7 @@ Endpoint POSIXSocket::remote_endpoint() const {
   Endpoint ep;
   ep.address.resize(INET_ADDRSTRLEN);
   inet_ntop(AF_INET, &addr.sin_addr, ep.address.data(), INET_ADDRSTRLEN);
+  ep.address.resize(strlen(ep.address.c_str()));
   ep.port = ntohs(addr.sin_port);
   return ep;
 }
