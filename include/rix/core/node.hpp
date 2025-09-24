@@ -163,7 +163,7 @@ std::shared_ptr<ServiceClient> Node::create_service_client(const std::string &se
   }
 
   rix::msg::mediator::SrvRequest service_request;
-  service_request.id = generate_id();
+  service_request.node_id = generate_id();
   service_request.name = service;
   service_request.node_id = info_.id;
   service_request.request_hash = TRequest().hash();
