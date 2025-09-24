@@ -2,10 +2,6 @@
 
 set -e
 
-mkdir -p $HOME/.rix
-cp setup.bash $HOME/.rix/setup.bash
-source $HOME/.rix/setup.bash
-
 echo "Installing Rix to $HOME/.rix"
 
 echo "Installing rix-msg ..."
@@ -32,3 +28,10 @@ make -j4
 make install
 cd ..
 echo "rix-cpp installed."
+
+echo "Sourcing setup.bash ..."
+mkdir -p $HOME/.rix
+cp setup.bash $HOME/.rix/setup.bash
+source $HOME/.rix/setup.bash
+
+echo "Rix installed successfully."

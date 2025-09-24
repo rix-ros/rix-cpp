@@ -37,7 +37,6 @@ Before running any RIX executable, source the setup script to set environment va
 
 ```bash
 source ~/.rix/setup.bash
-rixhub
 ```
 
 You can add this to your `.bashrc` (or similar) for convenience:
@@ -56,7 +55,12 @@ By default, RIX binds servers to the loopback address (`127.0.0.1`). You can con
 
 ## C++ API Tutorial
 
-RIX is organized into Nodes that communicate via message streams (topics) and remote procedural calls (services). Start the `rixhub` server before running your nodes.
+RIX is organized into Nodes that communicate via message streams (topics) and remote procedural calls (services). Source the setup script and start the `rixhub` server before running your nodes.
+
+```bash
+source ~/.rix/setup.bash
+rixhub
+```
 
 ### Publisher Example
 
