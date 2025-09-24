@@ -15,13 +15,20 @@
 #include "rix/msg/mediator/Operation.hpp"
 #include "rix/msg/mediator/Status.hpp"
 #include "rix/msg/standard/UInt32.hpp"
+#include "rix/util/environment.hpp"
 #include "rix/util/log.hpp"
 
 namespace rix::core {
 
-static inline std::string DEFAULT_IP{"127.0.0.1"};
-static inline std::string RIXHUB_IP{"127.0.0.1"};
-const uint16_t RIXHUB_PORT = 48104;
+// Default RIXHub IP will first check RIX_RIXHUB_IP, then RIX_DEFAULT_IP, then fallback to loopback address.
+static inline std::string RIXHUB_IP{
+    rix::util::get_env("RIX_RIXHUB_IP", rix::util::get_env("RIX_DEFAULT_IP", "127.0.0.1"))};
+
+// Default RIXHub port is 48104, can be overridden by RIX_RIXHUB_PORT environment variable
+static inline uint16_t RIXHUB_PORT{static_cast<uint16_t>(std::stoi(rix::util::get_env("RIX_RIXHUB_PORT", "48104")))};
+
+// Default IP is loopback address, can be overridden by RIX_DEFAULT_IP environment variable
+static inline std::string DEFAULT_IP{rix::util::get_env("RIX_DEFAULT_IP", "127.0.0.1")};
 
 enum OPCODE : uint8_t {
   STATUS_RESPONSE = 0,
