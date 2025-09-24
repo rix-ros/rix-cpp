@@ -1,4 +1,4 @@
-#include "rix/core/node.hpp"
+#include "rix/rix.hpp"
 
 int main() {
   auto node = std::make_shared<rix::core::Node>(

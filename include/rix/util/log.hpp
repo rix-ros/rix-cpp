@@ -1,9 +1,5 @@
 #pragma once
 
-#ifndef RIX_UTIL_LOG_LEVEL
-#define RIX_UTIL_LOG_LEVEL 1
-#endif
-
 #include <chrono>
 #include <fstream>
 #include <iomanip>
@@ -36,8 +32,7 @@ private:
   std::vector<std::streambuf *> targets_;
 };
 
-inline TeeBuffer::TeeBuffer(std::vector<std::streambuf *> targets)
-    : targets_(targets) {}
+inline TeeBuffer::TeeBuffer(std::vector<std::streambuf *> targets) : targets_(targets) {}
 inline int TeeBuffer::overflow(int c) {
   if (c != EOF) {
     for (auto target : targets_) {
@@ -57,9 +52,7 @@ inline int TeeBuffer::sync() {
   }
   return result;
 }
-inline void TeeBuffer::add(std::streambuf *target) {
-  targets_.push_back(target);
-}
+inline void TeeBuffer::add(std::streambuf *target) { targets_.push_back(target); }
 
 /**
  * @brief TeeStream class. This is used to write data to multiple streams at
@@ -75,8 +68,7 @@ private:
   TeeBuffer tee_buffer_;
 };
 
-inline TeeStream::TeeStream(const TeeBuffer &tee_buffer)
-    : std::ostream(&tee_buffer_), tee_buffer_(tee_buffer) {}
+inline TeeStream::TeeStream(const TeeBuffer &tee_buffer) : std::ostream(&tee_buffer_), tee_buffer_(tee_buffer) {}
 
 /**
  * @brief NullBuffer class. This is used as a fake stream that writes
@@ -104,7 +96,7 @@ public:
    * to stdout/stderr.
    *
    */
-  enum Level { DEBUG, INFO, WARN, ERROR, FATAL };
+  enum Level { DEBUGV, DEBUG, INFO, WARN, ERROR, FATAL };
 
 private:
   /**
@@ -114,8 +106,7 @@ private:
    */
   inline static detail::NullBuffer null_buffer{};
   inline static std::ofstream logFile{};
-  inline static detail::TeeBuffer tee_buffer{
-      std::vector<std::streambuf *>{std::cout.rdbuf()}};
+  inline static detail::TeeBuffer tee_buffer{std::vector<std::streambuf *>{std::cout.rdbuf()}};
   inline static std::mutex mutex{};
 
   /**
@@ -141,6 +132,7 @@ private:
 
 public:
   inline static void init(const std::string &name);
+  inline static void set_log_level(Level level) { level_ = level; }
 
   /**
    * The public LogStream objects. These are used to log inforamtion at the
@@ -148,27 +140,27 @@ public:
    * level parameter, then no data will be logged when used.
    *
    */
-  inline static LogStream<Level::DEBUG> debug;
-  inline static LogStream<Level::INFO> info;
-  inline static LogStream<Level::WARN> warn;
-  inline static LogStream<Level::ERROR> error;
-  inline static LogStream<Level::FATAL> fatal;
+  inline static LogStream<Level::DEBUGV> debugv{};
+  inline static LogStream<Level::DEBUG> debug{};
+  inline static LogStream<Level::INFO> info{};
+  inline static LogStream<Level::WARN> warn{};
+  inline static LogStream<Level::ERROR> error{};
+  inline static LogStream<Level::FATAL> fatal{};
 
 private:
-  inline static const std::string reset_color = "\033[0m";
-  inline static const std::string bold = "\x1b[1m";
-  inline static const std::string unbold = "\x1b[22m";
-  inline static std::string name;
-  inline static bool is_init{false};
+  inline static const std::string reset_color_ = "\033[0m";
+  inline static const std::string bold_ = "\x1b[1m";
+  inline static const std::string unbold_ = "\x1b[22m";
+  inline static std::string name_{};
+  inline static bool is_init_{false};
+  inline static Level level_{Level::INFO};
 
   inline static std::string get_color_code(Level level);
   inline static std::string get_level_string(Level level);
 };
 
-template <Log::Level level>
-template <typename T>
-inline std::ostream &Log::LogStream<level>::operator<<(const T &val) {
-  if (level < RIX_UTIL_LOG_LEVEL) {
+template <Log::Level level> template <typename T> inline std::ostream &Log::LogStream<level>::operator<<(const T &val) {
+  if (level < level_) {
     return null_stream;
   }
 
@@ -177,28 +169,25 @@ inline std::ostream &Log::LogStream<level>::operator<<(const T &val) {
   return tee_stream << header << val;
 }
 
-template <Log::Level level>
-inline std::string Log::LogStream<level>::create_header(const Time &t) {
+template <Log::Level level> inline std::string Log::LogStream<level>::create_header(const Time &t) {
   std::stringstream ss;
 
   // Date field
   ss << "[" << t.to_string() << "] ";
 
   // Level field
-  std::string level_str = "[" + bold + get_color_code(level) +
-                          get_level_string(level) + reset_color + "] ";
+  std::string level_str = "[" + bold_ + get_color_code(level) + get_level_string(level) + reset_color_ + "] ";
   ss << std::setw(21) << std::left << level_str;
 
   // Name field
-  if (is_init) {
-    ss << "[" << bold << name << unbold << "] ";
+  if (is_init_) {
+    ss << "[" << bold_ << name_ << unbold_ << "] ";
   }
 
   return ss.str();
 }
 
-template <Log::Level level>
-inline std::string Log::LogStream<level>::create_plain_header(const Time &t) {
+template <Log::Level level> inline std::string Log::LogStream<level>::create_plain_header(const Time &t) {
   std::stringstream ss;
 
   // Date field
@@ -209,23 +198,25 @@ inline std::string Log::LogStream<level>::create_plain_header(const Time &t) {
   ss << std::setw(8) << std::left << level_str;
 
   // Name field
-  if (is_init) {
-    ss << "[" << name << "] ";
+  if (is_init_) {
+    ss << "[" << name_ << "] ";
   }
 
   return ss.str();
 }
 
 inline void Log::init(const std::string &name) {
-  if (is_init) {
+  if (is_init_) {
     return;
   }
-  Log::name = name;
-  is_init = true;
+  name_ = name;
+  is_init_ = true;
 }
 
 inline std::string Log::get_color_code(Level level) {
   switch (level) {
+  case Level::DEBUGV:
+    return "\033[34m"; // Blue
   case Level::DEBUG:
     return "\033[36m"; // Cyan
   case Level::INFO:
@@ -243,6 +234,8 @@ inline std::string Log::get_color_code(Level level) {
 
 inline std::string Log::get_level_string(Level level) {
   switch (level) {
+  case Level::DEBUGV:
+    return "DEBUGV"; // Blue
   case Level::DEBUG:
     return "DEBUG"; // Cyan
   case Level::INFO:

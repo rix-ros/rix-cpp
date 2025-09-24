@@ -4,30 +4,54 @@
 
 using namespace rix::util;
 using namespace rix::core;
+using namespace rix::ipc;
+
+const std::string NAME = "simple_service_client";
+double RATE = 1.0; // Hz
 
 int main(int argc, char **argv) {
-  Node node("simple_service_client",
-            rix::ipc::Endpoint("127.0.0.1", rix::core::RIXHUB_PORT));
-  if (!node.ok()) {
-    Log::error << "Failed to initialize node." << std::endl;
+  Log::init(NAME);
+
+  auto parser = ArgumentParser(NAME, "A simple publisher example.");
+  parser.add<std::string>("rixhub_ip", "The IP address of the RIXHub server.", RIXHUB_IP);
+  parser.add<std::string>("default_ip", "The default IP address for servers to bind to.", DEFAULT_IP);
+  parser.add<double>("rate", "The publish rate in Hz.", 'r', RATE);
+
+  if (!parser.parse(argc, argv)) {
+    Log::error << "Failed to parse arguments." << std::endl;
     return 1;
   }
 
-  auto srv_cli =
-      node.create_service_client<rix::msg::standard::UInt32,
-                                 rix::msg::standard::String>("/alphabet");
+  parser.get<std::string>("rixhub_ip", RIXHUB_IP);
+  parser.get<std::string>("default_ip", DEFAULT_IP);
+  parser.get<double>("rate", RATE);
+
+  Node node("simple_service_client");
+  if (!node.ok()) {
+    Log::error << "Failed to create node." << std::endl;
+    return 1;
+  }
+
+  auto srv_cli = node.create_service_client<rix::msg::standard::UInt32, rix::msg::standard::String>("/alphabet");
   if (!srv_cli->ok()) {
     Log::error << "Failed to create service client." << std::endl;
     return 1;
   }
 
-  Rate rate(1);
-  for (uint32_t i = 0; i < 26 && node.ok(); i++) {
+  uint32_t i = 0;
+  auto timer = node.create_timer(Duration(1.0 / RATE), [srv_cli, &i](const rix::core::Timer::Event &) {
     rix::msg::standard::UInt32 req;
     req.data = i;
     rix::msg::standard::String res;
     srv_cli->call(req, res);
     Log::info << "Received response: " << res.data << std::endl;
-    rate.sleep();
+    i++;
+  });
+  if (!timer->ok()) {
+    Log::error << "Failed to create timer." << std::endl;
+    return 1;
   }
+
+  auto sig = create_signal(SIGINT);
+  node.spin(std::move(sig));
 }

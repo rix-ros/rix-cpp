@@ -10,6 +10,8 @@ public:
   Spinner() = default;
   Spinner(const Spinner &other) = default;
   Spinner &operator=(const Spinner &other) = default;
+  Spinner(Spinner &&other) = default;
+  Spinner &operator=(Spinner &&other) = default;
   virtual ~Spinner() = default;
 
   void spin(std::unique_ptr<rix::ipc::GenericSignal> signal) {

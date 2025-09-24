@@ -2,11 +2,9 @@
 
 namespace rix::core {
 
-Timer::Timer(const rix::util::Duration &duration, Callback callback)
-    : duration_(duration), callback_(callback) {
+Timer::Timer(const rix::util::Duration &duration, Callback callback) : duration_(duration), callback_(callback) {
   event_.current_real = rix::util::Time::now();
-  event_.current_expected = event_.last_expected = event_.last_real =
-      rix::util::Time(0.0);
+  event_.current_expected = event_.last_expected = event_.last_real = rix::util::Time(0.0);
   event_.last_duration = rix::util::Duration(0.0);
 }
 
