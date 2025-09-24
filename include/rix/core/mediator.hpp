@@ -25,7 +25,8 @@ namespace rix::core {
 
 class Mediator : public Spinner {
 public:
-  Mediator(const rix::ipc::Endpoint &rixhub_endpoint, SocketFactory socket_factory = rix::ipc::create_socket);
+  Mediator(const rix::ipc::Endpoint &rixhub_endpoint = rix::ipc::Endpoint(DEFAULT_IP, RIXHUB_PORT),
+           SocketFactory socket_factory = rix::ipc::create_socket);
   ~Mediator();
 
   Mediator(const Mediator &) = delete;

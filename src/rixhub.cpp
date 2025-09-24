@@ -4,29 +4,29 @@
 #include "rix/ipc/signal.hpp"
 #include "rix/rix.hpp"
 
+using namespace rix::core;
+using namespace rix::ipc;
+using namespace rix::util;
+
 int main(int argc, char **argv) {
-  auto parser = rix::util::ArgumentParser(
-      "rixhub", "The RIXHub is a central mediator for RIX nodes to register with and discover each other.");
-  parser.add_parser<rix::ipc::Endpoint>(rix::core::parse_endpoint);
-  parser.add<rix::ipc::Endpoint>("endpoint", "The RIXHub endpoint.", 'e', rix::ipc::Endpoint("127.0.0.1", 48104));
+  auto parser = ArgumentParser("rixhub", "The RIXHub is a central mediator for RIX nodes to discover each other.");
+  parser.add<std::string>("default_ip", "The default IP address for servers to bind to.", DEFAULT_IP);
+
   if (!parser.parse(argc, argv)) {
-    rix::util::Log::error << "Failed to parse arguments.\n" << parser.help() << std::endl;
+    Log::error << "Failed to parse arguments." << std::endl;
     return 1;
   }
 
-  rix::ipc::Endpoint endpoint;
-  if (!parser.get<rix::ipc::Endpoint>("endpoint", endpoint)) {
-    rix::util::Log::error << "Failed to get endpoint argument." << std::endl;
-    return 1;
-  }
+  Endpoint endpoint(DEFAULT_IP, RIXHUB_PORT);
+  parser.get<std::string>("default_ip", endpoint.address);
 
-  auto mediator = std::make_shared<rix::core::Mediator>(endpoint);
+  auto mediator = std::make_shared<Mediator>(endpoint);
   if (!mediator->ok()) {
-    rix::util::Log::error << "Failed to create mediator." << std::endl;
+    Log::error << "Failed to create mediator." << std::endl;
     return 1;
   }
 
-  auto sig = rix::ipc::create_signal(SIGINT);
+  auto sig = create_signal(SIGINT);
   mediator->spin(std::move(sig));
 
   return 0;

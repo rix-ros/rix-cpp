@@ -13,18 +13,18 @@
 #include "rix/core/timer.hpp"
 #include "rix/ipc/signal.hpp"
 #include "rix/ipc/socket.hpp"
-#include "rix/msg/standard/Void.hpp"
 #include "rix/msg/mediator/NodeInfo.hpp"
 #include "rix/msg/mediator/ParamInfo.hpp"
 #include "rix/msg/mediator/SystemInfo.hpp"
 #include "rix/msg/standard/UInt64.hpp"
+#include "rix/msg/standard/Void.hpp"
 #include "rix/util/log.hpp"
 
 namespace rix::core {
 
 class Node : public Spinner {
 public:
-  Node(const std::string &name, const rix::ipc::Endpoint &rixhub_endpoint,
+  Node(const std::string &name, const rix::ipc::Endpoint &rixhub_endpoint = rix::ipc::Endpoint(DEFAULT_IP, RIXHUB_PORT),
        SocketFactory socket_factory = rix::ipc::create_socket);
 
   Node(const Node &) = delete;
@@ -36,12 +36,11 @@ public:
 
   template <typename TMsg>
   std::shared_ptr<Publisher> create_publisher(const std::string &topic,
-                                              const rix::ipc::Endpoint &endpoint = rix::ipc::Endpoint("127.0.0.1", 0));
+                                              const rix::ipc::Endpoint &endpoint = rix::ipc::Endpoint(DEFAULT_IP, 0));
 
   template <typename TMsg>
   std::shared_ptr<Subscriber> create_subscriber(const std::string &topic, std::function<void(const TMsg &)> callback,
-                                                const rix::ipc::Endpoint &endpoint = rix::ipc::Endpoint("127.0.0.1",
-                                                                                                        0));
+                                                const rix::ipc::Endpoint &endpoint = rix::ipc::Endpoint(DEFAULT_IP, 0));
 
   std::shared_ptr<Timer> create_timer(const rix::util::Duration &d, Timer::Callback callback);
 
@@ -51,7 +50,7 @@ public:
   template <typename TRequest, typename TResponse>
   std::shared_ptr<Service> create_service(const std::string &service,
                                           std::function<void(const TRequest &, TResponse &)> callback,
-                                          const rix::ipc::Endpoint &endpoint = rix::ipc::Endpoint("127.0.0.1", 0));
+                                          const rix::ipc::Endpoint &endpoint = rix::ipc::Endpoint(DEFAULT_IP, 0));
 
   bool ok() const override;
   void shutdown() override;

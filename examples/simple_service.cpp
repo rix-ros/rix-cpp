@@ -2,15 +2,19 @@
 #include "rix/msg/standard/UInt32.hpp"
 #include "rix/rix.hpp"
 
-const std::string name = "simple_service";
+using namespace rix::core;
+using namespace rix::util;
+using namespace rix::ipc;
+
+const std::string NAME = "simple_service";
+int PORT = 8002;
 
 class SimpleService : public rix::core::Node {
 public:
-  SimpleService(const rix::ipc::Endpoint &rixhub_endpoint, const rix::ipc::Endpoint &service_endpoint)
-      : Node(name, rixhub_endpoint) {
+  SimpleService() : Node(NAME) {
     auto srv = create_service<rix::msg::standard::UInt32, rix::msg::standard::String>(
         "/alphabet", std::bind(&SimpleService::callback, this, std::placeholders::_1, std::placeholders::_2),
-        service_endpoint);
+        Endpoint(DEFAULT_IP, PORT));
     if (!srv->ok()) {
       rix::util::Log::error << "Failed to create service." << std::endl;
       shutdown();
@@ -25,37 +29,29 @@ private:
 };
 
 int main(int argc, char **argv) {
-  rix::util::Log::init(name);
+  rix::util::Log::init(NAME);
 
-  auto parser = rix::util::ArgumentParser(name, "A simple service example.");
-  parser.add_parser<rix::ipc::Endpoint>(rix::core::parse_endpoint);
-  parser.add<rix::ipc::Endpoint>("rixhub", "The RixHub endpoint.", rix::ipc::Endpoint("127.0.0.1", 48104));
-  parser.add<rix::ipc::Endpoint>("srv_endpoint", "The service endpoint.", 'e', rix::ipc::Endpoint("127.0.0.1", 8002));
+  auto parser = ArgumentParser(NAME, "A simple subscriber example.");
+  parser.add<std::string>("rixhub_ip", "The IP address of the RIXHub server.", RIXHUB_IP);
+  parser.add<std::string>("default_ip", "The default IP address for servers to bind to.", DEFAULT_IP);
+  parser.add<int>("port", "The port for the subscriber server.", 'p', PORT);
 
   if (!parser.parse(argc, argv)) {
-    rix::util::Log::error << "Failed to parse arguments." << std::endl;
+    Log::error << "Failed to parse arguments." << std::endl;
     return 1;
   }
 
-  rix::ipc::Endpoint rixhub_ep;
-  if (!parser.get<rix::ipc::Endpoint>("rixhub", rixhub_ep)) {
-    rix::util::Log::error << "Failed to get rixhub argument." << std::endl;
-    return 1;
-  }
+  parser.get<std::string>("rixhub_ip", RIXHUB_IP);
+  parser.get<std::string>("default_ip", DEFAULT_IP);
+  parser.get<int>("port", PORT);
 
-  rix::ipc::Endpoint srv_ep;
-  if (!parser.get<rix::ipc::Endpoint>("srv_endpoint", srv_ep)) {
-    rix::util::Log::error << "Failed to get srv_endpoint argument." << std::endl;
-    return 1;
-  }
-
-  auto simple_service = std::make_shared<SimpleService>(rixhub_ep, srv_ep);
+  auto simple_service = std::make_shared<SimpleService>();
   if (!simple_service->ok()) {
     rix::util::Log::error << "Failed to create simple_service." << std::endl;
     return 1;
   }
 
-  auto sig = rix::ipc::create_signal(SIGINT);
+  auto sig = create_signal(SIGINT);
   simple_service->spin(std::move(sig));
 
   return 0;

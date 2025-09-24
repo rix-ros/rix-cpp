@@ -155,8 +155,8 @@ bool parse_vector(ArgumentParser::ParserFunction parser, const std::string &str,
 
 } // namespace detail
 
-ArgumentParser::ArgumentParser(const std::string &name, const std::string &description)
-    : name_(name), description_(description) {
+ArgumentParser::ArgumentParser(const std::string &name, const std::string &description, bool disable_help)
+    : name_(name), description_(description), disable_help_(disable_help) {
   // Add default parsers for built-in types
   parsers_[typeid(int8_t)] = detail::parse_int8;
   parsers_[typeid(std::vector<int8_t>)] =
@@ -202,14 +202,23 @@ ArgumentParser::ArgumentParser(const std::string &name, const std::string &descr
   parsers_[typeid(std::vector<std::string>)] =
       std::bind(detail::parse_vector, detail::parse_string, std::placeholders::_1, std::placeholders::_2);
 
-  parsers_[typeid(bool)] = detail::parse_bool;
+  // parsers_[typeid(bool)] = detail::parse_bool;
+  // No parser for bool because it is a flag and does not take a value
   parsers_[typeid(std::vector<bool>)] =
       std::bind(detail::parse_vector, detail::parse_bool, std::placeholders::_1, std::placeholders::_2);
+
+  if (disable_help_) {
+    return;
+  }
+
+  // Add default help argument
+  add(Arg("help", "Show this help message and exit.", 'h', false, false));
 }
 
 ArgumentParser::Arg::Arg(const std::string &name, const std::string &description, char short_name,
                          const Value &default_value, bool required)
-    : name(name), description(description), value(default_value), required(required), short_name(short_name) {
+    : name(name), description(description), default_value(default_value), value(default_value), required(required),
+      short_name(short_name) {
   if (name.size() < 2 || !detail::isalnum(name)) {
     throw std::invalid_argument("Name must be at least 2 alphanumeric characters.");
   }
@@ -225,6 +234,12 @@ void ArgumentParser::add(const Arg &arg) {
 }
 
 bool ArgumentParser::parse_arg(char **argv, int argc, int &offset, Arg &arg) {
+  // If the argument is a bool, then it is a flag and does not take a value
+  if (arg.value.type() == typeid(bool)) {
+    arg.value = !std::any_cast<bool>(arg.value); // Invert the default value
+    return true;
+  }
+
   auto it = parsers_.find(arg.value.type());
   if (it == parsers_.end()) {
     return false;
@@ -285,28 +300,165 @@ bool ArgumentParser::parse(int argc, char **argv) {
     }
   }
 
+  // If help was requested, print help and return false
+  if (disable_help_) {
+    return true;
+  }
+  auto it = args_.find("help");
+  if (it != args_.end()) {
+    bool help_value = false;
+    if (it->second.value.type() == typeid(bool)) {
+      help_value = std::any_cast<bool>(it->second.value);
+    }
+    if (help_value) {
+      std::cout << help() << std::endl;
+      return false;
+    }
+  }
   return true;
 }
 
-std::string ArgumentParser::help() {
-  std::string usage = "Usage: " + name_;
-  std::string opt_usage;
-  std::string description = "\n\n" + description_ + "\n\nArguments:\n";
-  std::string opt_description;
-  for (const auto &arg : required_arg_names_) {
-    const auto &argInfo = args_.at(arg);
-    usage += " " + argInfo.name;
-    description += "  " + argInfo.name + " - " + argInfo.description + "\n";
+// clang-format off
+void ArgumentParser::detect_help_column_widths(size_t &name_width, size_t &short_width, size_t &desc_width,
+                                               size_t &default_width) {
+  // First, scan all arguments to determine max width for each column
+  name_width = std::string("Name").size();
+  short_width = std::string("Short").size();
+  desc_width = std::string("Description").size();
+  default_width = std::string("Default").size();
+
+  // Required arguments
+  for (const auto &arg_name : required_arg_names_) {
+    const auto &arg = args_.at(arg_name);
+    name_width = std::max(name_width, arg.name.size());
+    short_width = std::max(short_width, arg.short_name == '\0' ? 0ul : 1ul);
+    desc_width = std::max(desc_width, arg.description.size());
+    default_width = std::max(default_width, std::string("(required)").size());
   }
+
+  // Optional arguments
   for (const auto &pair : args_) {
     const auto &arg = pair.second;
     if (!arg.required) {
-      opt_usage += " [--" + arg.name + " (-" + arg.short_name + ")]";
-      opt_description += "  --" + arg.name + " (-" + arg.short_name + ")" + " - " + arg.description + "\n";
+      std::string name_str = "--" + arg.name;
+      name_width = std::max(name_width, name_str.size());
+      short_width = std::max(short_width, arg.short_name == '\0' ? 0ul : 2ul);
+      desc_width = std::max(desc_width, arg.description.size());
+
+      std::string default_str;
+      if (arg.default_value.has_value()) {
+        try {
+          if (arg.default_value.type() == typeid(std::string)) {
+            default_str = std::any_cast<std::string>(arg.default_value);
+          } else if (arg.default_value.type() == typeid(int)) {
+            default_str = std::to_string(std::any_cast<int>(arg.default_value));
+          } else if (arg.default_value.type() == typeid(double)) {
+            default_str = std::to_string(std::any_cast<double>(arg.default_value));
+          } else if (arg.default_value.type() == typeid(bool)) {
+            default_str = std::any_cast<bool>(arg.default_value) ? "true" : "false";
+          } else {
+            default_str = "<value>";
+          }
+        } catch (const std::bad_any_cast &) {
+          default_str = "<value>";
+        }
+      }
+      default_width = std::max(default_width, default_str.size());
     }
   }
-  return usage + opt_usage + description + opt_description;
+
+  // Add padding
+  name_width += 2;
+  short_width += 2;
+  desc_width += 2;
+  default_width += 2;
 }
+
+std::string ArgumentParser::help() {
+  // First, scan all arguments to determine max width for each column
+  size_t name_width, short_width, desc_width, default_width;
+  detect_help_column_widths(name_width, short_width, desc_width, default_width);
+
+  std::stringstream ss;
+  ss << "Usage: " << name_;
+
+  // Required arguments
+  for (const auto &arg_name : required_arg_names_) {
+    const auto &arg = args_.at(arg_name);
+    ss << " " << arg.name;
+  }
+
+  // Optional arguments
+  for (const auto &pair : args_) {
+    const auto &arg = pair.second;
+    if (!arg.required) {
+      ss << " [--" << arg.name;
+      if (arg.short_name != '\0') {
+        ss << " (-" << arg.short_name << ")";
+      }
+      if (arg.value.type() != typeid(bool)) {
+        ss << " <value>";
+      }
+      ss << "]";
+    }
+  }
+
+  ss << "\n\n" << description_ << "\n\nArguments\n";
+  ss << std::string(name_width + short_width + desc_width + default_width, '-') << "\n";
+  ss << std::left
+     << std::setw(name_width) << "Name"
+     << std::setw(short_width) << "Short"
+     << std::setw(desc_width) << "Description"
+     << std::setw(default_width) << "Default"
+     << "\n";
+  ss << std::string(name_width + short_width + desc_width + default_width, '-') << "\n";
+
+  // Required arguments description
+  for (const auto &arg_name : required_arg_names_) {
+    const auto &arg = args_.at(arg_name);
+    ss << std::left
+       << std::setw(name_width) << arg.name
+       << std::setw(short_width) << (arg.short_name == '\0' ? "" : std::string(1, arg.short_name))
+       << std::setw(desc_width) << arg.description
+       << std::setw(default_width) << "(required)"
+       << "\n";
+  }
+
+  // Optional arguments description
+  for (const auto &pair : args_) {
+    const auto &arg = pair.second;
+    if (!arg.required) {
+      std::string default_str;
+      if (arg.default_value.has_value()) {
+        try {
+          if (arg.default_value.type() == typeid(std::string)) {
+            default_str = std::any_cast<std::string>(arg.default_value);
+          } else if (arg.default_value.type() == typeid(int)) {
+            default_str = std::to_string(std::any_cast<int>(arg.default_value));
+          } else if (arg.default_value.type() == typeid(double)) {
+            default_str = std::to_string(std::any_cast<double>(arg.default_value));
+          } else if (arg.default_value.type() == typeid(bool)) {
+            default_str = std::any_cast<bool>(arg.default_value) ? "true" : "false";
+          } else {
+            default_str = "<value>";
+          }
+        } catch (const std::bad_any_cast &) {
+          default_str = "<value>";
+        }
+      }
+
+      ss << std::left
+         << std::setw(name_width) << ("--" + arg.name)
+         << std::setw(short_width) << (arg.short_name == '\0' ? "" : ("-" + std::string(1, arg.short_name)))
+         << std::setw(desc_width) << arg.description
+         << std::setw(default_width) << (default_str.empty() ? "" : default_str)
+         << "\n";
+    }
+  }
+
+  return ss.str();
+}
+// clang-format on
 
 } // namespace util
 } // namespace rix

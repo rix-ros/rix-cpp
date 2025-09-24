@@ -3,28 +3,32 @@
 
 #include <sstream>
 
-const std::string name = "simple_subscriber";
+using namespace rix::core;
+using namespace rix::util;
+using namespace rix::ipc;
+
+const std::string NAME = "simple_subscriber";
+int PORT = 8000;
 
 class SimpleSubscriber : public rix::core::Node {
 public:
   // Initialize the Node with a name and the RixHub endpoint
-  SimpleSubscriber(const rix::ipc::Endpoint &rixhub_endpoint, const rix::ipc::Endpoint &subscriber_endpoint)
-      : Node(name, rixhub_endpoint) {
+  SimpleSubscriber() : Node(NAME) {
 
     // If the Node failed to initialize, then ok() will return false
     if (!ok()) {
-      rix::util::Log::error << "Failed to create node." << std::endl;
+      Log::error << "Failed to create node." << std::endl;
       shutdown();
       return;
     }
 
     // Create a subscriber on topic /chatter with message type Header
     auto sub = create_subscriber<rix::msg::standard::Header>(
-        "/chatter", std::bind(&SimpleSubscriber::callback, this, std::placeholders::_1), subscriber_endpoint);
+        "/chatter", std::bind(&SimpleSubscriber::callback, this, std::placeholders::_1), Endpoint(DEFAULT_IP, PORT));
 
     // If the subscriber failed to initialize, then ok() will return false
     if (!sub->ok()) {
-      rix::util::Log::error << "Failed to create subscriber." << std::endl;
+      Log::error << "Failed to create subscriber." << std::endl;
       shutdown();
       return;
     }
@@ -32,68 +36,40 @@ public:
 
 private:
   void callback(const rix::msg::standard::Header &msg) {
-    static uint32_t prev_seq = 0;
-    static size_t msg_count = 0;
-    static size_t lost_count = 0;
-
-    msg_count++;
-
-    if (prev_seq == 0) {
-      prev_seq = msg.seq;
-      return;
-    }
-
-    if (msg.seq > prev_seq + 1) {
-      lost_count += (msg.seq - prev_seq - 1);
-      rix::util::Log::warn << "Lost " << lost_count << " / " << msg_count << " messages "
-                           << (lost_count * 100.0 / msg_count) << "%." << std::endl;
-    }
-
-    prev_seq = msg.seq;
-
-    // std::stringstream ss;
-    // ss << "Received message: \n"
-    //    << "seq: " << msg.seq << "\n"
-    //    << "stamp: " << msg.stamp.sec << "." << msg.stamp.nsec << "\n"
-    //    << "frame_id: " << msg.frame_id << "\n";
-    // rix::util::Log::info << ss.str() << std::endl;
+    std::stringstream ss;
+    ss << "Received message: \n"
+       << "seq: " << msg.seq << "\n"
+       << "stamp: " << msg.stamp.sec << "." << msg.stamp.nsec << "\n"
+       << "frame_id: " << msg.frame_id << "\n";
+    Log::info << ss.str() << std::endl;
   }
 };
 
 int main(int argc, char **argv) {
-  rix::util::Log::init(name);
-  rix::util::Log::set_log_level(rix::util::Log::Level::DEBUG);
+  Log::init(NAME);
+  Log::set_log_level(Log::Level::DEBUG);
 
-  auto parser = rix::util::ArgumentParser(name, "A simple subscriber example.");
-  parser.add_parser<rix::ipc::Endpoint>(rix::core::parse_endpoint);
-  parser.add<rix::ipc::Endpoint>("rixhub", "The RixHub endpoint.", rix::ipc::Endpoint("127.0.0.1", 48104));
-  parser.add<rix::ipc::Endpoint>("sub_endpoint", "The subscriber endpoint.", 'e',
-                                 rix::ipc::Endpoint("127.0.0.1", 8000));
+  auto parser = ArgumentParser(NAME, "A simple subscriber example.");
+  parser.add<std::string>("rixhub_ip", "The IP address of the RIXHub server.", RIXHUB_IP);
+  parser.add<std::string>("default_ip", "The default IP address for servers to bind to.", DEFAULT_IP);
+  parser.add<int>("port", "The port for the subscriber server.", 'p', PORT);
 
   if (!parser.parse(argc, argv)) {
-    rix::util::Log::error << "Failed to parse arguments." << std::endl;
+    Log::error << "Failed to parse arguments." << std::endl;
     return 1;
   }
 
-  rix::ipc::Endpoint rixhub_ep;
-  if (!parser.get<rix::ipc::Endpoint>("rixhub", rixhub_ep)) {
-    rix::util::Log::error << "Failed to get rixhub argument." << std::endl;
-    return 1;
-  }
+  parser.get<std::string>("rixhub_ip", RIXHUB_IP);
+  parser.get<std::string>("default_ip", DEFAULT_IP);
+  parser.get<int>("port", PORT);
 
-  rix::ipc::Endpoint sub_ep;
-  if (!parser.get<rix::ipc::Endpoint>("sub_endpoint", sub_ep)) {
-    rix::util::Log::error << "Failed to get sub_endpoint argument." << std::endl;
-    return 1;
-  }
-
-  auto simple_subscriber = std::make_shared<SimpleSubscriber>(rixhub_ep, sub_ep);
+  auto simple_subscriber = std::make_shared<SimpleSubscriber>();
   if (!simple_subscriber->ok()) {
-    rix::util::Log::error << "Failed to create simple_subscriber." << std::endl;
+    Log::error << "Failed to create simple_subscriber." << std::endl;
     return 1;
   }
 
-  auto sig = rix::ipc::create_signal(SIGINT);
+  auto sig = create_signal(SIGINT);
   simple_subscriber->spin(std::move(sig));
 
   return 0;

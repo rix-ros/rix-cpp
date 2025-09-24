@@ -19,6 +19,8 @@
 
 namespace rix::core {
 
+static inline std::string DEFAULT_IP{"127.0.0.1"};
+static inline std::string RIXHUB_IP{"127.0.0.1"};
 const uint16_t RIXHUB_PORT = 48104;
 
 enum OPCODE : uint8_t {

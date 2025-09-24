@@ -4,35 +4,29 @@
 
 using namespace rix::util;
 using namespace rix::core;
+using namespace rix::ipc;
 
-const std::string name = "simple_service_client";
+const std::string NAME = "simple_service_client";
+double RATE = 1.0; // Hz
 
 int main(int argc, char **argv) {
-  rix::util::Log::init(name);
+  Log::init(NAME);
 
-  auto parser = rix::util::ArgumentParser(name, "A simple service example.");
-  parser.add_parser<rix::ipc::Endpoint>(rix::core::parse_endpoint);
-  parser.add<rix::ipc::Endpoint>("rixhub", "The RixHub endpoint.", rix::ipc::Endpoint("127.0.0.1", 48104));
-  parser.add<double>("rate", "The call rate in Hz.", 'r', 1);
+  auto parser = ArgumentParser(NAME, "A simple publisher example.");
+  parser.add<std::string>("rixhub_ip", "The IP address of the RIXHub server.", RIXHUB_IP);
+  parser.add<std::string>("default_ip", "The default IP address for servers to bind to.", DEFAULT_IP);
+  parser.add<double>("rate", "The publish rate in Hz.", 'r', RATE);
 
   if (!parser.parse(argc, argv)) {
-    rix::util::Log::error << "Failed to parse arguments." << std::endl;
+    Log::error << "Failed to parse arguments." << std::endl;
     return 1;
   }
 
-  rix::ipc::Endpoint rixhub_ep;
-  if (!parser.get<rix::ipc::Endpoint>("rixhub", rixhub_ep)) {
-    rix::util::Log::error << "Failed to get rixhub argument." << std::endl;
-    return 1;
-  }
+  parser.get<std::string>("rixhub_ip", RIXHUB_IP);
+  parser.get<std::string>("default_ip", DEFAULT_IP);
+  parser.get<double>("rate", RATE);
 
-  double rate;
-  if (!parser.get<double>("rate", rate)) {
-    rix::util::Log::error << "Failed to get rate argument." << std::endl;
-    return 1;
-  }
-
-  Node node("simple_service_client", rixhub_ep);
+  Node node("simple_service_client");
   if (!node.ok()) {
     Log::error << "Failed to create node." << std::endl;
     return 1;
@@ -44,13 +38,20 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  Rate r(rate);
-  for (uint32_t i = 0; i < 26 && node.ok(); i++) {
+  uint32_t i = 0;
+  auto timer = node.create_timer(Duration(1.0 / RATE), [srv_cli, &i](const rix::core::Timer::Event &) {
     rix::msg::standard::UInt32 req;
     req.data = i;
     rix::msg::standard::String res;
     srv_cli->call(req, res);
     Log::info << "Received response: " << res.data << std::endl;
-    r.sleep();
+    i++;
+  });
+  if (!timer->ok()) {
+    Log::error << "Failed to create timer." << std::endl;
+    return 1;
   }
+
+  auto sig = create_signal(SIGINT);
+  node.spin(std::move(sig));
 }

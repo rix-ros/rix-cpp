@@ -2,14 +2,16 @@
 
 #include <any>
 #include <cctype>
+#include <cstdint>
 #include <functional>
+#include <iomanip>
 #include <iostream>
 #include <map>
 #include <set>
+#include <sstream>
 #include <string>
 #include <typeindex>
 #include <vector>
-#include <cstdint>
 
 namespace rix::util {
 
@@ -38,6 +40,7 @@ private:
 
     std::string name{};        ///< long name (--<name>), must be alphanumeric and greater than 2 characters
     std::string description{}; ///< description of the argument
+    Value default_value{};     ///< default value of the argument
     Value value{};             ///< value of the argument
     bool required{};           ///< whether the argument is required
     char short_name{};         ///< short name (single character) (-<short_name>), must be alphanumeric
@@ -52,7 +55,7 @@ public:
    * @param name The name of the program.
    * @param description The description of the program.
    */
-  ArgumentParser(const std::string &name, const std::string &description);
+  ArgumentParser(const std::string &name, const std::string &description, bool disable_help = false);
 
   /**
    * @brief Adds an argument to the parser.
@@ -98,6 +101,10 @@ private:
   std::map<std::string, Arg> args_{};
   ///< custom parsers for user-defined types
   std::map<std::type_index, ParserFunction> parsers_{};
+  ///< disable automatic help argument
+  bool disable_help_{false};
+
+  void detect_help_column_widths(size_t &name_width, size_t &short_width, size_t &desc_width, size_t &default_width);
 };
 
 template <typename T> bool ArgumentParser::get(const std::string &name, T &value) {
