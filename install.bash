@@ -30,7 +30,6 @@ cd ..
 echo "rix-cpp installed."
 
 echo "Sourcing setup.bash ..."
-mkdir -p $HOME/.rix
 cp setup.bash $HOME/.rix/setup.bash
 source $HOME/.rix/setup.bash
 

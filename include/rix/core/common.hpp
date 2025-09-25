@@ -12,11 +12,12 @@
 
 #include "rix/ipc/endpoint.hpp"
 #include "rix/ipc/socket.hpp"
-#include "rix/msg/mediator/Operation.hpp"
-#include "rix/msg/mediator/Status.hpp"
-#include "rix/msg/standard/UInt32.hpp"
 #include "rix/util/environment.hpp"
 #include "rix/util/log.hpp"
+
+#ifdef RIX_MULTITHREADED
+#include <thread>
+#endif
 
 namespace rix::core {
 

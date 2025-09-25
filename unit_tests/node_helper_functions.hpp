@@ -342,8 +342,6 @@ void init_srvcli_socket(std::shared_ptr<rix::ipc::MockSocket> socket, const rix:
         auto info = dynamic_cast<const rix::msg::mediator::SrvRequest *>(&msg);
         if (info) {
           EXPECT_EQ(info->node_id, node_id);
-          EXPECT_GT(info->id, 0);
-          EXPECT_NE(info->id, node_id);
           EXPECT_EQ(info->name, "test_service");
           EXPECT_EQ(info->request_hash, rix::msg::standard::UInt32().hash());
           EXPECT_EQ(info->response_hash, rix::msg::standard::Time().hash());

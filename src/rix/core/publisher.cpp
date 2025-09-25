@@ -38,6 +38,10 @@ Publisher::Publisher(const rix::msg::mediator::PubInfo &info, SocketFactory fact
   registered_flag_ = true;
 
   rix::util::Log::debug << "Publisher created on topic \"" << info_.topic_info.name << "\"." << std::endl;
+
+#ifdef RIX_MULTITHREADED
+  spin_thread_ = std::thread([this]() { this->spin(); });
+#endif
 }
 
 Publisher::~Publisher() {
@@ -49,6 +53,13 @@ Publisher::~Publisher() {
     }
   }
   rix::util::Log::debug << "Publisher on topic \"" << info_.topic_info.name << "\" destroyed." << std::endl;
+
+#ifdef RIX_MULTITHREADED
+  shutdown();
+  if (spin_thread_.joinable()) {
+    spin_thread_.join();
+  }
+#endif
 }
 
 bool Publisher::ok() const { return !shutdown_flag_; }
@@ -63,12 +74,16 @@ void Publisher::publish(const rix::msg::Message &msg) {
     return;
   }
 
+  std::lock_guard<std::mutex> lock(connections_mutex_);
+  if (connections_.empty()) {
+    return;
+  }
+
   std::vector<std::shared_ptr<rix::ipc::GenericSocket>> writable;
   std::vector<std::shared_ptr<rix::ipc::GenericSocket>> exceptional;
   rix::ipc::poll(writable, exceptional, connections_.begin(), connections_.end(), rix::util::Duration(0.0),
                  rix::ipc::SelectFlag::WRITE);
 
-  std::lock_guard<std::mutex> lock(connections_mutex_);
   // Remove any clients that have exceptions
   for (const auto &conn : exceptional) {
     connections_.erase(conn);

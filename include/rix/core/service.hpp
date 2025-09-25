@@ -46,6 +46,10 @@ private:
   std::shared_ptr<rix::msg::Message> request_instance_;
   std::shared_ptr<rix::msg::Message> response_instance_;
 
+#ifdef RIX_MULTITHREADED
+  std::thread spin_thread_;
+#endif
+
   Service(const rix::msg::mediator::SrvInfo &info, SocketFactory socket_factory,
           const rix::ipc::Endpoint &rixhub_endpoint);
 

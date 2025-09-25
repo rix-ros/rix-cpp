@@ -24,7 +24,7 @@ bool Mediator::ok() const { return !shutdown_flag_; }
 void Mediator::shutdown() { shutdown_flag_ = true; }
 
 void Mediator::spin_once() {
-  if (!server_->wait_readable(rix::util::Duration(0.0))) {
+  if (!server_->wait_readable(rix::util::Duration(1.0))) {
     return;
   }
 

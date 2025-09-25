@@ -18,7 +18,6 @@ public:
     // If the Node failed to initialize, then ok() will return false
     if (!ok()) {
       Log::error << "Failed to create node." << std::endl;
-      shutdown();
       return;
     }
 

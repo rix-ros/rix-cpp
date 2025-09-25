@@ -50,7 +50,35 @@ private:
   std::atomic<bool> registered_flag_;
   std::shared_ptr<rix::msg::Message> msg_instance_;
 
+#ifdef RIX_MULTITHREADED
+  std::thread spin_thread_;
+#endif
+
   Subscriber(const rix::msg::mediator::SubInfo &info, SocketFactory factory, const rix::ipc::Endpoint &rixhub_endpoint);
+
+  // Internal class to handle accepting new connections from rixhub
+  class SubNotifyAcceptor : public Spinner {
+  public:
+    SubNotifyAcceptor(Subscriber &parent) : parent(parent), shutdown_flag(false) {}
+    ~SubNotifyAcceptor() override = default;
+
+    SubNotifyAcceptor(const SubNotifyAcceptor &) = delete;
+    SubNotifyAcceptor &operator=(const SubNotifyAcceptor &) = delete;
+    SubNotifyAcceptor(SubNotifyAcceptor &&) = delete;
+    SubNotifyAcceptor &operator=(SubNotifyAcceptor &&) = delete;
+
+    bool ok() const override { return !shutdown_flag; }
+    void shutdown() override { shutdown_flag = true; }
+    void spin_once() override;
+
+    Subscriber &parent;
+    std::atomic<bool> shutdown_flag;
+#ifdef RIX_MULTITHREADED
+    std::thread spin_thread;
+#endif
+  };
+
+  SubNotifyAcceptor sub_notify_acceptor_{*this};
 
   using Spinner::spin;
   virtual void spin_once() override;
