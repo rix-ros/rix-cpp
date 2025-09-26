@@ -31,6 +31,14 @@ This will:
 
 **Note:** RIX is designed for POSIX-compliant systems (Linux, MacOS). Windows support is in progress (use WSL as a workaround).
 
+
+### Multithreaded Support
+The default RIX install will use a single thread to manage all components of a Node. There are many cases where using multiple threads will result in a significant boost in performance. If you would like to install RIX with multithreading support, run the install script with the `--multithreaded` argument.
+
+```bash
+bash install.bash --multitheaded
+```
+
 ### Environment Setup
 
 Before running any RIX executable, source the setup script to set environment variables:

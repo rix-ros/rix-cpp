@@ -79,47 +79,47 @@ int main(int argc, char **argv) {
   std::unordered_map<uint64_t, std::stringstream> node_info;
   for (const auto &node : system_info.nodes) {
     std::stringstream ss;
-    ss << node.name << ":\n";
+    ss << "  " << node.name << "\n";
     // ID as hex
-    ss << "  ID: '" << std::hex << std::setw(16) << std::setfill('0') << node.id << std::dec << "'\n";
+    ss << "    ID: " << node.id << "\n";
     node_info[node.id] = std::move(ss);
+  }
+
+  for (const auto &node : system_info.nodes) {
+    std::stringstream &ss = node_info[node.id];
+    ss << "    Publishers:\n";
   }
 
   for (const auto &pub : system_info.publishers) {
     std::stringstream &ss = node_info[pub.node_id];
-    ss << "  Publishers:\n";
-    ss << "    '" << pub.id << "':\n";
+    ss << "      ID: " << pub.id << "\n";
     ss << "      IP: " << pub.endpoint.address << "\n";
     ss << "      Port: " << pub.endpoint.port << "\n";
     ss << "      Topic: " << pub.topic_info.name << "\n";
   }
 
+  for (const auto &node : system_info.nodes) {
+    std::stringstream &ss = node_info[node.id];
+    ss << "    Subscribers:\n";
+  }
+
   for (const auto &sub : system_info.subscribers) {
     std::stringstream &ss = node_info[sub.node_id];
-    ss << "  Subscribers:\n";
-    ss << "    '" << std::hex << std::setw(16) << std::setfill('0') << sub.id << std::dec << "':\n";
+    ss << "      ID: " << sub.id << "\n";
     ss << "      IP: " << sub.endpoint.address << "\n";
     ss << "      Port: " << sub.endpoint.port << "\n";
     ss << "      Topic: " << sub.topic_info.name << "\n";
   }
 
-  for (const auto &topic : system_info.topics) {
-    std::stringstream &ss = node_info[0]; // Use node ID 0 for topics not associated with a node
-    ss << "Topics:\n";
-    ss << "  '" << topic.name << "':\n";
-    std::string message_name;
-    if (get_message_name(topic.message_hash, message_name)) {
-      ss << "    Message Type: " << message_name << "\n";
-    } else {
-      ss << "    Message Type: Unknown\n";
-    }
+  for (const auto &node : system_info.nodes) {
+    std::stringstream &ss = node_info[node.id];
+    ss << "    Services:\n";
   }
 
   for (const auto &srv : system_info.services) {
     std::stringstream &ss = node_info[srv.node_id];
-    ss << "  Services:\n";
-    ss << "    '" << std::hex << std::setw(16) << std::setfill('0') << srv.id << std::dec << "':\n";
     ss << "      Name: " << srv.name << "\n";
+    ss << "      ID: " << srv.id << "\n";
     std::string request_name;
     if (get_message_name(srv.request_hash, request_name)) {
       ss << "      Request Type: " << request_name << "\n";
@@ -134,11 +134,15 @@ int main(int argc, char **argv) {
     }
   }
 
+  for (const auto &node : system_info.nodes) {
+    std::stringstream &ss = node_info[node.id];
+    ss << "    Actions:\n";
+  }
+
   for (const auto &act : system_info.actions) {
     std::stringstream &ss = node_info[act.node_id];
-    ss << "  Actions:\n";
-    ss << "    '" << std::hex << std::setw(16) << std::setfill('0') << act.id << std::dec << "':\n";
     ss << "      Name: " << act.name << "\n";
+    ss << "      ID: " << act.id << "\n";
     std::string goal_name;
     if (get_message_name(act.goal_hash, goal_name)) {
       ss << "      Goal Type: " << goal_name << "\n";
@@ -158,6 +162,20 @@ int main(int argc, char **argv) {
       ss << "      Result Type: Unknown\n";
     }
   }
+
+  std::cout << "Topics:\n";
+  for (const auto &topic : system_info.topics) {
+    std::cout << "  " << topic.name << ": ";
+    std::string message_name;
+    if (get_message_name(topic.message_hash, message_name)) {
+      std::cout << message_name << "\n";
+    } else {
+      std::cout << "Unknown\n";
+    }
+  }
+  std::cout << std::endl;
+
+  std::cout << "Nodes:\n";
   for (const auto &pair : node_info) {
     std::cout << pair.second.str() << std::endl;
   }

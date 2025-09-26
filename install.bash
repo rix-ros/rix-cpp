@@ -2,6 +2,12 @@
 
 set -e
 
+MULTITHREADED_FLAG=""
+if [[ "$1" == "--multithreaded" ]]; then
+  MULTITHREADED_FLAG="-DMULTITHREADED=ON"
+  echo "Compiling rix-cpp with MULTITHREADED=ON"
+fi
+
 echo "Installing Rix to $HOME/.rix"
 
 echo "Installing rix-msg ..."
@@ -23,7 +29,7 @@ echo "rix-py installed."
 echo "Installing rix-cpp ..."
 mkdir build
 cd build
-cmake -DCMAKE_PREFIX_PATH=$HOME/.rix/ -DCMAKE_INSTALL_PREFIX=$HOME/.rix/ ..
+cmake -DCMAKE_PREFIX_PATH=$HOME/.rix/ -DCMAKE_INSTALL_PREFIX=$HOME/.rix/ $MULTITHREADED_FLAG ..
 make -j4
 make install
 cd ..
