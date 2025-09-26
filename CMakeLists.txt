@@ -18,6 +18,7 @@ add_library(rix
   src/rix/ipc/endpoint.cpp
   src/rix/ipc/posix_socket.cpp
   src/rix/ipc/posix_signal.cpp
+  src/rix/ipc/poll.cpp
   src/rix/util/argument_parser.cpp
   src/rix/util/time.cpp
 )

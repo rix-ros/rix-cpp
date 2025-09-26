@@ -78,11 +78,10 @@ void Publisher::publish(const rix::msg::Message &msg) {
   if (connections_.empty()) {
     return;
   }
-
+  std::vector<std::shared_ptr<rix::ipc::GenericSocket>> sockets(connections_.begin(), connections_.end());
   std::vector<std::shared_ptr<rix::ipc::GenericSocket>> writable;
   std::vector<std::shared_ptr<rix::ipc::GenericSocket>> exceptional;
-  rix::ipc::poll(writable, exceptional, connections_.begin(), connections_.end(), rix::util::Duration(0.0),
-                 rix::ipc::SelectFlag::WRITE);
+  rix::ipc::GenericSocket::poll(sockets, rix::util::Duration(0.0), rix::ipc::PollFlag::WRITE, writable, exceptional);
 
   // Remove any clients that have exceptions
   for (const auto &conn : exceptional) {
@@ -98,13 +97,15 @@ void Publisher::publish(const rix::msg::Message &msg) {
 
     // Send the message to the subscriber
     if (!conn->send_message(OPCODE::PUB_MESSAGE, msg)) {
-      it = writable.erase(it);
+      connections_.erase(conn);
+      it++;
+      rix::util::Log::debug << "Removed exceptional subscriber from topic \"" << info_.topic_info.name << "\"."
+                            << std::endl;
       continue;
     }
-    rix::util::Log::debugv << "Published message on topic \"" << info_.topic_info.name << "\"." << std::endl;
-
     it++;
   }
+  rix::util::Log::debugv << "Published message on topic \"" << info_.topic_info.name << "\"." << std::endl;
 }
 
 size_t Publisher::get_subscriber_count() const {
@@ -114,7 +115,7 @@ size_t Publisher::get_subscriber_count() const {
 
 void Publisher::spin_once() {
   // Check to see if a subscriber has made a connection
-  if (!server_->wait_readable(rix::util::Duration(0.0))) {
+  if (!server_->wait_readable(rix::util::Duration(1.0))) {
     return;
   }
 

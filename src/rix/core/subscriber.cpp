@@ -85,14 +85,28 @@ void Subscriber::spin_once() {
 #endif
 
   std::lock_guard<std::mutex> guard(callback_mutex_);
-
   if (clients_.empty() || !callback_) {
     return;
   }
+  std::vector<std::shared_ptr<rix::ipc::GenericSocket>> sockets(clients_.begin(), clients_.end());
   std::vector<std::shared_ptr<rix::ipc::GenericSocket>> readable_clients;
   std::vector<std::shared_ptr<rix::ipc::GenericSocket>> exception_clients;
-  rix::ipc::poll(readable_clients, exception_clients, clients_.begin(), clients_.end(), rix::util::Duration(0.0),
-                 rix::ipc::SelectFlag::READ);
+
+#ifdef RIX_MULTITHREADED
+  rix::util::Duration timeout(1.0);
+#else
+  rix::util::Duration timeout(0.0);
+#endif
+
+  rix::ipc::GenericSocket::poll(sockets, timeout, rix::ipc::PollFlag::READ, readable_clients, exception_clients);
+
+  // Remove any clients that have exceptions
+  for (const auto &conn : exception_clients) {
+    clients_.erase(conn);
+    rix::util::Log::debug << "Removed exceptional publisher from topic \"" << info_.topic_info.name << "\"."
+                          << std::endl;
+  }
+  exception_clients.clear();
 
   auto it = readable_clients.begin();
   while (it != readable_clients.end()) {
@@ -101,14 +115,18 @@ void Subscriber::spin_once() {
     // Read a message from the publisher
     rix::msg::mediator::Operation op;
     if (!client->recv_message(op, *msg_instance_)) {
-      clients_.erase(*it);
+      clients_.erase(client);
       it++;
+      rix::util::Log::debug << "Removed exceptional publisher from topic \"" << info_.topic_info.name << "\"."
+                            << std::endl;
       continue;
     }
 
     if (op.opcode != OPCODE::PUB_MESSAGE) {
-      clients_.erase(*it);
+      clients_.erase(client);
       it++;
+      rix::util::Log::debug << "Removed exceptional publisher from topic \"" << info_.topic_info.name << "\"."
+                            << std::endl;
       continue;
     }
 
@@ -122,7 +140,7 @@ void Subscriber::spin_once() {
 
 void Subscriber::SubNotifyAcceptor::spin_once() {
   // Check to see if rixhub has made a connection
-  if (!parent.server_->wait_readable(rix::util::Duration(0.0))) {
+  if (!parent.server_->wait_readable(rix::util::Duration(1.0))) {
     return;
   }
 
@@ -132,8 +150,8 @@ void Subscriber::SubNotifyAcceptor::spin_once() {
     return;
   }
 
-  rix::msg::mediator::SubNotify sub_notify;
   rix::msg::mediator::Operation op;
+  rix::msg::mediator::SubNotify sub_notify;
   if (!conn->recv_message(op, sub_notify)) {
     return;
   }

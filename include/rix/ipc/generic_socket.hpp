@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rix/ipc/endpoint.hpp"
+#include "rix/ipc/poll.hpp"
 #include "rix/msg/mediator/Operation.hpp"
 #include "rix/msg/message.hpp"
 #include "rix/util/time.hpp"
@@ -109,10 +110,21 @@ public:
     return true;
   }
 
+  static void set_poller(std::shared_ptr<GenericPoller> poller) { poller_ = poller; }
+  static bool poll(const std::vector<std::shared_ptr<GenericSocket>> &all_sockets, const rix::util::Duration &duration,
+                   PollFlag flag, std::vector<std::shared_ptr<GenericSocket>> &sockets,
+                   std::vector<std::shared_ptr<GenericSocket>> &exception_sockets) {
+    if (!poller_) {
+      return false;
+    }
+    return poller_->poll(all_sockets, duration, flag, sockets, exception_sockets);
+  }
+
 private:
   // Low-level I/O operations to be implemented by derived classes
   virtual ssize_t send(const void *buf, size_t len, int flags) const = 0;
   virtual ssize_t recv(void *buf, size_t len, int flags) const = 0;
+  static inline std::shared_ptr<GenericPoller> poller_{std::make_shared<Poller>()};
 };
 
 } // namespace rix::ipc
