@@ -13,17 +13,12 @@ int main(int argc, char **argv) {
   Log::init(NAME);
 
   auto parser = ArgumentParser(NAME, "A simple publisher example.");
-  parser.add<std::string>("rixhub_ip", "The IP address of the RIXHub server.", RIXHUB_IP);
-  parser.add<std::string>("default_ip", "The default IP address for servers to bind to.", DEFAULT_IP);
   parser.add<double>("rate", "The publish rate in Hz.", 'r', RATE);
 
   if (!parser.parse(argc, argv)) {
     Log::error << "Failed to parse arguments." << std::endl;
     return 1;
   }
-
-  parser.get<std::string>("rixhub_ip", RIXHUB_IP);
-  parser.get<std::string>("default_ip", DEFAULT_IP);
   parser.get<double>("rate", RATE);
 
   Node node("simple_service_client");

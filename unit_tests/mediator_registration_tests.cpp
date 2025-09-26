@@ -589,7 +589,6 @@ TEST(RegistrationTests, MediatorRegisterAndDeregisterService) {
   // 4  8004 Service Client request connection (service A, id 4)
   rix::msg::mediator::SrvRequest srv_request;
   rix::msg::mediator::SrvResponse srv_response;
-  srv_request.id = 2; // Duplicate ID
   srv_request.node_id = 1;
   srv_request.name = "service_A";
   srv_request.request_hash = rix::msg::standard::UInt32().hash();
@@ -645,7 +644,6 @@ TEST(RegistrationTests, MediatorRegisterAndDeregisterService) {
   i++;
 
   // 16  8011 Service Client request connection (service C, id 10, service not registered)
-  srv_request.id = 10;
   srv_request.node_id = 1;
   srv_request.name = "service_C"; // Service not registered
   srv_request.request_hash = rix::msg::standard::UInt32().hash();
@@ -656,7 +654,6 @@ TEST(RegistrationTests, MediatorRegisterAndDeregisterService) {
   i++;
 
   // 17  8011 Service Client request connection (service A, id 11, node not registered)
-  srv_request.id = 11;
   srv_request.node_id = 5; // Node not registered
   srv_request.name = "service_A";
   srv_request.request_hash = rix::msg::standard::UInt32().hash();
@@ -667,7 +664,6 @@ TEST(RegistrationTests, MediatorRegisterAndDeregisterService) {
   i++;
 
   // 9  8009 Service Client request connection (service B, id 8)
-  srv_request.id = 8; // Duplicate ID
   srv_request.node_id = 1;
   srv_request.name = "service_B";
   srv_request.request_hash = rix::msg::standard::Time().hash();
@@ -729,7 +725,6 @@ TEST(RegistrationTests, MediatorRegisterAndDeregisterService) {
   i++;
 
   // 15 8010 Service Client request connection (service B, id 9, service not registered)
-  srv_request.id = 9;
   srv_request.node_id = 1;
   srv_request.name = "service_B"; // Service not registered
   srv_request.request_hash = rix::msg::standard::Time().hash();

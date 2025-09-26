@@ -40,6 +40,10 @@ Service::Service(const rix::msg::mediator::SrvInfo &info, SocketFactory socket_f
   registered_flag_ = true;
 
   rix::util::Log::debug << "Service created for \"" << info_.name << "\"." << std::endl;
+
+#ifdef RIX_MULTITHREADED
+  spin_thread_ = std::thread([this]() { this->spin(); });
+#endif
 }
 
 Service::~Service() {
@@ -49,6 +53,15 @@ Service::~Service() {
       client->send_message(OPCODE::SRV_DEREGISTER, info_);
     }
   }
+
+#ifdef RIX_MULTITHREADED
+  shutdown();
+  if (spin_thread_.joinable()) {
+    spin_thread_.join();
+  }
+#endif
+
+  rix::util::Log::debug << "Service for \"" << info_.name << "\" destroyed." << std::endl;
 }
 
 bool Service::ok() const { return !shutdown_flag_; }

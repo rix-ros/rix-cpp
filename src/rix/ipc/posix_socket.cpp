@@ -51,7 +51,7 @@ bool POSIXSocket::wait_readable(const rix::util::Duration &timeout) const {
   pfd.fd = fd_;
   pfd.events = POLLIN;
   int timeout_ms = static_cast<int>(timeout.to_milliseconds());
-  int ret = poll(&pfd, 1, timeout_ms);
+  int ret = ::poll(&pfd, 1, timeout_ms);
   return ret > 0 && (pfd.revents & POLLIN);
 }
 
@@ -61,7 +61,7 @@ bool POSIXSocket::wait_writable(const rix::util::Duration &timeout) const {
   pfd.events = POLLOUT;
 
   int timeout_ms = static_cast<int>(timeout.to_milliseconds());
-  int ret = poll(&pfd, 1, timeout_ms);
+  int ret = ::poll(&pfd, 1, timeout_ms);
   return ret > 0 && (pfd.revents & POLLOUT);
 }
 
@@ -71,7 +71,7 @@ bool POSIXSocket::wait_exception(const rix::util::Duration &timeout) const {
   pfd.events = 0;
 
   int timeout_ms = static_cast<int>(timeout.to_milliseconds());
-  int ret = poll(&pfd, 1, timeout_ms);
+  int ret = ::poll(&pfd, 1, timeout_ms);
   return ret > 0 && (pfd.revents & POLLHUP || pfd.revents & POLLERR || pfd.revents & POLLNVAL);
 }
 

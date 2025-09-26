@@ -42,6 +42,10 @@ private:
   std::atomic<bool> shutdown_flag_;
   std::atomic<bool> registered_flag_;
 
+#ifdef RIX_MULTITHREADED
+  std::thread spin_thread_;
+#endif
+
   Publisher(const rix::msg::mediator::PubInfo &info, SocketFactory factory, rix::ipc::Endpoint rixhub_endpoint);
 
   using Spinner::spin;

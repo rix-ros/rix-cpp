@@ -3,6 +3,7 @@ project(rix)
 set(CMAKE_CXX_STANDARD 20)
 
 option(BUILD_TESTS "Build unit tests" OFF)
+option(MULTITHREADED "Enable multi-threaded support" OFF)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Ofast")
 
@@ -17,6 +18,7 @@ add_library(rix
   src/rix/ipc/endpoint.cpp
   src/rix/ipc/posix_socket.cpp
   src/rix/ipc/posix_signal.cpp
+  src/rix/ipc/poll.cpp
   src/rix/util/argument_parser.cpp
   src/rix/util/time.cpp
 )
@@ -26,6 +28,12 @@ target_include_directories(rix PUBLIC
   $<INSTALL_INTERFACE:include>
   $<INSTALL_INTERFACE:$ENV{HOME}/.rix/include>
 )
+
+if (MULTITHREADED)
+  add_compile_definitions(RIX_MULTITHREADED)
+  find_package(Threads REQUIRED)
+  target_link_libraries(rix Threads::Threads)
+endif()
 
 # Build examples
 add_executable(parameter_server examples/parameter_server.cpp)

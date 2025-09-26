@@ -38,6 +38,10 @@ Publisher::Publisher(const rix::msg::mediator::PubInfo &info, SocketFactory fact
   registered_flag_ = true;
 
   rix::util::Log::debug << "Publisher created on topic \"" << info_.topic_info.name << "\"." << std::endl;
+
+#ifdef RIX_MULTITHREADED
+  spin_thread_ = std::thread([this]() { this->spin(); });
+#endif
 }
 
 Publisher::~Publisher() {
@@ -49,6 +53,13 @@ Publisher::~Publisher() {
     }
   }
   rix::util::Log::debug << "Publisher on topic \"" << info_.topic_info.name << "\" destroyed." << std::endl;
+
+#ifdef RIX_MULTITHREADED
+  shutdown();
+  if (spin_thread_.joinable()) {
+    spin_thread_.join();
+  }
+#endif
 }
 
 bool Publisher::ok() const { return !shutdown_flag_; }
@@ -63,12 +74,15 @@ void Publisher::publish(const rix::msg::Message &msg) {
     return;
   }
 
+  std::lock_guard<std::mutex> lock(connections_mutex_);
+  if (connections_.empty()) {
+    return;
+  }
+  std::vector<std::shared_ptr<rix::ipc::GenericSocket>> sockets(connections_.begin(), connections_.end());
   std::vector<std::shared_ptr<rix::ipc::GenericSocket>> writable;
   std::vector<std::shared_ptr<rix::ipc::GenericSocket>> exceptional;
-  rix::ipc::poll(writable, exceptional, connections_.begin(), connections_.end(), rix::util::Duration(0.0),
-                 rix::ipc::SelectFlag::WRITE);
+  rix::ipc::GenericSocket::poll(sockets, rix::util::Duration(0.0), rix::ipc::PollFlag::WRITE, writable, exceptional);
 
-  std::lock_guard<std::mutex> lock(connections_mutex_);
   // Remove any clients that have exceptions
   for (const auto &conn : exceptional) {
     connections_.erase(conn);
@@ -83,13 +97,15 @@ void Publisher::publish(const rix::msg::Message &msg) {
 
     // Send the message to the subscriber
     if (!conn->send_message(OPCODE::PUB_MESSAGE, msg)) {
-      it = writable.erase(it);
+      connections_.erase(conn);
+      it++;
+      rix::util::Log::debug << "Removed exceptional subscriber from topic \"" << info_.topic_info.name << "\"."
+                            << std::endl;
       continue;
     }
-    rix::util::Log::debugv << "Published message on topic \"" << info_.topic_info.name << "\"." << std::endl;
-
     it++;
   }
+  rix::util::Log::debugv << "Published message on topic \"" << info_.topic_info.name << "\"." << std::endl;
 }
 
 size_t Publisher::get_subscriber_count() const {
@@ -99,7 +115,7 @@ size_t Publisher::get_subscriber_count() const {
 
 void Publisher::spin_once() {
   // Check to see if a subscriber has made a connection
-  if (!server_->wait_readable(rix::util::Duration(0.0))) {
+  if (!server_->wait_readable(rix::util::Duration(1.0))) {
     return;
   }
 

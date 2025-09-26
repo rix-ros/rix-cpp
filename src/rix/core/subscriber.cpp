@@ -39,6 +39,11 @@ Subscriber::Subscriber(const rix::msg::mediator::SubInfo &info, SocketFactory so
   registered_flag_ = true;
 
   rix::util::Log::debug << "Subscriber created on topic \"" << info_.topic_info.name << "\"." << std::endl;
+
+#ifdef RIX_MULTITHREADED
+  sub_notify_acceptor_.spin_thread = std::thread([this]() { this->sub_notify_acceptor_.spin(); });
+  spin_thread_ = std::thread([this]() { this->spin(); });
+#endif
 }
 
 Subscriber::~Subscriber() {
@@ -49,6 +54,17 @@ Subscriber::~Subscriber() {
     }
   }
   rix::util::Log::debug << "Subscriber on topic \"" << info_.topic_info.name << "\" destroyed." << std::endl;
+
+#ifdef RIX_MULTITHREADED
+  sub_notify_acceptor_.shutdown();
+  if (sub_notify_acceptor_.spin_thread.joinable()) {
+    sub_notify_acceptor_.spin_thread.join();
+  }
+  shutdown();
+  if (spin_thread_.joinable()) {
+    spin_thread_.join();
+  }
+#endif
 }
 
 bool Subscriber::ok() const { return !shutdown_flag_; }
@@ -62,41 +78,35 @@ size_t Subscriber::get_publisher_count() const {
 
 /**< TODO: Implement the spin_once method */
 void Subscriber::spin_once() {
+
+#ifndef RIX_MULTITHREADED
+  // In single-threaded mode, we need to also spin the acceptor
+  sub_notify_acceptor_.spin_once();
+#endif
+
   std::lock_guard<std::mutex> guard(callback_mutex_);
-
-  // Check to see if rixhub has made a connection
-  if (server_->wait_readable(rix::util::Duration(0.0))) {
-    // Accept a connection from rixhub
-    auto conn = server_->accept();
-    if (!conn) {
-      return;
-    }
-
-    rix::msg::mediator::SubNotify sub_notify;
-    rix::msg::mediator::Operation op;
-    if (!conn->recv_message(op, sub_notify)) {
-      return;
-    }
-    if (op.opcode != OPCODE::SUB_NOTIFY) {
-      rix::util::Log::warn << "Received invalid opcode from rixhub." << std::endl;
-      return;
-    }
-
-    // Connect to the specified publishers (non-blocking)
-    for (const auto &pub : sub_notify.publishers) {
-      auto client = socket_factory_();
-      client->set_blocking(false);
-      client->connect(rix::ipc::Endpoint(pub.endpoint.address, pub.endpoint.port));
-      clients_.insert(client);
-      rix::util::Log::debug << "Connected to publisher at \"" << pub.endpoint.address << ":" << pub.endpoint.port
-                            << "\" on topic \"" << pub.topic_info.name << "\"." << std::endl;
-    }
+  if (clients_.empty() || !callback_) {
+    return;
   }
-
+  std::vector<std::shared_ptr<rix::ipc::GenericSocket>> sockets(clients_.begin(), clients_.end());
   std::vector<std::shared_ptr<rix::ipc::GenericSocket>> readable_clients;
   std::vector<std::shared_ptr<rix::ipc::GenericSocket>> exception_clients;
-  rix::ipc::poll(readable_clients, exception_clients, clients_.begin(), clients_.end(), rix::util::Duration(0.0),
-                 rix::ipc::SelectFlag::READ);
+
+#ifdef RIX_MULTITHREADED
+  rix::util::Duration timeout(1.0);
+#else
+  rix::util::Duration timeout(0.0);
+#endif
+
+  rix::ipc::GenericSocket::poll(sockets, timeout, rix::ipc::PollFlag::READ, readable_clients, exception_clients);
+
+  // Remove any clients that have exceptions
+  for (const auto &conn : exception_clients) {
+    clients_.erase(conn);
+    rix::util::Log::debug << "Removed exceptional publisher from topic \"" << info_.topic_info.name << "\"."
+                          << std::endl;
+  }
+  exception_clients.clear();
 
   auto it = readable_clients.begin();
   while (it != readable_clients.end()) {
@@ -105,14 +115,18 @@ void Subscriber::spin_once() {
     // Read a message from the publisher
     rix::msg::mediator::Operation op;
     if (!client->recv_message(op, *msg_instance_)) {
-      clients_.erase(*it);
+      clients_.erase(client);
       it++;
+      rix::util::Log::debug << "Removed exceptional publisher from topic \"" << info_.topic_info.name << "\"."
+                            << std::endl;
       continue;
     }
 
     if (op.opcode != OPCODE::PUB_MESSAGE) {
-      clients_.erase(*it);
+      clients_.erase(client);
       it++;
+      rix::util::Log::debug << "Removed exceptional publisher from topic \"" << info_.topic_info.name << "\"."
+                            << std::endl;
       continue;
     }
 
@@ -122,6 +136,40 @@ void Subscriber::spin_once() {
     it++;
   }
   readable_clients.clear();
+}
+
+void Subscriber::SubNotifyAcceptor::spin_once() {
+  // Check to see if rixhub has made a connection
+  if (!parent.server_->wait_readable(rix::util::Duration(1.0))) {
+    return;
+  }
+
+  // Accept a connection from rixhub
+  auto conn = parent.server_->accept();
+  if (!conn) {
+    return;
+  }
+
+  rix::msg::mediator::Operation op;
+  rix::msg::mediator::SubNotify sub_notify;
+  if (!conn->recv_message(op, sub_notify)) {
+    return;
+  }
+  if (op.opcode != OPCODE::SUB_NOTIFY) {
+    rix::util::Log::warn << "Received invalid opcode from rixhub." << std::endl;
+    return;
+  }
+
+  std::lock_guard<std::mutex> guard(parent.callback_mutex_);
+  // Connect to the specified publishers (non-blocking)
+  for (const auto &pub : sub_notify.publishers) {
+    auto client = parent.socket_factory_();
+    client->set_blocking(false);
+    client->connect(rix::ipc::Endpoint(pub.endpoint.address, pub.endpoint.port));
+    parent.clients_.insert(client);
+    rix::util::Log::debug << "Connected to publisher at \"" << pub.endpoint.address << ":" << pub.endpoint.port
+                          << "\" on topic \"" << pub.topic_info.name << "\"." << std::endl;
+  }
 }
 
 } // namespace rix::core

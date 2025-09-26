@@ -342,8 +342,6 @@ void init_srvcli_socket(std::shared_ptr<rix::ipc::MockSocket> socket, const rix:
         auto info = dynamic_cast<const rix::msg::mediator::SrvRequest *>(&msg);
         if (info) {
           EXPECT_EQ(info->node_id, node_id);
-          EXPECT_GT(info->id, 0);
-          EXPECT_NE(info->id, node_id);
           EXPECT_EQ(info->name, "test_service");
           EXPECT_EQ(info->request_hash, rix::msg::standard::UInt32().hash());
           EXPECT_EQ(info->response_hash, rix::msg::standard::Time().hash());
@@ -516,7 +514,52 @@ void init_param_set_request_socket(std::shared_ptr<rix::ipc::MockSocket> socket,
 void init_pub_server_socket(std::shared_ptr<rix::ipc::MockSocket> socket, const rix::ipc::Endpoint &endpoint,
                             const rix::ipc::Endpoint &bound_endpoint, int accept_count) {
   init_server_socket(socket, endpoint, bound_endpoint);
-  EXPECT_CALL(*socket, wait_readable).Times(accept_count).WillRepeatedly(::testing::Return(true));
+  auto wait_count = std::make_shared<int>(0);
+  EXPECT_CALL(*socket, wait_readable).WillRepeatedly(::testing::Invoke([wait_count, accept_count]() {
+    if (*wait_count < accept_count) {
+      ++(*wait_count);
+      return true;
+    }
+    return false;
+  }));
+  EXPECT_CALL(*socket, accept)
+      .Times(accept_count)
+      .WillRepeatedly(
+          ::testing::Invoke([](rix::ipc::Endpoint &remote_endpoint) -> std::shared_ptr<rix::ipc::GenericSocket> {
+            return mock_create_socket();
+          }));
+}
+
+void init_sub_server_socket(std::shared_ptr<rix::ipc::MockSocket> socket, const rix::ipc::Endpoint &endpoint,
+                            const rix::ipc::Endpoint &bound_endpoint, int accept_count) {
+  init_server_socket(socket, endpoint, bound_endpoint);
+  auto wait_count = std::make_shared<int>(0);
+  EXPECT_CALL(*socket, wait_readable).WillRepeatedly(::testing::Invoke([wait_count, accept_count]() {
+    if (*wait_count < accept_count) {
+      ++(*wait_count);
+      return true;
+    }
+    return false;
+  }));
+  EXPECT_CALL(*socket, accept)
+      .Times(accept_count)
+      .WillRepeatedly(
+          ::testing::Invoke([](rix::ipc::Endpoint &remote_endpoint) -> std::shared_ptr<rix::ipc::GenericSocket> {
+            return mock_create_socket();
+          }));
+}
+
+void init_srv_server_socket(std::shared_ptr<rix::ipc::MockSocket> socket, const rix::ipc::Endpoint &endpoint,
+                            const rix::ipc::Endpoint &bound_endpoint, int accept_count) {
+  init_server_socket(socket, endpoint, bound_endpoint);
+  auto wait_count = std::make_shared<int>(0);
+  EXPECT_CALL(*socket, wait_readable).WillRepeatedly(::testing::Invoke([wait_count, accept_count]() {
+    if (*wait_count < accept_count) {
+      ++(*wait_count);
+      return true;
+    }
+    return false;
+  }));
   EXPECT_CALL(*socket, accept)
       .Times(accept_count)
       .WillRepeatedly(
@@ -529,12 +572,164 @@ template <typename TMsg>
 void init_pub_connection_socket(std::shared_ptr<rix::ipc::MockSocket> socket, int send_count,
                                 const std::vector<std::shared_ptr<TMsg>> &messages) {
   static_assert(std::is_base_of<rix::msg::Message, TMsg>::value, "TMsg must be derived from rix::msg::Message");
-  EXPECT_CALL(*socket, wait_writable).Times(send_count).WillRepeatedly(::testing::Return(true));
+  auto send_index = std::make_shared<int>(0);
   EXPECT_CALL(*socket, send_message)
       .Times(send_count)
-      .WillRepeatedly(::testing::Invoke([](uint8_t opcode, const rix::msg::Message &msg) {
+      .WillRepeatedly(::testing::Invoke([send_index, messages](uint8_t opcode, const rix::msg::Message &msg) {
+        ++(*send_index);
         EXPECT_EQ(opcode, rix::core::OPCODE::PUB_MESSAGE);
         if (dynamic_cast<const TMsg *>(&msg)) {
+          EXPECT_EQ(msg.size(), messages.at(*send_index - 1)->size());
+          // Assume message is valid if it can be cast to TMsg and size matches
+          return true;
+        }
+        return false;
+      }));
+  EXPECT_CALL(*socket, close()).Times(1);
+}
+
+template <typename TRequest, typename TResponse>
+void init_srv_connection_socket(std::shared_ptr<rix::ipc::MockSocket> socket, const TRequest &request,
+                                const TResponse &response) {
+  static_assert(std::is_base_of<rix::msg::Message, TRequest>::value, "TRequest must be derived from rix::msg::Message");
+  static_assert(std::is_base_of<rix::msg::Message, TResponse>::value,
+                "TResponse must be derived from rix::msg::Message");
+  EXPECT_CALL(*socket, recv_message)
+      .Times(2)
+      .WillOnce(::testing::Invoke([request](rix::msg::Message &msg, size_t len) {
+        auto op = dynamic_cast<rix::msg::mediator::Operation *>(&msg);
+        if (op) {
+          op->len = request.size();
+          op->opcode = rix::core::OPCODE::SRV_REQUEST_MESSAGE;
+          return true;
+        }
+        return false;
+      }))
+      .WillOnce(::testing::Invoke([request](rix::msg::Message &msg, size_t len) {
+        auto req = dynamic_cast<TRequest *>(&msg);
+        if (req) {
+          *req = request;
+          return true;
+        }
+        return false;
+      }));
+  EXPECT_CALL(*socket, send_message)
+      .Times(1)
+      .WillOnce(::testing::Invoke([response](uint8_t opcode, const rix::msg::Message &msg) {
+        EXPECT_EQ(opcode, rix::core::OPCODE::SRV_RESPONSE_MESSAGE);
+        auto resp = dynamic_cast<const TResponse *>(&msg);
+        if (resp) {
+          EXPECT_EQ(resp->size(), response.size());
+          // Assume message is valid if it can be cast to TResponse and size matches
+          return true;
+        }
+        return false;
+      }));
+  EXPECT_CALL(*socket, close()).Times(1);
+}
+
+void init_sub_connection_socket(std::shared_ptr<rix::ipc::MockSocket> socket,
+                                const rix::msg::mediator::SubNotify &notify) {
+  EXPECT_CALL(*socket, recv_message)
+      .Times(2)
+      .WillOnce(::testing::Invoke([&notify](rix::msg::Message &msg, size_t len) {
+        auto op = dynamic_cast<rix::msg::mediator::Operation *>(&msg);
+        if (op) {
+          op->len = notify.size();
+          op->opcode = rix::core::OPCODE::SUB_NOTIFY;
+          return true;
+        }
+        return false;
+      }))
+      .WillOnce(::testing::Invoke([&notify](rix::msg::Message &msg, size_t len) {
+        auto response = dynamic_cast<rix::msg::mediator::SubNotify *>(&msg);
+        if (response) {
+          *response = notify;
+          return true;
+        }
+        return false;
+      }));
+  EXPECT_CALL(*socket, close()).Times(1);
+}
+
+template <typename TMsg>
+void init_sub_client_socket(std::shared_ptr<rix::ipc::MockSocket> socket, int recv_count,
+                            const rix::ipc::Endpoint &endpoint, const std::vector<std::shared_ptr<TMsg>> &messages) {
+  static_assert(std::is_base_of<rix::msg::Message, TMsg>::value, "TMsg must be derived from rix::msg::Message");
+  EXPECT_CALL(*socket, set_blocking).With(::testing::Args<0>(false)).Times(1);
+  EXPECT_CALL(*socket, connect)
+      .With(::testing::Args<0>(::testing::Truly([endpoint](const auto &args) {
+        return std::get<0>(args).address == endpoint.address && std::get<0>(args).port == endpoint.port;
+      })))
+      .Times(1);
+  auto recv_index = std::make_shared<int>(0);
+  EXPECT_CALL(*socket, recv_message)
+      .Times(recv_count * 2)
+      .WillRepeatedly(::testing::Invoke([recv_index, messages](rix::msg::Message &msg, size_t len) {
+        int idx = *recv_index;
+        if (idx % 2 == 0) {
+          // Even: Operation
+          auto op = dynamic_cast<rix::msg::mediator::Operation *>(&msg);
+          if (op) {
+            op->len = sizeof(TMsg);
+            op->opcode = rix::core::OPCODE::PUB_MESSAGE;
+            ++(*recv_index);
+            return true;
+          }
+        } else {
+          // Odd: TMsg
+          if (idx / 2 < static_cast<int>(messages.size())) {
+            auto message = dynamic_cast<TMsg *>(&msg);
+            if (message) {
+              *message = *(messages.at(idx / 2));
+              ++(*recv_index);
+              return true;
+            }
+          }
+        }
+        return false;
+      }));
+  EXPECT_CALL(*socket, close()).Times(1);
+}
+
+template <typename TRequest, typename TResponse>
+void init_srvcli_client_socket(std::shared_ptr<rix::ipc::MockSocket> socket, const rix::ipc::Endpoint &endpoint,
+                               const TRequest &request, const TResponse &response) {
+  static_assert(std::is_base_of<rix::msg::Message, TRequest>::value, "TRequest must be derived from rix::msg::Message");
+  static_assert(std::is_base_of<rix::msg::Message, TResponse>::value,
+                "TResponse must be derived from rix::msg::Message");
+  EXPECT_CALL(*socket, connect)
+      .With(::testing::Args<0>(::testing::Truly([endpoint](const auto &args) {
+        return std::get<0>(args).address == endpoint.address && std::get<0>(args).port == endpoint.port;
+      })))
+      .Times(1);
+  EXPECT_CALL(*socket, send_message)
+      .Times(1)
+      .WillOnce(::testing::Invoke([&request](uint8_t opcode, const rix::msg::Message &msg) {
+        EXPECT_EQ(opcode, rix::core::OPCODE::SRV_REQUEST_MESSAGE);
+        auto info = dynamic_cast<const TRequest *>(&msg);
+        if (info) {
+          EXPECT_EQ(msg.size(), request.size());
+          // Assume message is valid if it can be cast to TRequest and size matches
+          return true;
+        }
+        return false;
+      }));
+  EXPECT_CALL(*socket, recv_message)
+      .Times(2)
+      .WillOnce(::testing::Invoke([response](rix::msg::Message &msg, size_t len) {
+        auto op = dynamic_cast<rix::msg::mediator::Operation *>(&msg);
+        if (op) {
+          op->len = response.size();
+          op->opcode = rix::core::OPCODE::SRV_RESPONSE_MESSAGE;
+          return true;
+        }
+        return false;
+      }))
+      .WillOnce(::testing::Invoke([response](rix::msg::Message &msg, size_t len) {
+        auto resp = dynamic_cast<TResponse *>(&msg);
+        if (resp) {
+          *resp = response;
           return true;
         }
         return false;

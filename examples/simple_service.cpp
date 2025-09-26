@@ -16,7 +16,7 @@ public:
         "/alphabet", std::bind(&SimpleService::callback, this, std::placeholders::_1, std::placeholders::_2),
         Endpoint(DEFAULT_IP, PORT));
     if (!srv->ok()) {
-      rix::util::Log::error << "Failed to create service." << std::endl;
+      Log::error << "Failed to create service." << std::endl;
       shutdown();
       return;
     }
@@ -29,25 +29,21 @@ private:
 };
 
 int main(int argc, char **argv) {
-  rix::util::Log::init(NAME);
+  Log::init(NAME);
+  Log::set_log_level(Log::Level::DEBUG);
 
   auto parser = ArgumentParser(NAME, "A simple subscriber example.");
-  parser.add<std::string>("rixhub_ip", "The IP address of the RIXHub server.", RIXHUB_IP);
-  parser.add<std::string>("default_ip", "The default IP address for servers to bind to.", DEFAULT_IP);
   parser.add<int>("port", "The port for the subscriber server.", 'p', PORT);
 
   if (!parser.parse(argc, argv)) {
     Log::error << "Failed to parse arguments." << std::endl;
     return 1;
   }
-
-  parser.get<std::string>("rixhub_ip", RIXHUB_IP);
-  parser.get<std::string>("default_ip", DEFAULT_IP);
   parser.get<int>("port", PORT);
 
   auto simple_service = std::make_shared<SimpleService>();
   if (!simple_service->ok()) {
-    rix::util::Log::error << "Failed to create simple_service." << std::endl;
+    Log::error << "Failed to create simple_service." << std::endl;
     return 1;
   }
 

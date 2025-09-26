@@ -69,6 +69,10 @@ private:
   Callback callback_;
   std::mutex callback_mutex_;
   std::atomic<bool> shutdown_flag_;
+
+#ifdef RIX_MULTITHREADED
+  std::thread spin_thread_;
+#endif
 };
 
 } // namespace rix::core
