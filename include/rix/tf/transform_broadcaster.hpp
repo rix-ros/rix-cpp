@@ -10,19 +10,21 @@
 namespace rix::tf {
 
 class TransformBroadcaster {
-   public:
-    TransformBroadcaster(rix::core::Node &node, const std::string &topic = "/tf",
-                         const rix::ipc::Endpoint &endpoint = rix::ipc::Endpoint("127.0.0.1", 0));
-    TransformBroadcaster(const TransformBroadcaster &other);
-    TransformBroadcaster &operator=(const TransformBroadcaster &other);
+public:
+  TransformBroadcaster(std::shared_ptr<rix::core::Node> node, const std::string &topic = "/tf",
+                       const rix::ipc::Endpoint &endpoint = rix::ipc::Endpoint(rix::core::DEFAULT_IP, 0));
+  TransformBroadcaster(rix::core::Node &node, const std::string &topic = "/tf",
+                       const rix::ipc::Endpoint &endpoint = rix::ipc::Endpoint(rix::core::DEFAULT_IP, 0));
+  TransformBroadcaster(const TransformBroadcaster &other);
+  TransformBroadcaster &operator=(const TransformBroadcaster &other);
 
-    void send(const rix::msg::geometry::TransformStamped &transform);
-    void send(const rix::msg::geometry::TF &tf);
+  void send(const rix::msg::geometry::TransformStamped &transform);
+  void send(const rix::msg::geometry::TF &tf);
 
-    bool ok() const;
+  bool ok() const;
 
-   private:
-    std::shared_ptr<rix::core::Publisher> publisher_;
+private:
+  std::shared_ptr<rix::core::Publisher> publisher_;
 };
 
-}  // namespace rix::tf
+} // namespace rix::tf

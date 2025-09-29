@@ -4,6 +4,7 @@
 alias rixhub="$HOME/.rix/bin/rixhub"
 alias rixmsg="$HOME/.rix/bin/rixmsg"
 alias rixinfo="$HOME/.rix/bin/rixinfo"
+alias rixtopic="$HOME/.rix/bin/rixtopic"
 
 # Set the CMake prefix path for RIX
 case ":$CMAKE_PREFIX_PATH:" in

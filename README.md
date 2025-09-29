@@ -5,11 +5,15 @@
 **RIX** is a high-performance C++ framework for real-time interprocess communication in robotics and distributed systems. It delivers a robust messaging infrastructure, node management, and service orchestration—empowering you to build scalable, reliable robot software architectures.
 
 - 🚀 **Fast & Lightweight:** Zero third-party dependencies, optimized for low-latency and high-throughput.
-- 🧩 **Modular:** Easily extendable with publishers, subscribers, services, and timers.
+- 🧩 **Modular:** Easily extendable with publishers, subscribers, services, timers, and more.
 - 🤖 **Robotics-Ready:** Designed to meet the demands of modern robotics applications.
 - 🔒 **Reliable:** TCP-based communication ensures message integrity; loosely-coupled nodes provide system stability across distributed environments.
 
-RIX makes it easy to develop complex robotic systems, offering a clean API and powerful tools for node registration, topic management, and service handling.
+### Support for Robotics Applications
+- 🌳 **Transformation Trees:** Built-in support for 3D spatial transform trees (`rix::tf`), including frame graph management, transform broadcasting/listening, and time-based interpolation.
+- 🦾 **Robot Model & Kinematics:** Parse robot descriptions from JSON (JRDF), manage kinematic chains, and perform forward/inverse kinematics with the `rix::rob` module.
+
+RIX makes it easy to develop complex robotic systems, offering a clean API and powerful tools for node registration, topic management, service handling, spatial transforms, and robot modeling.
 
 ---
 
@@ -224,7 +228,7 @@ If you do not have a static IP address, you can modify the `~/.rix/setup.bash` f
 
 On Linux:
 ```bash
-export RIX_DEFAULT_IP=$(hostname -I)
+export RIX_DEFAULT_IP=$(hostname -I | xargs)
 ```
 
 On MacOS:
