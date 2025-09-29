@@ -28,12 +28,30 @@ target_include_directories(rix PUBLIC
   $<INSTALL_INTERFACE:include>
   $<INSTALL_INTERFACE:$ENV{HOME}/.rix/include>
 )
-
 if (MULTITHREADED)
   add_compile_definitions(RIX_MULTITHREADED)
   find_package(Threads REQUIRED)
-  target_link_libraries(rix Threads::Threads)
+  target_link_libraries(rix PUBLIC Threads::Threads)
 endif()
+
+add_library(tf
+  src/rix/rob/joint.cpp
+  src/rix/rob/link.cpp
+  src/rix/rob/robot_model.cpp
+  src/rix/rob/eigen_util.cpp
+  src/rix/rob/kinematics_solver.cpp
+  src/rix/tf/frame_graph.cpp
+  src/rix/tf/frame.cpp
+  src/rix/tf/transform_broadcaster.cpp
+  src/rix/tf/transform_buffer.cpp
+  src/rix/tf/transform_listener.cpp
+)
+target_include_directories(tf PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:$ENV{HOME}/.rix/include>
+  $<INSTALL_INTERFACE:include>
+  $<INSTALL_INTERFACE:$ENV{HOME}/.rix/include>
+)
 
 # Build examples
 add_executable(parameter_server examples/parameter_server.cpp)
@@ -75,13 +93,27 @@ if(BUILD_TESTS)
   target_link_libraries(message_tests GTest::gtest_main GTest::gmock rix)
 endif()
 
+# Configure rixConfig.cmake
+if(MULTITHREADED)
+  set(THREADS_FIND_PACKAGE "find_package(Threads REQUIRED)")
+else()
+  set(THREADS_FIND_PACKAGE "")
+endif()
+
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/rixConfig.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/rixConfig.cmake
+  @ONLY
+)
+
 # Install library and headers
 install(TARGETS rix DESTINATION lib)
+install(TARGETS tf DESTINATION lib)
 install(DIRECTORY include/rix DESTINATION include)
 
-install(TARGETS rix EXPORT rixTargets DESTINATION lib)
+install(TARGETS rix tf EXPORT rixTargets DESTINATION lib)
 install(EXPORT rixTargets FILE rixTargets.cmake NAMESPACE rix:: DESTINATION lib/cmake/rix)
-install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/rixConfig.cmake" DESTINATION lib/cmake/rix)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/rixConfig.cmake" DESTINATION lib/cmake/rix)
 
 # Build RIXHub
 add_executable(rixhub src/rixhub.cpp)
