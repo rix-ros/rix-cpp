@@ -13,6 +13,8 @@
 - 🌳 **Transformation Trees:** Built-in support for 3D spatial transform trees (`rix::tf`), including frame graph management, transform broadcasting/listening, and time-based interpolation.
 - 🦾 **Robot Model & Kinematics:** Parse robot descriptions from JSON (JRDF), manage kinematic chains, and perform forward/inverse kinematics with the `rix::rob` module.
 
+The `rix::tf` library depends on [`Eigen`](https://github.com/PX4/eigen) for linear algebra operations and [`nlohmann::json`](https://github.com/nlohmann/json) for JSON parsing.
+
 RIX makes it easy to develop complex robotic systems, offering a clean API and powerful tools for node registration, topic management, service handling, spatial transforms, and robot modeling.
 
 ---
@@ -30,7 +32,7 @@ bash install.bash
 This will:
 - Build and install the RIX C++ library and tools to `$HOME/.rix/`
 - Build and install the `rixmsg` tool for generating message headers.
-- Install the RIX Python API (`rix-py`) for Python users
+- Install the RIX Python API (`rix-py`) for Python users, which installs the `jrdf` and `rixtopic` tools.
 - Set up environment scripts and virtual environments
 
 **Note:** RIX is designed for POSIX-compliant systems (Linux, MacOS). Windows support is in progress (use WSL as a workaround).

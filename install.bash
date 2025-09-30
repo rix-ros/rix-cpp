@@ -57,8 +57,6 @@ make install
 cd ..
 echo "rix-cpp installed."
 
-echo "Sourcing setup.bash ..."
 cp setup.bash $HOME/.rix/setup.bash
-source $HOME/.rix/setup.bash
 
 echo "Rix installed successfully."
