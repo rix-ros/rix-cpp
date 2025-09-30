@@ -42,9 +42,14 @@ public:
   enum Type { UNKNOWN, FIXED, CONTINUOUS, REVOLUTE, PRISMATIC };
 
   Joint(const rix::msg::geometry::Vector3 &axis = rix::rob::vector3_zeros(),
-        const rix::msg::geometry::Transform &origin = rix::rob::transform_identity(), const Type &type = FIXED,
-        const JointLimits &limits = {}, const JointDynamics &dynamics = {}, const JointMimic &mimic = {},
-        const std::string &name = "", const std::string &parent = "", const std::string &child = "");
+        const rix::msg::geometry::Transform &origin = rix::rob::transform_identity(), 
+        const Type &type = FIXED,
+        const JointLimits &limits = {}, 
+        const JointDynamics &dynamics = {}, 
+        const JointMimic &mimic = {},
+        const std::string &name = "", 
+        const std::string &parent = "", 
+        const std::string &child = "");
   Joint(const Joint &j);
   Joint &operator=(const Joint &j);
 

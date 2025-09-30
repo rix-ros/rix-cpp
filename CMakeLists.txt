@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(rix)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 
 option(BUILD_TESTS "Build unit tests" OFF)
 option(MULTITHREADED "Enable multi-threaded support" OFF)
@@ -78,19 +78,28 @@ if(BUILD_TESTS)
   message(STATUS "Building unit tests")
   enable_testing()
   add_executable(node_registration_tests
-    unit_tests/node_registration_tests.cpp
+    unit_tests/rix/node_registration_tests.cpp
   )
   target_link_libraries(node_registration_tests GTest::gtest_main GTest::gmock rix)
 
   add_executable(mediator_registration_tests
-    unit_tests/mediator_registration_tests.cpp
+    unit_tests/rix/mediator_registration_tests.cpp
   )
   target_link_libraries(mediator_registration_tests GTest::gtest_main GTest::gmock rix)
 
   add_executable(message_tests
-    unit_tests/message_tests.cpp
+    unit_tests/rix/message_tests.cpp
   )
   target_link_libraries(message_tests GTest::gtest_main GTest::gmock rix)
+
+  add_executable(tf_tests
+      unit_tests/tf/frame_graph.cpp
+      unit_tests/tf/joint.cpp
+      unit_tests/tf/kinematics_solver.cpp
+      unit_tests/tf/robot_model_rx200.cpp
+      unit_tests/tf/robot_model_simple_bot.cpp
+      unit_tests/tf/transform_buffer.cpp)
+  target_link_libraries(tf_tests GTest::Main tf rix)
 endif()
 
 # Configure rixConfig.cmake
