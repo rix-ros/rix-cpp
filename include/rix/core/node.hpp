@@ -24,7 +24,7 @@ namespace rix::core {
 
 class Node : public Spinner {
 public:
-  Node(const std::string &name, const rix::ipc::Endpoint &rixhub_endpoint = rix::ipc::Endpoint(DEFAULT_IP, RIXHUB_PORT),
+  Node(const std::string &name, const rix::ipc::Endpoint &rixhub_endpoint = rix::ipc::Endpoint(RIXHUB_IP, RIXHUB_PORT),
        SocketFactory socket_factory = rix::ipc::create_socket);
 
   Node(const Node &) = delete;

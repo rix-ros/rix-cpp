@@ -9,8 +9,9 @@ Node::Node(const std::string &name, const rix::ipc::Endpoint &rixhub_endpoint, S
   info_.name = name;
 
   auto client = socket_factory_();
-  if (!client->connect(rixhub_endpoint_))
+  if (!client->connect(rixhub_endpoint_)) {
     return;
+  }
   if (!client->send_message(OPCODE::NODE_REGISTER, info_))
     return;
 

@@ -2,7 +2,10 @@
 
 namespace rix::ipc {
 
-POSIXSocket::POSIXSocket() : fd_(::socket(AF_INET, SOCK_STREAM, 0)) {}
+POSIXSocket::POSIXSocket() : fd_(::socket(AF_INET, SOCK_STREAM, 0)) {
+  int optval = 1;
+  setsockopt(fd_, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval));
+}
 
 POSIXSocket::POSIXSocket(int fd) : fd_(fd) {}
 
