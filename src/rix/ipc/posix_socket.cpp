@@ -3,8 +3,11 @@
 namespace rix::ipc {
 
 POSIXSocket::POSIXSocket() : fd_(::socket(AF_INET, SOCK_STREAM, 0)) {
-  int optval = 1;
-  setsockopt(fd_, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval));
+  static std::once_flag flag;
+  std::call_once(flag, []() {
+    // Ignore SIGPIPE signal to prevent process termination on socket write errors
+    signal(SIGPIPE, SIG_IGN);
+  });
 }
 
 POSIXSocket::POSIXSocket(int fd) : fd_(fd) {}
