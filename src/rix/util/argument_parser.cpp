@@ -273,7 +273,7 @@ bool ArgumentParser::parse(int argc, char **argv) {
 
     // Handle short_name
     if (name.size() == 2) {
-      if (!name.starts_with('-')) {
+      if (name[0] != '-') {
         return false;
       }
       auto it = short_to_long_.find(name[1]);
@@ -284,7 +284,7 @@ bool ArgumentParser::parse(int argc, char **argv) {
       name = it->second;
     } else {
       // name.size() >= 4
-      if (!name.starts_with("--")) {
+      if (name[0] != '-' || name[1] != '-') {
         return false;
       }
       name = name.substr(2);
