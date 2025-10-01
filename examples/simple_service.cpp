@@ -47,8 +47,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  auto sig = create_signal(SIGINT);
-  simple_service->spin(std::move(sig));
+  simple_service->spin();
 
   return 0;
 }

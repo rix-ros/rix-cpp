@@ -25,7 +25,7 @@ namespace rix::core {
 
 class Mediator : public Spinner {
 public:
-  Mediator(const rix::ipc::Endpoint &rixhub_endpoint = rix::ipc::Endpoint(DEFAULT_IP, RIXHUB_PORT),
+  Mediator(const rix::ipc::Endpoint &endpoint = rix::ipc::Endpoint(DEFAULT_IP, RIXHUB_PORT),
            SocketFactory socket_factory = rix::ipc::create_socket);
   ~Mediator();
 
@@ -34,8 +34,6 @@ public:
   Mediator(Mediator &&) = delete;
   Mediator &operator=(Mediator &&) = delete;
 
-  bool ok() const override;
-  void shutdown() override;
   void spin_once() override;
 
   size_t get_node_count() const { return nodes_.size(); }
@@ -52,7 +50,6 @@ private:
   std::map<uint64_t, rix::msg::mediator::SrvInfo> services_{};
   std::map<std::string, std::array<uint64_t, 2>> topic_hashes_{};
   std::map<std::string, std::pair<std::array<uint64_t, 2>, std::vector<uint8_t>>> parameters_{};
-  std::atomic<bool> shutdown_flag_{};
 
   void handle_node_register(const rix::msg::mediator::Operation &operation,
                             std::shared_ptr<rix::ipc::GenericSocket> conn);

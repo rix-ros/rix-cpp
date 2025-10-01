@@ -3,26 +3,31 @@
 namespace rix::core {
 
 Node::Node(const std::string &name, const rix::ipc::Endpoint &rixhub_endpoint, SocketFactory socket_factory)
-    : rixhub_endpoint_(rixhub_endpoint), socket_factory_(socket_factory), shutdown_flag_(true),
-      registered_flag_(false) {
+    : rixhub_endpoint_(rixhub_endpoint), socket_factory_(socket_factory), registered_flag_(false) {
   info_.id = generate_id();
   info_.name = name;
 
   auto client = socket_factory_();
   if (!client->connect(rixhub_endpoint_)) {
+    shutdown();
     return;
   }
-  if (!client->send_message(OPCODE::NODE_REGISTER, info_))
+  if (!client->send_message(OPCODE::NODE_REGISTER, info_)) {
+    shutdown();
     return;
+  }
 
   rix::msg::mediator::Operation op;
   rix::msg::mediator::Status status;
-  if (!client->recv_message(op, status))
+  if (!client->recv_message(op, status)) {
+    shutdown();
     return;
-  if (status.error)
+  }
+  if (status.error) {
+    shutdown();
     return;
+  }
 
-  shutdown_flag_ = false;
   registered_flag_ = true;
 }
 
@@ -34,10 +39,6 @@ Node::~Node() {
     }
   }
 }
-
-bool Node::ok() const { return !shutdown_flag_; }
-
-void Node::shutdown() { shutdown_flag_ = true; }
 
 void Node::spin_once() {
   // Spin all components, remove ones that are not 'ok'

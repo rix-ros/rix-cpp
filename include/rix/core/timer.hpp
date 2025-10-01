@@ -29,19 +29,6 @@ public:
   ~Timer();
 
   /**
-   * @brief Returns true if the Subscriber has not been shut down.
-   *
-   */
-  bool ok() const override;
-
-  /**
-   * @brief Stops the spin loop. ok() will return false after this function
-   * is called.
-   *
-   */
-  void shutdown() override;
-
-  /**
    * @brief A single iteration of the timer loop. The callback will only
    * be called if the timer duration has passed since its last calling.
    *
@@ -68,7 +55,6 @@ private:
   Event event_;
   Callback callback_;
   std::mutex callback_mutex_;
-  std::atomic<bool> shutdown_flag_;
 
 #ifdef RIX_MULTITHREADED
   std::thread spin_thread_;

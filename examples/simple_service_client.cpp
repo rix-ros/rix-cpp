@@ -47,6 +47,5 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  auto sig = create_signal(SIGINT);
-  node.spin(std::move(sig));
+  node.spin();
 }

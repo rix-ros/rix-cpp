@@ -63,8 +63,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  auto sig = create_signal(SIGINT);
-  simple_subscriber->spin(std::move(sig));
+  simple_subscriber->spin();
 
   return 0;
 }

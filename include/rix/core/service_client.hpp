@@ -17,7 +17,7 @@ namespace rix::core {
 
 class Node; // Forward declaration
 
-class ServiceClient : Spinner {
+class ServiceClient : public Spinner {
   friend class Node;
 
 public:
@@ -28,14 +28,11 @@ public:
 
   ~ServiceClient();
 
-  bool ok() const override;
-  void shutdown() override;
   bool call(const rix::msg::Message &request, rix::msg::Message &response);
 
 private:
   rix::msg::mediator::SrvRequest request_;
   SocketFactory socket_factory_;
-  std::atomic<bool> shutdown_flag_;
   rix::ipc::Endpoint endpoint_;
 
   using Spinner::spin;

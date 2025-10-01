@@ -104,7 +104,7 @@ int main() {
   Node node("publisher_node");
   publisher = node.create_publisher<Header>("/my_topic");
   node.create_timer(Duration(1.0), timer_callback);
-  node.spin(std::move(create_signal(SIGINT)));
+  node.spin();
 }
 ```
 
@@ -127,7 +127,7 @@ void subscriber_callback(const Header &msg) {
 int main() {
   Node node("subscriber_node");
   node.create_subscriber<Header>("/my_topic", subscriber_callback);
-  node.spin(std::move(create_signal(SIGINT)));
+  node.spin();
 }
 ```
 
@@ -154,7 +154,7 @@ void service_callback(const UInt32 &req, Header &res) {
 int main() {
   Node node("service_node");
   node.create_service<UInt32, Header>("/my_service", service_callback);
-  node.spin(std::move(create_signal(SIGINT)));
+  node.spin();
 }
 ```
 
@@ -190,7 +190,7 @@ int main() {
   Node node("service_client_node");
   service_client = node.create_service_client<UInt32, Header>("/my_service");
   node.create_timer(Duration(1.0), timer_callback);
-  node.spin(std::move(create_signal(SIGINT)));
+  node.spin();
 }
 ```
 

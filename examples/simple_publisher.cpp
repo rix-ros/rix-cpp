@@ -76,8 +76,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  auto sig = create_signal(SIGINT);
-  simple_publisher->spin(std::move(sig));
+  simple_publisher->spin();
 
   return 0;
 }

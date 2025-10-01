@@ -26,8 +26,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  auto sig = create_signal(SIGINT);
-  mediator->spin(std::move(sig));
+  mediator->spin();
 
   return 0;
 }

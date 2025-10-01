@@ -51,7 +51,7 @@ RobotModel::RobotModel(const std::string &file_path) : world_to_root(transform_i
 }
 
 RobotModel::RobotModel(const RobotModel &other)
-    : joints(other.joints), links(other.links), root(other.root), world_to_root(other.world_to_root) {}
+    : root(other.root), joints(other.joints), links(other.links), world_to_root(other.world_to_root) {}
 
 RobotModel &RobotModel::operator=(const RobotModel &other) {
     if (this != &other) {
@@ -195,7 +195,6 @@ rix::msg::geometry::TF RobotModel::get_static_transforms() const {
     transform.header.stamp = rix::util::Time::now().to_msg();
     transform.header.seq = 0;
 
-    size_t index = 0;
     for (const auto &pair : links) {
         const std::string &link_name = pair.first;
         std::shared_ptr<Link> link = pair.second;

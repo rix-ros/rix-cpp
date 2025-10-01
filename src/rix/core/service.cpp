@@ -4,8 +4,8 @@ namespace rix::core {
 
 Service::Service(const rix::msg::mediator::SrvInfo &info, SocketFactory socket_factory,
                  const rix::ipc::Endpoint &rixhub_endpoint)
-    : info_(info), socket_factory_(socket_factory), rixhub_endpoint_(rixhub_endpoint), shutdown_flag_(true),
-      registered_flag_(false), request_instance_(nullptr), response_instance_(nullptr) {
+    : info_(info), socket_factory_(socket_factory), rixhub_endpoint_(rixhub_endpoint), registered_flag_(false),
+      request_instance_(nullptr), response_instance_(nullptr) {
 
   server_ = socket_factory_();
   server_->set_reuse_address(true);
@@ -13,8 +13,10 @@ Service::Service(const rix::msg::mediator::SrvInfo &info, SocketFactory socket_f
   server_->listen(rix::ipc::MAX_CONN);
 
   // Ensure server was intitialized properly
-  if (server_->is_exception())
+  if (server_->is_exception()) {
+    shutdown();
     return;
+  }
 
   auto server_endpoint = server_->local_endpoint();
   // Update the endpoint in case the port was set to 0 (ephemeral)
@@ -23,20 +25,27 @@ Service::Service(const rix::msg::mediator::SrvInfo &info, SocketFactory socket_f
 
   // Register service with rixhub
   auto client = socket_factory_();
-  if (!client->connect(rixhub_endpoint_))
+  if (!client->connect(rixhub_endpoint_)) {
+    shutdown();
     return;
+  }
 
-  if (!client->send_message(OPCODE::SRV_REGISTER, info_))
+  if (!client->send_message(OPCODE::SRV_REGISTER, info_)) {
+    shutdown();
     return;
+  }
 
   rix::msg::mediator::Operation op;
   rix::msg::mediator::Status status;
-  if (!client->recv_message(op, status))
+  if (!client->recv_message(op, status)) {
+    shutdown();
     return;
-  if (status.error)
+  }
+  if (status.error) {
+    shutdown();
     return;
+  }
 
-  shutdown_flag_ = false;
   registered_flag_ = true;
 
   rix::util::Log::debug << "Service created for \"" << info_.name << "\"." << std::endl;
@@ -63,10 +72,6 @@ Service::~Service() {
 
   rix::util::Log::debug << "Service for \"" << info_.name << "\" destroyed." << std::endl;
 }
-
-bool Service::ok() const { return !shutdown_flag_; }
-
-void Service::shutdown() { shutdown_flag_ = true; }
 
 void Service::spin_once() {
   // Check to see if a subscriber has made a connection

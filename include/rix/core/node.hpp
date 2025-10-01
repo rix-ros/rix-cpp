@@ -52,8 +52,6 @@ public:
                                           std::function<void(const TRequest &, TResponse &)> callback,
                                           const rix::ipc::Endpoint &endpoint = rix::ipc::Endpoint(DEFAULT_IP, 0));
 
-  bool ok() const override;
-  void shutdown() override;
   void spin_once() override;
 
   template <typename TParam> bool set_parameter(const std::string &name, const TParam &parameter);
@@ -66,7 +64,6 @@ private:
   SocketFactory socket_factory_;
   rix::msg::mediator::NodeInfo info_;
   std::vector<std::shared_ptr<Spinner>> components_;
-  std::atomic<bool> shutdown_flag_;
   std::atomic<bool> registered_flag_;
 
   static uint64_t generate_id();

@@ -5,7 +5,7 @@ namespace rix::core {
 Subscriber::Subscriber(const rix::msg::mediator::SubInfo &info, SocketFactory socket_factory,
                        const rix::ipc::Endpoint &rixhub_endpoint)
     : info_(info), socket_factory_(socket_factory), callback_(nullptr), rixhub_endpoint_(rixhub_endpoint),
-      shutdown_flag_(true), registered_flag_(false) {
+      registered_flag_(false) {
 
   server_ = socket_factory_();
   server_->set_reuse_address(true);
@@ -13,8 +13,10 @@ Subscriber::Subscriber(const rix::msg::mediator::SubInfo &info, SocketFactory so
   server_->listen(rix::ipc::MAX_CONN);
 
   // Ensure server was intitialized properly
-  if (server_->is_exception())
+  if (server_->is_exception()) {
+    shutdown();
     return;
+  }
 
   auto server_endpoint = server_->local_endpoint();
   // Update the endpoint in case the port was set to 0 (ephemeral)
@@ -23,19 +25,26 @@ Subscriber::Subscriber(const rix::msg::mediator::SubInfo &info, SocketFactory so
 
   // Register subscriber with rixhub
   auto client = socket_factory_();
-  if (!client->connect(rixhub_endpoint_))
+  if (!client->connect(rixhub_endpoint_)) {
+    shutdown();
     return;
-  if (!client->send_message(OPCODE::SUB_REGISTER, info_))
+  }
+  if (!client->send_message(OPCODE::SUB_REGISTER, info_)) {
+    shutdown();
     return;
+  }
 
   rix::msg::mediator::Operation op;
   rix::msg::mediator::Status status;
-  if (!client->recv_message(op, status))
+  if (!client->recv_message(op, status)) {
+    shutdown();
     return;
-  if (status.error)
+  }
+  if (status.error) {
+    shutdown();
     return;
+  }
 
-  shutdown_flag_ = false;
   registered_flag_ = true;
 
   rix::util::Log::debug << "Subscriber created on topic \"" << info_.topic_info.name << "\"." << std::endl;
@@ -66,10 +75,6 @@ Subscriber::~Subscriber() {
   }
 #endif
 }
-
-bool Subscriber::ok() const { return !shutdown_flag_; }
-
-void Subscriber::shutdown() { shutdown_flag_ = true; }
 
 size_t Subscriber::get_publisher_count() const {
   std::lock_guard<std::mutex> guard(callback_mutex_);
@@ -137,6 +142,8 @@ void Subscriber::spin_once() {
   }
   readable_clients.clear();
 }
+
+Subscriber::SubNotifyAcceptor::SubNotifyAcceptor(Subscriber &parent) : parent(parent) {}
 
 void Subscriber::SubNotifyAcceptor::spin_once() {
   // Check to see if rixhub has made a connection

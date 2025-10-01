@@ -1,6 +1,6 @@
 #pragma once
 
-#include "rix/ipc/generic_signal.hpp"
+#include "rix/ipc/signal.hpp"
 #include <memory>
 
 namespace rix::core {
@@ -14,19 +14,13 @@ public:
   Spinner &operator=(Spinner &&other) = default;
   virtual ~Spinner() = default;
 
-  void spin(std::unique_ptr<rix::ipc::GenericSignal> signal) {
-    while (ok()) {
-      if (signal->is_ready()) {
-        shutdown();
-        break;
-      }
-      spin_once();
-    }
-  }
-
   void spin() {
-    while (ok())
+    while (ok()) {
       spin_once();
+      if (shutdown_signal_ && shutdown_signal_->is_ready()) {
+        shutdown();
+      }
+    }
   }
 
   /**
@@ -40,13 +34,19 @@ public:
    * created the object without error.
    *
    */
-  virtual bool ok() const = 0;
+  bool ok() const { return !shutdown_flag_; }
 
   /**
    * @brief Shuts down the object. ok() will return false after this call.
    *
    */
-  virtual void shutdown() = 0;
+  void shutdown() { shutdown_flag_ = true; }
+
+  void set_shutdown_signal(std::shared_ptr<rix::ipc::GenericSignal> signal) { shutdown_signal_ = signal; }
+
+private:
+  bool shutdown_flag_{false};
+  std::shared_ptr<rix::ipc::GenericSignal> shutdown_signal_{rix::ipc::create_signal(SIGINT)};
 };
 
 } // namespace rix::core

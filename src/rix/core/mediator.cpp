@@ -3,25 +3,21 @@
 namespace rix::core {
 
 Mediator::Mediator(const rix::ipc::Endpoint &rixhub_endpoint, SocketFactory socket_factory)
-    : socket_factory_(socket_factory), shutdown_flag_(true) {
+    : socket_factory_(socket_factory) {
   server_ = socket_factory_();
   server_->set_reuse_address(true);
   server_->bind(rixhub_endpoint);
   server_->listen(rix::ipc::MAX_CONN);
   // Ensure server was intitialized properly
   if (server_->is_exception()) {
+    shutdown();
     return;
   }
 
-  shutdown_flag_ = false;
   rix::util::Log::info << "rixhub started on " << server_->local_endpoint() << std::endl;
 }
 
 Mediator::~Mediator() {}
-
-bool Mediator::ok() const { return !shutdown_flag_; }
-
-void Mediator::shutdown() { shutdown_flag_ = true; }
 
 void Mediator::spin_once() {
   if (!server_->wait_readable(rix::util::Duration(1.0))) {

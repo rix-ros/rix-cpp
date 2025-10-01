@@ -31,9 +31,6 @@ public:
   Subscriber &operator=(const Subscriber &) = delete;
   ~Subscriber();
 
-  virtual bool ok() const override;
-  virtual void shutdown() override;
-
   template <typename TMsg> void set_callback(std::function<void(const TMsg &)> callback);
 
   size_t get_publisher_count() const;
@@ -46,7 +43,6 @@ private:
   mutable std::mutex callback_mutex_;
   std::set<std::shared_ptr<rix::ipc::GenericSocket>> clients_;
   rix::ipc::Endpoint rixhub_endpoint_;
-  std::atomic<bool> shutdown_flag_;
   std::atomic<bool> registered_flag_;
   std::shared_ptr<rix::msg::Message> msg_instance_;
 
@@ -59,7 +55,7 @@ private:
   // Internal class to handle accepting new connections from rixhub
   class SubNotifyAcceptor : public Spinner {
   public:
-    SubNotifyAcceptor(Subscriber &parent) : parent(parent), shutdown_flag(false) {}
+    SubNotifyAcceptor(Subscriber &parent);
     ~SubNotifyAcceptor() override = default;
 
     SubNotifyAcceptor(const SubNotifyAcceptor &) = delete;
@@ -67,12 +63,9 @@ private:
     SubNotifyAcceptor(SubNotifyAcceptor &&) = delete;
     SubNotifyAcceptor &operator=(SubNotifyAcceptor &&) = delete;
 
-    bool ok() const override { return !shutdown_flag; }
-    void shutdown() override { shutdown_flag = true; }
     void spin_once() override;
 
     Subscriber &parent;
-    std::atomic<bool> shutdown_flag;
 #ifdef RIX_MULTITHREADED
     std::thread spin_thread;
 #endif

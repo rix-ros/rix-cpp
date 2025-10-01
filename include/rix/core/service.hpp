@@ -28,9 +28,6 @@ public:
   Service &operator=(Service &&) = delete;
   ~Service();
 
-  bool ok() const override;
-  void shutdown() override;
-
   template <typename TRequest, typename TResponse>
   void set_callback(std::function<void(const TRequest &, TResponse &)> callback);
 
@@ -41,7 +38,6 @@ private:
   Callback callback_;
   mutable std::mutex callback_mutex_;
   rix::ipc::Endpoint rixhub_endpoint_;
-  std::atomic<bool> shutdown_flag_;
   std::atomic<bool> registered_flag_;
   std::shared_ptr<rix::msg::Message> request_instance_;
   std::shared_ptr<rix::msg::Message> response_instance_;

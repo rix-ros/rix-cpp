@@ -4,37 +4,43 @@ namespace rix::core {
 
 ServiceClient::ServiceClient(const rix::msg::mediator::SrvRequest &request, SocketFactory socket_factory,
                              const rix::ipc::Endpoint &rixhub_endpoint)
-    : request_(request), socket_factory_(socket_factory), shutdown_flag_(true) {
+    : request_(request), socket_factory_(socket_factory) {
   rix::msg::mediator::SrvResponse response;
 
   auto client = socket_factory_();
-  if (!client->connect(rixhub_endpoint))
+  if (!client->connect(rixhub_endpoint)) {
+    shutdown();
     return;
+  }
 
-  if (!client->send_message(OPCODE::SRV_REQUEST, request))
+  if (!client->send_message(OPCODE::SRV_REQUEST, request)) {
+    shutdown();
     return;
+  }
 
   rix::msg::mediator::Operation op;
-  if (!client->recv_message(op, response))
+  if (!client->recv_message(op, response)) {
+    shutdown();
     return;
+  }
 
-  if (op.opcode != OPCODE::SRV_RESPONSE)
+  if (op.opcode != OPCODE::SRV_RESPONSE) {
+    shutdown();
     return;
+  }
 
-  if (response.error)
+  if (response.error) {
+    shutdown();
     return;
+  }
 
   endpoint_.address = response.srv_info.endpoint.address;
   endpoint_.port = response.srv_info.endpoint.port;
-
-  shutdown_flag_ = false;
 }
 
 ServiceClient::~ServiceClient() {}
 
-bool ServiceClient::ok() const { return !shutdown_flag_; }
-void ServiceClient::shutdown() { shutdown_flag_ = true; }
-void ServiceClient::spin_once() { return; }
+void ServiceClient::spin_once() {}
 
 bool ServiceClient::call(const rix::msg::Message &request, rix::msg::Message &response) {
   auto client = socket_factory_();

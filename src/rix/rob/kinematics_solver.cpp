@@ -229,8 +229,6 @@ bool KinematicsSolver::iterate_ik(const std::vector<std::shared_ptr<Joint>> &cha
 
     Eigen::VectorXd dq = Jinv * dp;
 
-    double slope = dq.norm();
-
     for (size_t k = 0; k < dq.rows(); k++) {
         auto &j = chain[k];
         double new_pos = j->clamp(j->position() + step_scale_ * dq(k));

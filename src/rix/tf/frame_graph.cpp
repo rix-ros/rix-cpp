@@ -5,7 +5,7 @@
 namespace rix::tf {
 
 FrameGraph::FrameGraph(const std::string &root, const rix::util::Duration &duration)
-    : frames_(1, Frame(root, duration)), graph_(1), duration_(duration) {
+    : graph_(1), frames_(1, Frame(root, duration)), duration_(duration) {
     name_to_index_[root] = 0;
 }
 

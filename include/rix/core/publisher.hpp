@@ -27,8 +27,6 @@ public:
   Publisher &operator=(Publisher &&) = delete;
   ~Publisher();
 
-  bool ok() const override;
-  void shutdown() override;
   void publish(const rix::msg::Message &msg);
   size_t get_subscriber_count() const;
 
@@ -39,7 +37,6 @@ private:
   std::set<std::shared_ptr<rix::ipc::GenericSocket>> connections_;
   mutable std::mutex connections_mutex_;
   rix::ipc::Endpoint rixhub_endpoint_;
-  std::atomic<bool> shutdown_flag_;
   std::atomic<bool> registered_flag_;
 
 #ifdef RIX_MULTITHREADED
