@@ -2,7 +2,14 @@
 
 namespace rix::ipc {
 
-POSIXSocket::POSIXSocket() : fd_(::socket(AF_INET, SOCK_STREAM, 0)) {}
+POSIXSocket::POSIXSocket() : fd_(::socket(AF_INET, SOCK_STREAM, 0)) {
+  static bool sigpipe_flag = false;
+  if (!sigpipe_flag) {
+    // Ignore SIGPIPE signal to prevent process termination on socket write errors
+    signal(SIGPIPE, SIG_IGN);
+    sigpipe_flag = true;
+  }
+}
 
 POSIXSocket::POSIXSocket(int fd) : fd_(fd) {}
 
