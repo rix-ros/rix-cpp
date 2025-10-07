@@ -92,7 +92,6 @@ double Joint::effort() const {
 const rix::msg::geometry::Vector3 &Joint::axis() const { return axis_; }
 const rix::msg::geometry::Transform &Joint::origin() const { return origin_; }
 
-/**< TODO: Implement transform method. */
 rix::msg::geometry::Transform Joint::transform() const {
   Eigen::Affine3d T = Eigen::Affine3d::Identity();
   Eigen::Vector3d axis = msg_to_eigen(axis_);
