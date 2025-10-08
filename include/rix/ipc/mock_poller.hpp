@@ -4,14 +4,14 @@
 #include "rix/ipc/poll.hpp"
 #include <gmock/gmock.h>
 
-namespace rix::ipc {
+namespace rix {
 
 class MockPoller : public GenericPoller {
 public:
   MockPoller() {
     ON_CALL(*this, poll)
         .WillByDefault([](const std::vector<std::shared_ptr<GenericSocket>> &all_sockets,
-                          const rix::util::Duration &duration, PollFlag flag,
+                          const Duration &duration, PollFlag flag,
                           std::vector<std::shared_ptr<GenericSocket>> &sockets,
                           std::vector<std::shared_ptr<GenericSocket>> &exception_sockets) -> bool {
           sockets = all_sockets;
@@ -21,10 +21,10 @@ public:
   }
 
   MOCK_METHOD(bool, poll,
-              (const std::vector<std::shared_ptr<GenericSocket>> &all_sockets, const rix::util::Duration &duration,
+              (const std::vector<std::shared_ptr<GenericSocket>> &all_sockets, const Duration &duration,
                PollFlag flag, std::vector<std::shared_ptr<GenericSocket>> &sockets,
                std::vector<std::shared_ptr<GenericSocket>> &exception_sockets),
               (override));
 };
 
-} // namespace rix::ipc
+} // namespace rix

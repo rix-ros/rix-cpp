@@ -3,14 +3,12 @@
 
 #include <sstream>
 
-using namespace rix::core;
-using namespace rix::util;
-using namespace rix::ipc;
+using namespace rix;
 
 const std::string NAME = "simple_subscriber";
-int PORT = 8000;
+int               PORT = 8000;
 
-class SimpleSubscriber : public rix::core::Node {
+class SimpleSubscriber : public Node {
 public:
   // Initialize the Node with a name and the RixHub endpoint
   SimpleSubscriber() : Node(NAME) {
@@ -21,9 +19,13 @@ public:
       return;
     }
 
-    // Create a subscriber on topic /chatter with message type Header
-    auto sub = create_subscriber<rix::msg::standard::Header>(
-        "/chatter", std::bind(&SimpleSubscriber::callback, this, std::placeholders::_1), Endpoint(DEFAULT_IP, PORT));
+    // Create a subscriber on topic /chatter
+    // Pass member function pointer and 'this' - no lambda or std::bind needed!
+    auto sub = create_subscriber(
+        "/chatter",
+        &SimpleSubscriber::callback,
+        this,
+        Endpoint(DEFAULT_IP, PORT));
 
     // If the subscriber failed to initialize, then ok() will return false
     if (!sub->ok()) {
@@ -34,7 +36,7 @@ public:
   }
 
 private:
-  void callback(const rix::msg::standard::Header &msg) {
+  void callback(const rix::msg::standard::Header& msg) {
     std::stringstream ss;
     ss << "Received message: \n"
        << "seq: " << msg.seq << "\n"
@@ -44,7 +46,7 @@ private:
   }
 };
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   Log::init(NAME);
   Log::set_log_level(Log::Level::DEBUG);
 

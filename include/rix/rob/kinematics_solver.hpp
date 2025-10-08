@@ -4,20 +4,20 @@
 #include "rix/rob/eigen_util.hpp"
 #include "rix/rob/robot_model.hpp"
 
-namespace rix::rob {
+namespace rix {
 
 class KinematicsSolver {
 public:
   KinematicsSolver(std::shared_ptr<RobotModel> robot, double step_scale = 0.25, double tolerance = 1e-5,
                    uint32_t max_iterations = 1000);
 
-  bool solve_ik(const std::string &link_name, const rix::msg::geometry::Transform &goal,
-                rix::msg::sensor::JS initial_guess, rix::msg::sensor::JS &solution);
+  bool solve_ik(const std::string &link_name, const msg::geometry::Transform &goal,
+                msg::sensor::JS initial_guess, msg::sensor::JS &solution);
 
-  bool solve_ik(const std::string &link_name, const rix::msg::geometry::Transform &goal,
-                rix::msg::sensor::JS initial_guess, std::vector<rix::msg::sensor::JS> &solution);
+  bool solve_ik(const std::string &link_name, const msg::geometry::Transform &goal,
+                msg::sensor::JS initial_guess, std::vector<msg::sensor::JS> &solution);
 
-  rix::msg::geometry::Transform solve_fk(const std::string &link_name) const;
+  msg::geometry::Transform solve_fk(const std::string &link_name) const;
 
   Eigen::MatrixXd get_jacobian(const std::vector<std::shared_ptr<Joint>> &chain, Eigen::Affine3d &ee_transform);
 
@@ -39,4 +39,4 @@ private:
                   const Eigen::Affine3d &goal);
 };
 
-} // namespace rix::rob
+} // namespace rix

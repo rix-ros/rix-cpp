@@ -7,7 +7,7 @@
 
 using Json = nlohmann::json;
 
-namespace rix::rob {
+namespace rix {
 
 namespace detail {
 
@@ -16,7 +16,7 @@ bool convert_json_box(const Json &src, Box &dst);
 bool convert_json_cylinder(const Json &src, Cylinder &dst);
 bool convert_json_mesh(const Json &src, Mesh &dst);
 bool convert_json_material(const Json &src, Material &dst);
-bool convert_json_origin(const Json &src, rix::msg::geometry::Transform &dst);
+bool convert_json_origin(const Json &src, msg::geometry::Transform &dst);
 bool convert_json_inertial(const Json &src, Inertial &dst);
 bool convert_json_geometry(const Json &src, std::shared_ptr<Geometry> &dst);
 bool convert_json_visual(const Json &src, Visual &dst);
@@ -134,10 +134,10 @@ std::vector<std::shared_ptr<Joint>> RobotModel::get_joints_in_chain(const std::s
 }
 
 /**< TODO: Implement the get_transforms method */
-rix::msg::geometry::TF RobotModel::get_transforms() const {
-  rix::msg::geometry::TF tf;
+msg::geometry::TF RobotModel::get_transforms() const {
+  msg::geometry::TF tf;
 
-  rix::msg::standard::Time stamp = rix::util::Time::now().to_msg();
+  msg::standard::Time stamp = Time::now().to_msg();
 
   tf.transforms.resize(joints.size() + 1);
 
@@ -176,9 +176,9 @@ rix::msg::geometry::TF RobotModel::get_transforms() const {
 }
 
 /**< TODO: Implement the get_joint_states method */
-rix::msg::sensor::JS RobotModel::get_joint_states() const {
-  rix::msg::sensor::JS js;
-  js.stamp = rix::util::Time::now().to_msg();
+msg::sensor::JS RobotModel::get_joint_states() const {
+  msg::sensor::JS js;
+  js.stamp = Time::now().to_msg();
   for (auto j : joints) {
     if (j.second->type() == Joint::Type::FIXED) {
       continue;
@@ -188,10 +188,10 @@ rix::msg::sensor::JS RobotModel::get_joint_states() const {
   return js;
 }
 
-rix::msg::geometry::TF RobotModel::get_static_transforms() const {
-  rix::msg::geometry::TF tf;
-  rix::msg::geometry::TransformStamped transform;
-  transform.header.stamp = rix::util::Time::now().to_msg();
+msg::geometry::TF RobotModel::get_static_transforms() const {
+  msg::geometry::TF tf;
+  msg::geometry::TransformStamped transform;
+  transform.header.stamp = Time::now().to_msg();
   transform.header.seq = 0;
 
   for (const auto &pair : links) {
@@ -225,13 +225,13 @@ rix::msg::geometry::TF RobotModel::get_static_transforms() const {
   return tf;
 }
 
-void RobotModel::set_state(const rix::msg::sensor::JS &js) {
+void RobotModel::set_state(const msg::sensor::JS &js) {
   for (const auto &joint_state : js.joint_states) {
     set_state(joint_state);
   }
 }
 
-void RobotModel::set_state(const rix::msg::sensor::JointState &js) {
+void RobotModel::set_state(const msg::sensor::JointState &js) {
   set_state(js.name, js.position, js.velocity, js.effort);
 }
 
@@ -243,9 +243,9 @@ void RobotModel::set_state(const std::string &joint_name, double position, doubl
   it->second->set_state(position, velocity, effort);
 }
 
-void RobotModel::set_world_to_root(const rix::msg::geometry::Transform &transform) { world_to_root = transform; }
+void RobotModel::set_world_to_root(const msg::geometry::Transform &transform) { world_to_root = transform; }
 
-const rix::msg::geometry::Transform &RobotModel::get_world_to_root() const { return world_to_root; }
+const msg::geometry::Transform &RobotModel::get_world_to_root() const { return world_to_root; }
 
 namespace detail {
 
@@ -358,7 +358,7 @@ bool convert_json_material(const Json &src, Material &dst) {
   return true;
 }
 
-bool convert_json_origin(const Json &src, rix::msg::geometry::Transform &dst) {
+bool convert_json_origin(const Json &src, msg::geometry::Transform &dst) {
   if (!src.is_array())
     return false;
   if (src.size() != 6)
@@ -679,7 +679,7 @@ std::shared_ptr<Joint> convert_json_joint(const Json &src) {
     return nullptr;
   }
 
-  rix::msg::geometry::Vector3 axis;
+  msg::geometry::Vector3 axis;
   bool has_axis = src.contains("axis");
   if (!has_axis && type != Joint::Type::FIXED)
     return nullptr; // All joint must have axis besides fixed
@@ -699,7 +699,7 @@ std::shared_ptr<Joint> convert_json_joint(const Json &src) {
     axis.z = src.at("axis")[2].template get<double>();
   }
 
-  rix::msg::geometry::Transform origin = rix::rob::transform_identity();
+  msg::geometry::Transform origin = transform_identity();
   if (src.contains("origin")) {
     if (!convert_json_origin(src.at("origin"), origin))
       return nullptr;
@@ -781,4 +781,4 @@ void parse_jrdf(Json &json, std::map<std::string, std::shared_ptr<Joint>> &joint
 
 } // namespace detail
 
-} // namespace rix::rob
+} // namespace rix

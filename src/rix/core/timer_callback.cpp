@@ -1,18 +1,19 @@
-#include "rix/core/timer.hpp"
+#include "rix/core/timer_callback.hpp"
 
-namespace rix::core {
+namespace rix {
 
-Timer::Timer(const rix::util::Duration &duration, Callback callback) : duration_(duration), callback_(callback) {
-  event_.current_real = rix::util::Time::now();
-  event_.current_expected = event_.last_expected = event_.last_real = rix::util::Time(0.0);
-  event_.last_duration = rix::util::Duration(0.0);
+TimerCallback::TimerCallback(const Duration &duration, Callback callback)
+    : duration_(duration), callback_(callback) {
+  event_.current_real = Time::now();
+  event_.current_expected = event_.last_expected = event_.last_real = Time(0.0);
+  event_.last_duration = Duration(0.0);
 
 #ifdef RIX_MULTITHREADED
   spin_thread_ = std::thread([this]() { this->spin(); });
 #endif
 }
 
-Timer::~Timer() {
+TimerCallback::~TimerCallback() {
 #ifdef RIX_MULTITHREADED
   shutdown();
   if (spin_thread_.joinable()) {
@@ -21,8 +22,8 @@ Timer::~Timer() {
 #endif
 }
 
-void Timer::spin_once() {
-  event_.current_real = rix::util::Time::now();
+void TimerCallback::spin_once() {
+  event_.current_real = Time::now();
   if (event_.current_real - event_.last_real > duration_) {
     std::lock_guard<std::mutex> guard(callback_mutex_);
     event_.last_duration = event_.current_real - event_.last_real;
@@ -37,8 +38,8 @@ void Timer::spin_once() {
   }
 }
 
-void Timer::set_callback(Callback callback) { callback_ = callback; }
+void TimerCallback::set_callback(Callback callback) { callback_ = callback; }
 
-Timer::Callback Timer::get_callback() const { return callback_; }
+TimerCallback::Callback TimerCallback::get_callback() const { return callback_; }
 
-} // namespace rix::core
+} // namespace rix

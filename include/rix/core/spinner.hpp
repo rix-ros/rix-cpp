@@ -3,7 +3,7 @@
 #include "rix/ipc/signal.hpp"
 #include <memory>
 
-namespace rix::core {
+namespace rix {
 
 class Spinner {
 public:
@@ -42,11 +42,11 @@ public:
    */
   void shutdown() { shutdown_flag_ = true; }
 
-  void set_shutdown_signal(std::shared_ptr<rix::ipc::GenericSignal> signal) { shutdown_signal_ = signal; }
+  void set_shutdown_signal(std::shared_ptr<GenericSignal> signal) { shutdown_signal_ = signal; }
 
 private:
   bool shutdown_flag_{false};
-  std::shared_ptr<rix::ipc::GenericSignal> shutdown_signal_{rix::ipc::create_signal(SIGINT)};
+  std::shared_ptr<GenericSignal> shutdown_signal_{create_signal(SIGINT)};
 };
 
-} // namespace rix::core
+} // namespace rix

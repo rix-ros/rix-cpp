@@ -47,7 +47,7 @@ void test_solve_random(std::shared_ptr<rix::robot::RobotModel> robot, const std:
     }
 
     size_t success = 0;
-    rix::util::Time start = rix::util::Time::now();
+    rix::Time start = rix::Time::now();
     for (size_t i = 0; i < iterations; ++i) {
         rix::msg::sensor::JS sol;
         if (solver->solve_ik(ee, goals[i], initial_guesses[i], sol)) {
@@ -69,7 +69,7 @@ void test_solve_random(std::shared_ptr<rix::robot::RobotModel> robot, const std:
             EXPECT_LT(error, 0.001);
         }
     }
-    rix::util::Duration d = rix::util::Time::now() - start;
+    rix::Duration d = rix::Time::now() - start;
 
     double success_rate = (double)success / iterations;
     double iter_duration = ((double)d.to_nanoseconds() / 1e6) / iterations;

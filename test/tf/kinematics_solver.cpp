@@ -11,7 +11,7 @@
 
 using rix::msg::geometry::Transform;
 using rix::msg::sensor::JS;
-using namespace rix::rob;
+using namespace rix;
 
 // Helper functions for property-based testing
 

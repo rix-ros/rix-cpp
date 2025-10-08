@@ -84,13 +84,12 @@ Create a publisher that sends `Header` messages at 1 Hz:
 #include "rix/rix.hpp"
 #include "rix/msg/standard/Header.hpp"
 
-using namespace rix::core;
-using namespace rix::util;
+using namespace rix;
 using rix::msg::standard::Header;
 
 std::shared_ptr<Publisher> publisher;
 
-void timer_callback(const rix::core::Timer::Event event) {
+void timer_callback(const rix::TimerCallback::Event event) {
   static int i = 0;
   if (publisher) {
     Header msg;
@@ -116,8 +115,7 @@ Register a subscriber on the same topic:
 #include "rix/rix.hpp"
 #include "rix/msg/standard/Header.hpp"
 
-using namespace rix::core;
-using namespace rix::util;
+using namespace rix;
 using rix::msg::standard::Header;
 
 void subscriber_callback(const Header &msg) {
@@ -126,7 +124,7 @@ void subscriber_callback(const Header &msg) {
 
 int main() {
   Node node("subscriber_node");
-  node.create_subscriber<Header>("/my_topic", subscriber_callback);
+  node.create_subscriber("/my_topic", subscriber_callback);
   node.spin();
 }
 ```
@@ -140,8 +138,7 @@ Provide a request-response service:
 #include "rix/msg/standard/UInt32.hpp"
 #include "rix/msg/standard/Header.hpp"
 
-using namespace rix::core;
-using namespace rix::util;
+using namespace rix;
 using rix::msg::standard::UInt32;
 using rix::msg::standard::Header;
 
@@ -153,7 +150,7 @@ void service_callback(const UInt32 &req, Header &res) {
 
 int main() {
   Node node("service_node");
-  node.create_service<UInt32, Header>("/my_service", service_callback);
+  node.create_service("/my_service", service_callback);
   node.spin();
 }
 ```
@@ -167,14 +164,13 @@ Call a service from another node:
 #include "rix/msg/standard/UInt32.hpp"
 #include "rix/msg/standard/Header.hpp"
 
-using namespace rix::core;
-using namespace rix::util;
+using namespace rix;
 using rix::msg::standard::UInt32;
 using rix::msg::standard::Header;
 
 std::shared_ptr<ServiceClient> service_client;
 
-void timer_callback(const rix::core::Timer::Event event) {
+void timer_callback(const rix::TimerCallback::Event event) {
   static int i = 0;
   if (service_client) {
     Header res;

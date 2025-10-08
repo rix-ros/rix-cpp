@@ -7,26 +7,28 @@
 #include "rix/core/common.hpp"
 #include "rix/core/spinner.hpp"
 
-namespace rix::core {
+namespace rix {
 
-class Timer : public Spinner {
+class TimerCallback : public Spinner {
 public:
   struct Event {
-    rix::util::Time last_expected{};
-    rix::util::Time last_real{};
-    rix::util::Time current_expected{};
-    rix::util::Time current_real{};
-    rix::util::Duration last_duration{};
+    Time     last_expected{};
+    Time     last_real{};
+    Time     current_expected{};
+    Time     current_real{};
+    Duration last_duration{};
   };
 
-  using Callback = std::function<void(const Event &event)>;
+  using Callback = std::function<void(const Event& event)>;
+  template <typename TObj>
+  using ObjCallback = std::function<void(TObj*, const Event& event)>;
 
-  Timer(const rix::util::Duration &duration, Callback callback);
-  Timer(const Timer &) = delete;
-  Timer &operator=(const Timer &) = delete;
-  Timer(Timer &&) = delete;
-  Timer &operator=(Timer &&) = delete;
-  ~Timer();
+  TimerCallback(const Duration& duration, Callback callback);
+  TimerCallback(const TimerCallback&) = delete;
+  TimerCallback& operator=(const TimerCallback&) = delete;
+  TimerCallback(TimerCallback&&) = delete;
+  TimerCallback& operator=(TimerCallback&&) = delete;
+  ~TimerCallback();
 
   /**
    * @brief A single iteration of the timer loop. The callback will only
@@ -51,9 +53,9 @@ public:
   Callback get_callback() const;
 
 private:
-  rix::util::Duration duration_;
-  Event event_;
-  Callback callback_;
+  Duration   duration_;
+  Event      event_;
+  Callback   callback_;
   std::mutex callback_mutex_;
 
 #ifdef RIX_MULTITHREADED
@@ -61,4 +63,4 @@ private:
 #endif
 };
 
-} // namespace rix::core
+} // namespace rix

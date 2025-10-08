@@ -5,20 +5,20 @@
 
 #include "mediator_helper_functions.hpp"
 
-std::vector<std::shared_ptr<rix::ipc::MockSocket>> sockets;
+std::vector<std::shared_ptr<rix::MockSocket>> sockets;
 int socket_index;
 
 TEST(RegistrationTests, MediatorRegisterAndDeregisterNode) {
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Mediator server
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Node register connection 1
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Node register connection 2
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Node register connection 3
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Node deregister connection 1
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Node deregister connection 2
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Node deregister connection 3
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Mediator server
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Node register connection 1
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Node register connection 2
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Node register connection 3
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Node deregister connection 1
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Node deregister connection 2
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Node deregister connection 3
 
-  rix::ipc::Endpoint rixhub_endpoint("127.0.0.1", 0);
-  rix::ipc::Endpoint rixhub_bound_endpoint("127.0.0.1", 8000);
+  rix::Endpoint rixhub_endpoint("127.0.0.1", 0);
+  rix::Endpoint rixhub_bound_endpoint("127.0.0.1", 8000);
 
   init_med_server_socket(sockets[0], rixhub_endpoint, rixhub_bound_endpoint, 6);
   rix::msg::mediator::NodeInfo node_info;
@@ -47,7 +47,7 @@ TEST(RegistrationTests, MediatorRegisterAndDeregisterNode) {
   init_node_deregister_socket_med(sockets[6], node_info); // Never registered
 
   {
-    auto med = rix::core::Mediator(rixhub_endpoint, mock_create_socket);
+    auto med = rix::Mediator(rixhub_endpoint, mock_create_socket);
     med.spin_once(); // Register node 1
     med.spin_once(); // Register node 2
     med.spin_once(); // Fail to register node 3 (a duplicate of node 1)
@@ -82,11 +82,11 @@ TEST(RegistrationTests, MediatorRegisterAndDeregisterPublisher) {
 
   sockets.resize(18, nullptr);
   for (auto &s : sockets) {
-    s = std::make_shared<rix::ipc::MockSocket>();
+    s = std::make_shared<rix::MockSocket>();
   }
 
-  rix::ipc::Endpoint rixhub_endpoint("127.0.0.1", 0);
-  rix::ipc::Endpoint rixhub_bound_endpoint("127.0.0.1", 8000);
+  rix::Endpoint rixhub_endpoint("127.0.0.1", 0);
+  rix::Endpoint rixhub_bound_endpoint("127.0.0.1", 8000);
 
   size_t i = 0;
 
@@ -250,7 +250,7 @@ TEST(RegistrationTests, MediatorRegisterAndDeregisterPublisher) {
   init_pub_deregister_socket_med(sockets[i], pub_info);
 
   {
-    auto med = rix::core::Mediator(rixhub_endpoint, mock_create_socket);
+    auto med = rix::Mediator(rixhub_endpoint, mock_create_socket);
     med.spin_once(); // Register node 1
     EXPECT_EQ(med.get_node_count(), 1);
     med.spin_once(); // Register publisher topic A, id 2
@@ -313,11 +313,11 @@ TEST(RegistrationTests, MediatorRegisterAndDeregisterSubscriber) {
 
   sockets.resize(18, nullptr);
   for (auto &s : sockets) {
-    s = std::make_shared<rix::ipc::MockSocket>();
+    s = std::make_shared<rix::MockSocket>();
   }
 
-  rix::ipc::Endpoint rixhub_endpoint("127.0.0.1", 0);
-  rix::ipc::Endpoint rixhub_bound_endpoint("127.0.0.1", 8000);
+  rix::Endpoint rixhub_endpoint("127.0.0.1", 0);
+  rix::Endpoint rixhub_bound_endpoint("127.0.0.1", 8000);
 
   size_t i = 0;
 
@@ -481,7 +481,7 @@ TEST(RegistrationTests, MediatorRegisterAndDeregisterSubscriber) {
   init_sub_deregister_socket_med(sockets[i], sub_info);
 
   {
-    auto med = rix::core::Mediator(rixhub_endpoint, mock_create_socket);
+    auto med = rix::Mediator(rixhub_endpoint, mock_create_socket);
     med.spin_once(); // Register node 1
     EXPECT_EQ(med.get_node_count(), 1);
     med.spin_once(); // Register subscriber topic A, id 2
@@ -544,11 +544,11 @@ TEST(RegistrationTests, MediatorRegisterAndDeregisterService) {
 
   sockets.resize(18, nullptr);
   for (auto &s : sockets) {
-    s = std::make_shared<rix::ipc::MockSocket>();
+    s = std::make_shared<rix::MockSocket>();
   }
 
-  rix::ipc::Endpoint rixhub_endpoint("127.0.0.1", 0);
-  rix::ipc::Endpoint rixhub_bound_endpoint("127.0.0.1", 8000);
+  rix::Endpoint rixhub_endpoint("127.0.0.1", 0);
+  rix::Endpoint rixhub_bound_endpoint("127.0.0.1", 8000);
 
   size_t i = 0;
 
@@ -734,7 +734,7 @@ TEST(RegistrationTests, MediatorRegisterAndDeregisterService) {
   init_srvcli_request_socket_med(sockets[i], srv_request, srv_response);
 
   {
-    auto med = rix::core::Mediator(rixhub_endpoint, mock_create_socket);
+    auto med = rix::Mediator(rixhub_endpoint, mock_create_socket);
     med.spin_once(); // 1  8001 Node register connection (id 1)
     EXPECT_EQ(med.get_node_count(), 1);
     med.spin_once(); // 2  8002 Service register connection (service A, id 2)
@@ -778,11 +778,11 @@ TEST(RegistrationTests, MediatorRegisterAndDeregisterService) {
 TEST(RegistrationTests, MediatorGetSystemInfo) {
   sockets.resize(10, nullptr);
   for (auto &s : sockets) {
-    s = std::make_shared<rix::ipc::MockSocket>();
+    s = std::make_shared<rix::MockSocket>();
   }
 
-  rix::ipc::Endpoint rixhub_endpoint("127.0.0.1", 0);
-  rix::ipc::Endpoint rixhub_bound_endpoint("127.0.0.1", 8000);
+  rix::Endpoint rixhub_endpoint("127.0.0.1", 0);
+  rix::Endpoint rixhub_bound_endpoint("127.0.0.1", 8000);
   int i = 0;
 
   init_med_server_socket(sockets[i], rixhub_endpoint, rixhub_bound_endpoint, 9);
@@ -872,7 +872,7 @@ TEST(RegistrationTests, MediatorGetSystemInfo) {
   i++;
 
   {
-    auto med = rix::core::Mediator(rixhub_endpoint, mock_create_socket);
+    auto med = rix::Mediator(rixhub_endpoint, mock_create_socket);
     med.spin_once();
     EXPECT_EQ(med.get_node_count(), 1);
     med.spin_once();
@@ -901,11 +901,11 @@ TEST(RegistrationTests, MediatorGetSystemInfo) {
 TEST(RegistrationTests, MediatorParameterGetAndSet) {
   sockets.resize(9, nullptr);
   for (auto &s : sockets) {
-    s = std::make_shared<rix::ipc::MockSocket>();
+    s = std::make_shared<rix::MockSocket>();
   }
 
-  rix::ipc::Endpoint rixhub_endpoint("127.0.0.1", 8000);
-  rix::ipc::Endpoint rixhub_bound_endpoint("127.0.0.1", 8001);
+  rix::Endpoint rixhub_endpoint("127.0.0.1", 8000);
+  rix::Endpoint rixhub_bound_endpoint("127.0.0.1", 8001);
 
   int i = 0;
   init_med_server_socket(sockets[i], rixhub_endpoint, rixhub_bound_endpoint, 8);
@@ -970,7 +970,7 @@ TEST(RegistrationTests, MediatorParameterGetAndSet) {
   i++;
 
   {
-    auto med = rix::core::Mediator(rixhub_endpoint, mock_create_socket);
+    auto med = rix::Mediator(rixhub_endpoint, mock_create_socket);
     med.spin_once();
     EXPECT_EQ(med.get_node_count(), 1);
     for (int j = 0; j < 7; j++) {

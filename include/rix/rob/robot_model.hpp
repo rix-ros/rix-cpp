@@ -17,7 +17,7 @@
 #include "rix/util/log.hpp"
 #include "rix/util/time.hpp"
 
-namespace rix::rob {
+namespace rix {
 
 class RobotModel {
 public:
@@ -159,40 +159,40 @@ public:
    *      [A->B, B->C, C->D, E->F, B->E]
    * B->E must come before E->F because B is the parent of E.
    *
-   * @return rix::msg::geometry::TF
+   * @return msg::geometry::TF
    */
-  rix::msg::geometry::TF get_transforms() const;
+  msg::geometry::TF get_transforms() const;
 
   /**
    * @brief Create a JS message from the current state of the RobotModel.
    * There is no order to the joint states in the JS message.
    *
-   * @return rix::msg::sensor::JS
+   * @return msg::sensor::JS
    */
-  rix::msg::sensor::JS get_joint_states() const;
+  msg::sensor::JS get_joint_states() const;
 
   /**
    * @brief Get the static transforms from the RobotModel. This returns any
    * inertial, visual, or collision frames for each link.
    *
-   * @return rix::msg::geometry::TF
+   * @return msg::geometry::TF
    */
-  rix::msg::geometry::TF get_static_transforms() const;
+  msg::geometry::TF get_static_transforms() const;
 
-  void set_state(const rix::msg::sensor::JS &js);
-  void set_state(const rix::msg::sensor::JointState &js);
+  void set_state(const msg::sensor::JS &js);
+  void set_state(const msg::sensor::JointState &js);
   void set_state(const std::string &joint_name, double position, double velocity, double effort);
 
-  void set_world_to_root(const rix::msg::geometry::Transform &world_to_root);
-  const rix::msg::geometry::Transform &get_world_to_root() const;
+  void set_world_to_root(const msg::geometry::Transform &world_to_root);
+  const msg::geometry::Transform &get_world_to_root() const;
 
 private:
   std::string root;
   std::map<std::string, std::shared_ptr<Joint>> joints;
   std::map<std::string, std::shared_ptr<Link>> links;
-  rix::msg::geometry::Transform world_to_root;
+  msg::geometry::Transform world_to_root;
 
   RobotModel();
 };
 
-} // namespace rix::rob
+} // namespace rix

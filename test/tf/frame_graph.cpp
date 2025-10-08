@@ -2,10 +2,10 @@
 
 #include <gtest/gtest.h>
 
-using namespace rix::tf;
+using namespace rix;
 
 TEST(FrameGraph, Test) {
-    FrameGraph graph("world", rix::util::Duration(1.0));
+    FrameGraph graph("world", rix::Duration(1.0));
     EXPECT_EQ(graph.get_leaves().size(), 0);
     EXPECT_EQ(graph.get_root()->name, "world");
     
@@ -32,21 +32,21 @@ TEST(FrameGraph, Test) {
     it = graph.find("base");
     EXPECT_NE(it, graph.end());
     EXPECT_EQ(it->name, "base");
-    EXPECT_EQ(it->buffer.duration(), rix::util::Duration(1.0));
+    EXPECT_EQ(it->buffer.duration(), rix::Duration(1.0));
 
     it = graph.find("upper_arm");
     EXPECT_NE(it, graph.end());
     EXPECT_EQ(it->name, "upper_arm");
-    EXPECT_EQ(it->buffer.duration(), rix::util::Duration(1.0));
+    EXPECT_EQ(it->buffer.duration(), rix::Duration(1.0));
 
     it = graph.find("forearm");
     EXPECT_NE(it, graph.end());
     EXPECT_EQ(it->name, "forearm");
-    EXPECT_EQ(it->buffer.duration(), rix::util::Duration(1.0));
+    EXPECT_EQ(it->buffer.duration(), rix::Duration(1.0));
 }
 
 TEST(FrameGraph, IteratorTest) {
-    FrameGraph graph("world", rix::util::Duration(1.0));
+    FrameGraph graph("world", rix::Duration(1.0));
 
     rix::msg::geometry::TransformStamped transform;
     transform.header.frame_id = "world";
@@ -72,10 +72,10 @@ TEST(FrameGraph, IteratorTest) {
 }
 
 TEST(FrameGraph, UpdateTest) {
-    FrameGraph graph("world", rix::util::Duration(1.0));
+    FrameGraph graph("world", rix::Duration(1.0));
 
     rix::msg::geometry::TransformStamped transform;
-    transform.header.stamp = rix::util::Time(1.0).to_msg();
+    transform.header.stamp = rix::Time(1.0).to_msg();
     transform.header.frame_id = "world";
     transform.child_frame_id = "base";
     transform.transform.translation.x = 1.0;
@@ -88,7 +88,7 @@ TEST(FrameGraph, UpdateTest) {
     EXPECT_EQ(graph.update(transform), true);
     EXPECT_EQ(graph.find("base")->buffer.size(), 1);
 
-    transform.header.stamp = rix::util::Time(2.0).to_msg();
+    transform.header.stamp = rix::Time(2.0).to_msg();
     transform.header.frame_id = "base";
     transform.child_frame_id = "upper_arm";
     transform.transform.translation.x = 2.0;
@@ -110,7 +110,7 @@ TEST(FrameGraph, UpdateTest) {
 }
 
 TEST(FrameGraph, LeafTest) {
-    FrameGraph graph("world", rix::util::Duration(1.0));
+    FrameGraph graph("world", rix::Duration(1.0));
 
     rix::msg::geometry::TransformStamped transform;
     transform.header.frame_id = "world";
@@ -132,7 +132,7 @@ TEST(FrameGraph, LeafTest) {
 }
 
 TEST(FrameGraph, AncestorTest) {
-    FrameGraph graph("world", rix::util::Duration(1.0));
+    FrameGraph graph("world", rix::Duration(1.0));
 
     rix::msg::geometry::TransformStamped tf;
     tf.header.frame_id = "world";
@@ -189,10 +189,10 @@ TEST(FrameGraph, AncestorTest) {
 }
 
 TEST(FrameGraph, DuplicateTransformTest) {
-    FrameGraph graph("world", rix::util::Duration(1.0));
+    FrameGraph graph("world", rix::Duration(1.0));
 
     rix::msg::geometry::TransformStamped tf;
-    tf.header.stamp = rix::util::Time(1.0).to_msg();
+    tf.header.stamp = rix::Time(1.0).to_msg();
     tf.header.frame_id = "world";
     tf.child_frame_id = "base";
     tf.transform.translation.x = 1.0;
@@ -208,18 +208,18 @@ TEST(FrameGraph, DuplicateTransformTest) {
 
     // Transform should be most recent
     rix::msg::geometry::Transform new_tf;
-    EXPECT_EQ(it->buffer.get(rix::util::Time(1.0), new_tf), true);
+    EXPECT_EQ(it->buffer.get(rix::Time(1.0), new_tf), true);
     EXPECT_NEAR(new_tf.translation.x, 2.0, 1e-6);
 }
 
 TEST(FrameGraph, GetTransformTest) {
-    FrameGraph graph("world", rix::util::Duration(10.0));
+    FrameGraph graph("world", rix::Duration(10.0));
 
     rix::msg::geometry::TransformStamped tf;
-    tf.header.stamp = rix::util::Time(5.0).to_msg();
+    tf.header.stamp = rix::Time(5.0).to_msg();
     tf.header.frame_id = "world";
     tf.child_frame_id = "base";
-    tf.transform = rix::rob::transform_identity();
+    tf.transform = rix::transform_identity();
     tf.transform.translation.x = 1.0;
     tf.transform.translation.y = 2.0;
     tf.transform.translation.z = 3.0;
@@ -233,7 +233,7 @@ TEST(FrameGraph, GetTransformTest) {
     graph.update(tf);
 
     rix::msg::geometry::TransformStamped result;
-    bool success = graph.get_transform("arm", "world", rix::util::Time(5.0), result);
+    bool success = graph.get_transform("arm", "world", rix::Time(5.0), result);
     EXPECT_TRUE(success);
     EXPECT_EQ(result.header.frame_id, "world");
     EXPECT_EQ(result.child_frame_id, "arm");
@@ -242,7 +242,7 @@ TEST(FrameGraph, GetTransformTest) {
 }
 
 TEST(FrameGraph, IteratorComparisonTest) {
-    FrameGraph graph("world", rix::util::Duration(1.0));
+    FrameGraph graph("world", rix::Duration(1.0));
     rix::msg::geometry::TransformStamped tf;
 
     tf.header.frame_id = "world";

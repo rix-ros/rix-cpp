@@ -7,7 +7,7 @@
 #include "rix/msg/standard/Duration.hpp"
 #include "rix/msg/standard/Time.hpp"
 
-namespace rix::util {
+namespace rix {
 
 using Clock = std::chrono::system_clock;
 
@@ -24,7 +24,7 @@ public:
   Time(const Type &time_point);
   Time(double seconds);
   Time(int32_t seconds, int32_t nanoseconds);
-  Time(const rix::msg::standard::Time &msg);
+  Time(const msg::standard::Time &msg);
 
   Time(const Time &other);
   Time &operator=(const Time &other);
@@ -43,7 +43,7 @@ public:
   bool operator>=(const Time &other) const;
 
   std::string to_string(bool local_time = false) const;
-  rix::msg::standard::Time to_msg();
+  msg::standard::Time to_msg();
 
   enum RoundType { FLOOR = 0, CEIL, NEAREST };
 
@@ -80,7 +80,7 @@ public:
   Duration(const Type &duration);
   Duration(double seconds);
   Duration(int32_t seconds, int32_t nanoseconds);
-  Duration(const rix::msg::standard::Duration &msg);
+  Duration(const msg::standard::Duration &msg);
 
   Duration(const Duration &other);
   Duration &operator=(const Duration &other);
@@ -106,7 +106,7 @@ public:
   bool operator>(const Duration &other) const;
   bool operator>=(const Duration &other) const;
 
-  rix::msg::standard::Duration to_msg();
+  msg::standard::Duration to_msg();
 
   int64_t to_seconds(Time::RoundType type = Time::RoundType::FLOOR) const;
   int64_t to_milliseconds(Time::RoundType type = Time::RoundType::FLOOR) const;
@@ -216,4 +216,4 @@ private:
   Time start_;
 };
 
-} // namespace rix::util
+} // namespace rix

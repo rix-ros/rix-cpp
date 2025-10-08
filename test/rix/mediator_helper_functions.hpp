@@ -13,13 +13,13 @@
 #include "rix/msg/standard/Void.hpp"
 #include <gmock/gmock.h>
 
-extern std::vector<std::shared_ptr<rix::ipc::MockSocket>> sockets;
+extern std::vector<std::shared_ptr<rix::MockSocket>> sockets;
 extern int socket_index;
 
-std::shared_ptr<rix::ipc::GenericSocket> mock_create_socket() { return sockets[socket_index++]; }
+std::shared_ptr<rix::GenericSocket> mock_create_socket() { return sockets[socket_index++]; }
 
-void init_med_server_socket(std::shared_ptr<rix::ipc::MockSocket> socket, const rix::ipc::Endpoint &rixhub_endpoint,
-                            const rix::ipc::Endpoint &rixhub_bound_endpoint, int expected_spin_count) {
+void init_med_server_socket(std::shared_ptr<rix::MockSocket> socket, const rix::Endpoint &rixhub_endpoint,
+                            const rix::Endpoint &rixhub_bound_endpoint, int expected_spin_count) {
   EXPECT_CALL(*socket, set_reuse_address(true)).Times(1);
   EXPECT_CALL(*socket, bind)
       .With(::testing::Args<0>(::testing::Truly([&rixhub_endpoint](const auto &args) {
@@ -30,14 +30,14 @@ void init_med_server_socket(std::shared_ptr<rix::ipc::MockSocket> socket, const 
   EXPECT_CALL(*socket, local_endpoint).Times(1).WillOnce(::testing::Return(rixhub_bound_endpoint));
   EXPECT_CALL(*socket, wait_exception).Times(1);
   EXPECT_CALL(*socket, wait_readable).Times(expected_spin_count).WillRepeatedly(::testing::Return(true));
-  EXPECT_CALL(*socket, accept).Times(expected_spin_count).WillRepeatedly(::testing::Invoke([](rix::ipc::Endpoint &ep) {
-    ep = rix::ipc::Endpoint("127.0.0.1", 1234);
+  EXPECT_CALL(*socket, accept).Times(expected_spin_count).WillRepeatedly(::testing::Invoke([](rix::Endpoint &ep) {
+    ep = rix::Endpoint("127.0.0.1", 1234);
     return mock_create_socket();
   }));
   EXPECT_CALL(*socket, close()).Times(1);
 }
 
-void init_pub_register_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
+void init_pub_register_socket_med(std::shared_ptr<rix::MockSocket> socket,
                                   const rix::msg::mediator::PubInfo &pub_info, bool error) {
   EXPECT_CALL(*socket, recv_message)
       .Times(2)
@@ -45,7 +45,7 @@ void init_pub_register_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
         auto op = dynamic_cast<rix::msg::mediator::Operation *>(&msg);
         if (op) {
           op->len = pub_info.size();
-          op->opcode = rix::core::OPCODE::PUB_REGISTER;
+          op->opcode = rix::OPCODE::PUB_REGISTER;
           return true;
         }
         return false;
@@ -61,7 +61,7 @@ void init_pub_register_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
   EXPECT_CALL(*socket, send_message)
       .Times(1)
       .WillOnce(::testing::Invoke([pub_info, error](uint8_t opcode, const rix::msg::Message &msg) {
-        EXPECT_EQ(opcode, rix::core::OPCODE::STATUS_RESPONSE);
+        EXPECT_EQ(opcode, rix::OPCODE::STATUS_RESPONSE);
         auto status = dynamic_cast<const rix::msg::mediator::Status *>(&msg);
         if (status) {
           EXPECT_EQ(status->id, pub_info.id);
@@ -77,7 +77,7 @@ void init_pub_register_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
   EXPECT_CALL(*socket, close()).Times(1);
 }
 
-void init_sub_register_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
+void init_sub_register_socket_med(std::shared_ptr<rix::MockSocket> socket,
                                   const rix::msg::mediator::SubInfo &sub_info, bool error) {
   EXPECT_CALL(*socket, recv_message)
       .Times(2)
@@ -85,7 +85,7 @@ void init_sub_register_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
         auto op = dynamic_cast<rix::msg::mediator::Operation *>(&msg);
         if (op) {
           op->len = sub_info.size();
-          op->opcode = rix::core::OPCODE::SUB_REGISTER;
+          op->opcode = rix::OPCODE::SUB_REGISTER;
           return true;
         }
         return false;
@@ -101,7 +101,7 @@ void init_sub_register_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
   EXPECT_CALL(*socket, send_message)
       .Times(1)
       .WillOnce(::testing::Invoke([sub_info, error](uint8_t opcode, const rix::msg::Message &msg) {
-        EXPECT_EQ(opcode, rix::core::OPCODE::STATUS_RESPONSE);
+        EXPECT_EQ(opcode, rix::OPCODE::STATUS_RESPONSE);
         auto status = dynamic_cast<const rix::msg::mediator::Status *>(&msg);
         if (status) {
           EXPECT_EQ(status->id, sub_info.id);
@@ -117,7 +117,7 @@ void init_sub_register_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
   EXPECT_CALL(*socket, close()).Times(1);
 }
 
-void init_srv_register_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
+void init_srv_register_socket_med(std::shared_ptr<rix::MockSocket> socket,
                                   const rix::msg::mediator::SrvInfo &srv_info, bool error) {
   EXPECT_CALL(*socket, recv_message)
       .Times(2)
@@ -125,7 +125,7 @@ void init_srv_register_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
         auto op = dynamic_cast<rix::msg::mediator::Operation *>(&msg);
         if (op) {
           op->len = srv_info.size();
-          op->opcode = rix::core::OPCODE::SRV_REGISTER;
+          op->opcode = rix::OPCODE::SRV_REGISTER;
           return true;
         }
         return false;
@@ -141,7 +141,7 @@ void init_srv_register_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
   EXPECT_CALL(*socket, send_message)
       .Times(1)
       .WillOnce(::testing::Invoke([srv_info, error](uint8_t opcode, const rix::msg::Message &msg) {
-        EXPECT_EQ(opcode, rix::core::OPCODE::STATUS_RESPONSE);
+        EXPECT_EQ(opcode, rix::OPCODE::STATUS_RESPONSE);
         auto status = dynamic_cast<const rix::msg::mediator::Status *>(&msg);
         if (status) {
           EXPECT_EQ(status->id, srv_info.id);
@@ -157,7 +157,7 @@ void init_srv_register_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
   EXPECT_CALL(*socket, close()).Times(1);
 }
 
-void init_node_register_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
+void init_node_register_socket_med(std::shared_ptr<rix::MockSocket> socket,
                                    const rix::msg::mediator::NodeInfo &node_info, bool error) {
   EXPECT_CALL(*socket, recv_message)
       .Times(2)
@@ -165,7 +165,7 @@ void init_node_register_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
         auto op = dynamic_cast<rix::msg::mediator::Operation *>(&msg);
         if (op) {
           op->len = node_info.size();
-          op->opcode = rix::core::OPCODE::NODE_REGISTER;
+          op->opcode = rix::OPCODE::NODE_REGISTER;
           return true;
         }
         return false;
@@ -181,7 +181,7 @@ void init_node_register_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
   EXPECT_CALL(*socket, send_message)
       .Times(1)
       .WillOnce(::testing::Invoke([node_info, error](uint8_t opcode, const rix::msg::Message &msg) {
-        EXPECT_EQ(opcode, rix::core::OPCODE::STATUS_RESPONSE);
+        EXPECT_EQ(opcode, rix::OPCODE::STATUS_RESPONSE);
         auto status = dynamic_cast<const rix::msg::mediator::Status *>(&msg);
         if (status) {
           EXPECT_EQ(status->id, node_info.id);
@@ -197,7 +197,7 @@ void init_node_register_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
   EXPECT_CALL(*socket, close()).Times(1);
 }
 
-void init_srvcli_request_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
+void init_srvcli_request_socket_med(std::shared_ptr<rix::MockSocket> socket,
                                     const rix::msg::mediator::SrvRequest &srv_request,
                                     const rix::msg::mediator::SrvResponse &srv_response) {
   EXPECT_CALL(*socket, recv_message)
@@ -206,7 +206,7 @@ void init_srvcli_request_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket
         auto op = dynamic_cast<rix::msg::mediator::Operation *>(&msg);
         if (op) {
           op->len = srv_request.size();
-          op->opcode = rix::core::OPCODE::SRV_REQUEST;
+          op->opcode = rix::OPCODE::SRV_REQUEST;
           return true;
         }
         return false;
@@ -222,7 +222,7 @@ void init_srvcli_request_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket
   EXPECT_CALL(*socket, send_message)
       .Times(1)
       .WillOnce(::testing::Invoke([srv_response](uint8_t opcode, const rix::msg::Message &msg) {
-        EXPECT_EQ(opcode, rix::core::OPCODE::SRV_RESPONSE);
+        EXPECT_EQ(opcode, rix::OPCODE::SRV_RESPONSE);
         auto response = dynamic_cast<const rix::msg::mediator::SrvResponse *>(&msg);
         if (response) {
           if (srv_response.error == 0) {
@@ -243,7 +243,7 @@ void init_srvcli_request_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket
   EXPECT_CALL(*socket, close()).Times(1);
 }
 
-void init_sys_info_request_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
+void init_sys_info_request_socket_med(std::shared_ptr<rix::MockSocket> socket,
                                       const rix::msg::mediator::SystemInfo &sys_info, uint64_t node_id) {
   EXPECT_CALL(*socket, recv_message)
       .Times(2)
@@ -251,7 +251,7 @@ void init_sys_info_request_socket_med(std::shared_ptr<rix::ipc::MockSocket> sock
         auto op = dynamic_cast<rix::msg::mediator::Operation *>(&msg);
         if (op) {
           op->len = 0;
-          op->opcode = rix::core::OPCODE::SYSTEM_GET_REQUEST;
+          op->opcode = rix::OPCODE::SYSTEM_GET_REQUEST;
           return true;
         }
         return false;
@@ -267,7 +267,7 @@ void init_sys_info_request_socket_med(std::shared_ptr<rix::ipc::MockSocket> sock
   EXPECT_CALL(*socket, send_message)
       .Times(1)
       .WillOnce(::testing::Invoke([sys_info](uint8_t opcode, const rix::msg::Message &msg) {
-        EXPECT_EQ(opcode, rix::core::OPCODE::SYSTEM_GET_RESPONSE);
+        EXPECT_EQ(opcode, rix::OPCODE::SYSTEM_GET_RESPONSE);
         auto info = dynamic_cast<const rix::msg::mediator::SystemInfo *>(&msg);
         if (info) {
           EXPECT_EQ(info->publishers.size(), sys_info.publishers.size());
@@ -310,7 +310,7 @@ void init_sys_info_request_socket_med(std::shared_ptr<rix::ipc::MockSocket> sock
   EXPECT_CALL(*socket, close()).Times(1);
 }
 
-void init_param_set_request_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
+void init_param_set_request_socket_med(std::shared_ptr<rix::MockSocket> socket,
                                        const rix::msg::mediator::ParamInfo &param_info, bool error) {
   EXPECT_CALL(*socket, recv_message)
       .Times(2)
@@ -318,7 +318,7 @@ void init_param_set_request_socket_med(std::shared_ptr<rix::ipc::MockSocket> soc
         auto op = dynamic_cast<rix::msg::mediator::Operation *>(&msg);
         if (op) {
           op->len = param_info.size();
-          op->opcode = rix::core::OPCODE::PARAM_SET_REQUEST;
+          op->opcode = rix::OPCODE::PARAM_SET_REQUEST;
           return true;
         }
         return false;
@@ -334,7 +334,7 @@ void init_param_set_request_socket_med(std::shared_ptr<rix::ipc::MockSocket> soc
   EXPECT_CALL(*socket, send_message)
       .Times(1)
       .WillOnce(::testing::Invoke([param_info, error](uint8_t opcode, const rix::msg::Message &msg) {
-        EXPECT_EQ(opcode, rix::core::OPCODE::STATUS_RESPONSE);
+        EXPECT_EQ(opcode, rix::OPCODE::STATUS_RESPONSE);
         auto status = dynamic_cast<const rix::msg::mediator::Status *>(&msg);
         if (status) {
           EXPECT_EQ(status->id, param_info.id);
@@ -350,7 +350,7 @@ void init_param_set_request_socket_med(std::shared_ptr<rix::ipc::MockSocket> soc
   EXPECT_CALL(*socket, close()).Times(1);
 }
 
-void init_param_get_request_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
+void init_param_get_request_socket_med(std::shared_ptr<rix::MockSocket> socket,
                                        const rix::msg::mediator::ParamInfo &param_get_request,
                                        const rix::msg::mediator::ParamInfo &param_info, bool error) {
   EXPECT_CALL(*socket, recv_message)
@@ -359,7 +359,7 @@ void init_param_get_request_socket_med(std::shared_ptr<rix::ipc::MockSocket> soc
         auto op = dynamic_cast<rix::msg::mediator::Operation *>(&msg);
         if (op) {
           op->len = param_get_request.size();
-          op->opcode = rix::core::OPCODE::PARAM_GET_REQUEST;
+          op->opcode = rix::OPCODE::PARAM_GET_REQUEST;
           return true;
         }
         return false;
@@ -375,7 +375,7 @@ void init_param_get_request_socket_med(std::shared_ptr<rix::ipc::MockSocket> soc
   EXPECT_CALL(*socket, send_message)
       .Times(1)
       .WillOnce(::testing::Invoke([param_get_request, param_info, error](uint8_t opcode, const rix::msg::Message &msg) {
-        EXPECT_EQ(opcode, rix::core::OPCODE::PARAM_GET_RESPONSE);
+        EXPECT_EQ(opcode, rix::OPCODE::PARAM_GET_RESPONSE);
         auto info = dynamic_cast<const rix::msg::mediator::ParamInfo *>(&msg);
         if (info) {
           EXPECT_EQ(info->id, param_get_request.id);
@@ -393,7 +393,7 @@ void init_param_get_request_socket_med(std::shared_ptr<rix::ipc::MockSocket> soc
   EXPECT_CALL(*socket, close()).Times(1);
 }
 
-void init_pub_deregister_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
+void init_pub_deregister_socket_med(std::shared_ptr<rix::MockSocket> socket,
                                     const rix::msg::mediator::PubInfo &pub_info) {
   EXPECT_CALL(*socket, recv_message)
       .Times(2)
@@ -401,7 +401,7 @@ void init_pub_deregister_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket
         auto op = dynamic_cast<rix::msg::mediator::Operation *>(&msg);
         if (op) {
           op->len = pub_info.size();
-          op->opcode = rix::core::OPCODE::PUB_DEREGISTER;
+          op->opcode = rix::OPCODE::PUB_DEREGISTER;
           return true;
         }
         return false;
@@ -417,7 +417,7 @@ void init_pub_deregister_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket
   EXPECT_CALL(*socket, close()).Times(1);
 }
 
-void init_sub_deregister_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
+void init_sub_deregister_socket_med(std::shared_ptr<rix::MockSocket> socket,
                                     const rix::msg::mediator::SubInfo &sub_info) {
   EXPECT_CALL(*socket, recv_message)
       .Times(2)
@@ -425,7 +425,7 @@ void init_sub_deregister_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket
         auto op = dynamic_cast<rix::msg::mediator::Operation *>(&msg);
         if (op) {
           op->len = sub_info.size();
-          op->opcode = rix::core::OPCODE::SUB_DEREGISTER;
+          op->opcode = rix::OPCODE::SUB_DEREGISTER;
           return true;
         }
         return false;
@@ -441,7 +441,7 @@ void init_sub_deregister_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket
   EXPECT_CALL(*socket, close()).Times(1);
 }
 
-void init_srv_deregister_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
+void init_srv_deregister_socket_med(std::shared_ptr<rix::MockSocket> socket,
                                     const rix::msg::mediator::SrvInfo &srv_info) {
   EXPECT_CALL(*socket, recv_message)
       .Times(2)
@@ -449,7 +449,7 @@ void init_srv_deregister_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket
         auto op = dynamic_cast<rix::msg::mediator::Operation *>(&msg);
         if (op) {
           op->len = srv_info.size();
-          op->opcode = rix::core::OPCODE::SRV_DEREGISTER;
+          op->opcode = rix::OPCODE::SRV_DEREGISTER;
           return true;
         }
         return false;
@@ -465,7 +465,7 @@ void init_srv_deregister_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket
   EXPECT_CALL(*socket, close()).Times(1);
 }
 
-void init_node_deregister_socket_med(std::shared_ptr<rix::ipc::MockSocket> socket,
+void init_node_deregister_socket_med(std::shared_ptr<rix::MockSocket> socket,
                                      const rix::msg::mediator::NodeInfo &node_info) {
   EXPECT_CALL(*socket, recv_message)
       .Times(2)
@@ -473,7 +473,7 @@ void init_node_deregister_socket_med(std::shared_ptr<rix::ipc::MockSocket> socke
         auto op = dynamic_cast<rix::msg::mediator::Operation *>(&msg);
         if (op) {
           op->len = node_info.size();
-          op->opcode = rix::core::OPCODE::NODE_DEREGISTER;
+          op->opcode = rix::OPCODE::NODE_DEREGISTER;
           return true;
         }
         return false;

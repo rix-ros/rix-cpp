@@ -2,18 +2,19 @@
 #include "rix/msg/standard/UInt32.hpp"
 #include "rix/rix.hpp"
 
-using namespace rix::core;
-using namespace rix::util;
-using namespace rix::ipc;
+using namespace rix;
 
 const std::string NAME = "simple_service";
-int PORT = 8002;
+int               PORT = 8002;
 
-class SimpleService : public rix::core::Node {
+class SimpleService : public rix::Node {
 public:
   SimpleService() : Node(NAME) {
-    auto srv = create_service<rix::msg::standard::UInt32, rix::msg::standard::String>(
-        "/alphabet", std::bind(&SimpleService::callback, this, std::placeholders::_1, std::placeholders::_2),
+    // Pass member function pointer and 'this' - no lambda or std::bind needed!
+    auto srv = create_service(
+        "/alphabet",
+        &SimpleService::callback,
+        this,
         Endpoint(DEFAULT_IP, PORT));
     if (!srv->ok()) {
       Log::error << "Failed to create service." << std::endl;
@@ -23,12 +24,13 @@ public:
   }
 
 private:
-  void callback(const rix::msg::standard::UInt32 &request, rix::msg::standard::String &response) {
+  void callback(const rix::msg::standard::UInt32& request,
+                rix::msg::standard::String&       response) {
     response.data = std::string(1, 'a' + (request.data % 26));
   }
 };
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   Log::init(NAME);
   Log::set_log_level(Log::Level::DEBUG);
 

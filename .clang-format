@@ -1,2 +1,12 @@
 BasedOnStyle: LLVM
-ColumnLimit: 120
+
+ColumnLimit: 90
+IndentWidth: 2
+TabWidth: 2
+UseTab: Never
+
+AlignArrayOfStructures: Right
+BinPackParameters: false
+BinPackArguments: false
+PointerAlignment: Left
+SortIncludes: true

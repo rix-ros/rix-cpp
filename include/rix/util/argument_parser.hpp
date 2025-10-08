@@ -13,7 +13,7 @@
 #include <typeindex>
 #include <vector>
 
-namespace rix::util {
+namespace rix {
 
 namespace detail {
 template <typename> struct is_std_vector : std::false_type {};
@@ -174,4 +174,4 @@ template <typename T> void ArgumentParser::add_parser(ParserFunction parser) {
       std::bind(detail::parse_vector, parser, std::placeholders::_1, std::placeholders::_2);
 }
 
-} // namespace rix::util
+} // namespace rix

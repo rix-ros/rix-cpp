@@ -7,7 +7,7 @@
 
 #include "rix/ipc/generic_signal.hpp"
 
-namespace rix::ipc {
+namespace rix {
 
 class POSIXSignal : public GenericSignal {
 public:
@@ -20,7 +20,7 @@ public:
 
   bool ignore() const override;
   bool raise() const override;
-  bool wait(const rix::util::Duration &d) const override;
+  bool wait(const Duration &d) const override;
 
 private:
   struct Notifier {
@@ -35,4 +35,4 @@ private:
   int signum_;
 };
 
-} // namespace rix::ipc
+} // namespace rix

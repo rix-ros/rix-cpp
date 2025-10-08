@@ -5,8 +5,8 @@
 #include "rix/rob/robot_model.hpp"
 #include "robots.hpp"
 
-using namespace rix::rob;
-using namespace rix::msg::geometry;
+using namespace rix;
+using namespace rix;
 
 // Compare two doubles with tolerance
 inline bool almost_equal_scalar(double a, double b, double tol = 1e-6) { return std::fabs(a - b) <= tol; }

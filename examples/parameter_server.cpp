@@ -1,9 +1,7 @@
 #include "rix/msg/standard/Header.hpp"
 #include "rix/rix.hpp"
 
-using namespace rix::core;
-using namespace rix::util;
-using namespace rix::ipc;
+using namespace rix;
 
 const std::string NAME = "param_server_example";
 

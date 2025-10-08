@@ -5,7 +5,7 @@
 #include <sstream>
 #include <thread>
 
-namespace rix::util {
+namespace rix {
 
 std::string Time::to_string(bool local_time) const {
   auto time =
@@ -34,11 +34,11 @@ std::string Time::to_string(bool local_time) const {
   return ss.str();
 }
 
-rix::msg::standard::Time Time::to_msg() {
+msg::standard::Time Time::to_msg() {
   int64_t ns_ = std::chrono::duration_cast<std::chrono::nanoseconds>(
                     tp.time_since_epoch())
                     .count();
-  rix::msg::standard::Time msg;
+  msg::standard::Time msg;
   msg.sec = ns_ / 1'000'000'000;
   msg.nsec = ns_ % 1'000'000'000;
   return msg;
@@ -63,7 +63,7 @@ Time::Time(int32_t second, int32_t nanosecond)
          Duration::Type(static_cast<int64_t>(second) * 1'000'000'000 +
                         static_cast<int64_t>(nanosecond))) {}
 
-Time::Time(const rix::msg::standard::Time &msg) : Time(msg.sec, msg.nsec) {}
+Time::Time(const msg::standard::Time &msg) : Time(msg.sec, msg.nsec) {}
 
 Time::Time(const Time &other) : tp(other.tp) {}
 
@@ -166,7 +166,7 @@ Time::Type &Time::get() { return tp; }
 
 Duration::Duration() : d{} {}
 
-Duration::Duration(const rix::msg::standard::Duration &msg)
+Duration::Duration(const msg::standard::Duration &msg)
     : Duration(msg.sec, msg.nsec) {}
 
 Duration::Duration(const Type &duration) : d(duration) {}
@@ -257,9 +257,9 @@ bool Duration::operator>(const Duration &other) const { return d > other.d; }
 
 bool Duration::operator>=(const Duration &other) const { return d >= other.d; }
 
-rix::msg::standard::Duration Duration::to_msg() {
+msg::standard::Duration Duration::to_msg() {
   int64_t ns_ = d.count();
-  rix::msg::standard::Duration msg;
+  msg::standard::Duration msg;
   msg.sec = ns_ / 1'000'000'000;
   msg.nsec = ns_ % 1'000'000'000;
   return msg;
@@ -389,4 +389,4 @@ void Rate::set_frequency(double frequency) {
   }
 }
 
-} // namespace rix::util
+} // namespace rix

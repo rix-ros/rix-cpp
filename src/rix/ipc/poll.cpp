@@ -1,10 +1,10 @@
 #include "rix/ipc/poll.hpp"
 #include "rix/ipc/generic_socket.hpp"
 
-namespace rix::ipc {
+namespace rix {
 
 bool SelectPoller::poll(const std::vector<std::shared_ptr<GenericSocket>> &all_sockets,
-                        const rix::util::Duration &duration, PollFlag flag,
+                        const Duration &duration, PollFlag flag,
                         std::vector<std::shared_ptr<GenericSocket>> &sockets,
                         std::vector<std::shared_ptr<GenericSocket>> &exception_sockets) {
   fd_set fds;
@@ -54,7 +54,7 @@ bool SelectPoller::poll(const std::vector<std::shared_ptr<GenericSocket>> &all_s
 }
 
 bool PollPoller::poll(const std::vector<std::shared_ptr<GenericSocket>> &all_sockets,
-                      const rix::util::Duration &duration, PollFlag flag,
+                      const Duration &duration, PollFlag flag,
                       std::vector<std::shared_ptr<GenericSocket>> &sockets,
                       std::vector<std::shared_ptr<GenericSocket>> &exception_sockets) {
   std::vector<struct pollfd> pfds;
@@ -98,4 +98,4 @@ bool PollPoller::poll(const std::vector<std::shared_ptr<GenericSocket>> &all_soc
   return true;
 }
 
-} // namespace rix::ipc
+} // namespace rix

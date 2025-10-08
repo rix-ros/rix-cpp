@@ -5,33 +5,33 @@
 
 #include "node_helper_functions.hpp"
 
-std::vector<std::shared_ptr<rix::ipc::MockSocket>> sockets;
+std::vector<std::shared_ptr<rix::MockSocket>> sockets;
 int socket_index = 0;
 
 TEST(MessageTests, PublisherAcceptConnectionsAndPublish) {
-  auto poller = std::make_shared<rix::ipc::MockPoller>();
-  rix::ipc::GenericSocket::set_poller(poller);
+  auto poller = std::make_shared<rix::MockPoller>();
+  rix::GenericSocket::set_poller(poller);
 
   EXPECT_CALL(*poller, poll).Times(::testing::AtLeast(1));
 
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Node register
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Publisher server
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Publisher register
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Publisher accept connection 1
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Publisher accept connection 2
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Publisher accept connection 3
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Publisher deregister
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Node deregister
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Node register
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Publisher server
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Publisher register
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Publisher accept connection 1
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Publisher accept connection 2
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Publisher accept connection 3
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Publisher deregister
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Node deregister
 
   uint64_t node_id = 0;
-  rix::ipc::Endpoint rixhub_endpoint("127.0.0.1", 8000);
-  rix::ipc::Endpoint pub_endpoint("127.0.0.1", 0);
-  rix::ipc::Endpoint pub_bound_endpoint("127.0.0.1", 8001);
+  rix::Endpoint rixhub_endpoint("127.0.0.1", 8000);
+  rix::Endpoint pub_endpoint("127.0.0.1", 0);
+  rix::Endpoint pub_bound_endpoint("127.0.0.1", 8001);
 
   // Node register client socket will be used to send a register message to rixhub
   rix::msg::mediator::NodeInfo node_info;
   node_info.name = "test_node";
-  init_node_register_socket(sockets[0], rixhub_endpoint, node_info, node_id, rix::core::OPCODE::NODE_REGISTER, false);
+  init_node_register_socket(sockets[0], rixhub_endpoint, node_info, node_id, rix::OPCODE::NODE_REGISTER, false);
 
   init_pub_server_socket(sockets[1], pub_endpoint, pub_bound_endpoint, 3);
 
@@ -67,12 +67,12 @@ TEST(MessageTests, PublisherAcceptConnectionsAndPublish) {
 
   // Test creating a node and publisher
   {
-    rix::core::Node node("test_node", rix::ipc::Endpoint("127.0.0.1", 8000), mock_create_socket);
+    rix::Node node("test_node", rix::Endpoint("127.0.0.1", 8000), mock_create_socket);
     EXPECT_TRUE(node.ok());
 
     // Specify endpoint as different than the one that will be assigned by the OS to ensure that the
     // publisher uses the correct endpoint (the one returned by the server socket's local_endpoint() method).
-    auto pub = node.create_publisher<rix::msg::standard::UInt32>("test_topic", rix::ipc::Endpoint("127.0.0.1", 0));
+    auto pub = node.create_publisher<rix::msg::standard::UInt32>("test_topic", rix::Endpoint("127.0.0.1", 0));
     EXPECT_NE(pub, nullptr);
     EXPECT_TRUE(pub->ok());
 
@@ -115,21 +115,21 @@ TEST(MessageTests, PublisherAcceptConnectionsAndPublish) {
   socket_index = 0;
 
   poller = nullptr;
-  rix::ipc::GenericSocket::set_poller(nullptr);
+  rix::GenericSocket::set_poller(nullptr);
 }
 
 TEST(MessageTests, SubscriberConnectAndReceive) {
-  auto poller = std::make_shared<rix::ipc::MockPoller>();
-  rix::ipc::GenericSocket::set_poller(poller);
+  auto poller = std::make_shared<rix::MockPoller>();
+  rix::GenericSocket::set_poller(poller);
 
   auto poll_call_count = std::make_shared<int>(0);
   EXPECT_CALL(*poller, poll)
       .Times(::testing::AtLeast(1))
       .WillRepeatedly(::testing::Invoke(
-          [poll_call_count](const std::vector<std::shared_ptr<rix::ipc::GenericSocket>> &all_sockets,
-                            const rix::util::Duration &duration, rix::ipc::PollFlag flag,
-                            std::vector<std::shared_ptr<rix::ipc::GenericSocket>> &sockets,
-                            std::vector<std::shared_ptr<rix::ipc::GenericSocket>> &exception_sockets) -> bool {
+          [poll_call_count](const std::vector<std::shared_ptr<rix::GenericSocket>> &all_sockets,
+                            const rix::Duration &duration, rix::PollFlag flag,
+                            std::vector<std::shared_ptr<rix::GenericSocket>> &sockets,
+                            std::vector<std::shared_ptr<rix::GenericSocket>> &exception_sockets) -> bool {
             sockets.clear();
             exception_sockets.clear();
             if (*poll_call_count >= 3) {
@@ -141,25 +141,25 @@ TEST(MessageTests, SubscriberConnectAndReceive) {
             return true;
           }));
 
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Node register
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Subscriber server
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Subscriber register
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Subscriber connection to rixhub
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Subscriber client 1
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Subscriber client 2
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Subscriber client 3
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Subscriber deregister
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Node deregister
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Node register
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Subscriber server
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Subscriber register
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Subscriber connection to rixhub
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Subscriber client 1
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Subscriber client 2
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Subscriber client 3
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Subscriber deregister
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Node deregister
 
   uint64_t node_id = 0;
-  rix::ipc::Endpoint rixhub_endpoint("127.0.0.1", 8000);
-  rix::ipc::Endpoint sub_endpoint("127.0.0.1", 0);
-  rix::ipc::Endpoint sub_bound_endpoint("127.0.0.1", 8001);
+  rix::Endpoint rixhub_endpoint("127.0.0.1", 8000);
+  rix::Endpoint sub_endpoint("127.0.0.1", 0);
+  rix::Endpoint sub_bound_endpoint("127.0.0.1", 8001);
 
   // Node register client socket will be used to send a register message to rixhub
   rix::msg::mediator::NodeInfo node_info;
   node_info.name = "test_node";
-  init_node_register_socket(sockets[0], rixhub_endpoint, node_info, node_id, rix::core::OPCODE::NODE_REGISTER, false);
+  init_node_register_socket(sockets[0], rixhub_endpoint, node_info, node_id, rix::OPCODE::NODE_REGISTER, false);
 
   init_sub_server_socket(sockets[1], sub_endpoint, sub_bound_endpoint, 1);
 
@@ -191,7 +191,7 @@ TEST(MessageTests, SubscriberConnectAndReceive) {
   messages[0]->data = 42;
   messages[1]->data = 43;
   messages[2]->data = 44;
-  rix::ipc::Endpoint pub_endpoint("127.0.0.1", 8002);
+  rix::Endpoint pub_endpoint("127.0.0.1", 8002);
   init_sub_client_socket<rix::msg::standard::UInt32>(sockets[4], 3, pub_endpoint, messages);
 
   pub_endpoint.port = 8003;
@@ -206,7 +206,7 @@ TEST(MessageTests, SubscriberConnectAndReceive) {
 
   // Test creating a node and publisher
   {
-    rix::core::Node node("test_node", rix::ipc::Endpoint("127.0.0.1", 8000), mock_create_socket);
+    rix::Node node("test_node", rix::Endpoint("127.0.0.1", 8000), mock_create_socket);
     EXPECT_TRUE(node.ok());
 
     // Specify endpoint as different than the one that will be assigned by the OS to ensure that the
@@ -214,7 +214,7 @@ TEST(MessageTests, SubscriberConnectAndReceive) {
     std::vector<uint32_t> received_data;
     auto callback = [&received_data](const rix::msg::standard::UInt32 &msg) { received_data.push_back(msg.data); };
     auto sub =
-        node.create_subscriber<rix::msg::standard::UInt32>("test_topic", callback, rix::ipc::Endpoint("127.0.0.1", 0));
+        node.create_subscriber<rix::msg::standard::UInt32>("test_topic", callback, rix::Endpoint("127.0.0.1", 0));
     EXPECT_NE(sub, nullptr);
     EXPECT_TRUE(sub->ok());
 
@@ -275,31 +275,31 @@ TEST(MessageTests, SubscriberConnectAndReceive) {
   socket_index = 0;
 
   poller = nullptr;
-  rix::ipc::GenericSocket::set_poller(nullptr);
+  rix::GenericSocket::set_poller(nullptr);
 }
 
 TEST(MessageTests, ServiceAcceptRequestAndRespond) {
-  auto poller = std::make_shared<rix::ipc::MockPoller>();
-  rix::ipc::GenericSocket::set_poller(poller);
+  auto poller = std::make_shared<rix::MockPoller>();
+  rix::GenericSocket::set_poller(poller);
 
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Node register
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Service server
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Service register
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Service accept connection 1
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Service accept connection 2
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Service accept connection 3
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Service deregister
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Node deregister
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Node register
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Service server
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Service register
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Service accept connection 1
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Service accept connection 2
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Service accept connection 3
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Service deregister
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Node deregister
 
   uint64_t node_id = 0;
-  rix::ipc::Endpoint rixhub_endpoint("127.0.0.1", 8000);
-  rix::ipc::Endpoint srv_endpoint("127.0.0.1", 0);
-  rix::ipc::Endpoint srv_bound_endpoint("127.0.0.1", 8001);
+  rix::Endpoint rixhub_endpoint("127.0.0.1", 8000);
+  rix::Endpoint srv_endpoint("127.0.0.1", 0);
+  rix::Endpoint srv_bound_endpoint("127.0.0.1", 8001);
 
   // Node register client socket will be used to send a register message to rixhub
   rix::msg::mediator::NodeInfo node_info;
   node_info.name = "test_node";
-  init_node_register_socket(sockets[0], rixhub_endpoint, node_info, node_id, rix::core::OPCODE::NODE_REGISTER, false);
+  init_node_register_socket(sockets[0], rixhub_endpoint, node_info, node_id, rix::OPCODE::NODE_REGISTER, false);
 
   init_srv_server_socket(sockets[1], srv_endpoint, srv_bound_endpoint, 3);
 
@@ -332,7 +332,7 @@ TEST(MessageTests, ServiceAcceptRequestAndRespond) {
 
   // Test creating a node and service
   {
-    rix::core::Node node("test_node", rix::ipc::Endpoint("127.0.0.1", 8000), mock_create_socket);
+    rix::Node node("test_node", rix::Endpoint("127.0.0.1", 8000), mock_create_socket);
     EXPECT_TRUE(node.ok());
 
     // Specify endpoint as different than the one that will be assigned by the OS to ensure that the
@@ -343,7 +343,7 @@ TEST(MessageTests, ServiceAcceptRequestAndRespond) {
       response.nsec = req.data + 500; // Just an example implementation
     };
     auto srv = node.create_service<rix::msg::standard::UInt32, rix::msg::standard::Time>(
-        "test_topic", callback, rix::ipc::Endpoint("127.0.0.1", 0));
+        "test_topic", callback, rix::Endpoint("127.0.0.1", 0));
     EXPECT_NE(srv, nullptr);
     EXPECT_TRUE(srv->ok());
 
@@ -385,27 +385,27 @@ TEST(MessageTests, ServiceAcceptRequestAndRespond) {
   socket_index = 0;
 
   poller = nullptr;
-  rix::ipc::GenericSocket::set_poller(nullptr);
+  rix::GenericSocket::set_poller(nullptr);
 }
 
 TEST(MessageTests, ServiceClientRequestAndReceive) {
-  auto poller = std::make_shared<rix::ipc::MockPoller>();
-  rix::ipc::GenericSocket::set_poller(poller);
+  auto poller = std::make_shared<rix::MockPoller>();
+  rix::GenericSocket::set_poller(poller);
 
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Node register
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Service Client request
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Service Client client 1
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Service Client client 2
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Service Client client 3
-  sockets.push_back(std::make_shared<rix::ipc::MockSocket>()); // Node deregister
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Node register
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Service Client request
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Service Client client 1
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Service Client client 2
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Service Client client 3
+  sockets.push_back(std::make_shared<rix::MockSocket>()); // Node deregister
 
   uint64_t node_id = 0;
-  rix::ipc::Endpoint rixhub_endpoint("127.0.0.1", 8000);
+  rix::Endpoint rixhub_endpoint("127.0.0.1", 8000);
 
   // Node register client socket will be used to send a register message to rixhub
   rix::msg::mediator::NodeInfo node_info;
   node_info.name = "test_node";
-  init_node_register_socket(sockets[0], rixhub_endpoint, node_info, node_id, rix::core::OPCODE::NODE_REGISTER, false);
+  init_node_register_socket(sockets[0], rixhub_endpoint, node_info, node_id, rix::OPCODE::NODE_REGISTER, false);
 
   rix::msg::mediator::SrvResponse srv_response;
   srv_response.srv_info.name = "test_service";
@@ -418,7 +418,7 @@ TEST(MessageTests, ServiceClientRequestAndReceive) {
   srv_response.error = 0;
   init_srvcli_socket(sockets[1], rixhub_endpoint, srv_response, node_id);
 
-  rix::ipc::Endpoint srv_endpoint("127.0.0.1", 8001);
+  rix::Endpoint srv_endpoint("127.0.0.1", 8001);
   rix::msg::standard::UInt32 request;
   rix::msg::standard::Time response;
   request.data = 1;
@@ -438,7 +438,7 @@ TEST(MessageTests, ServiceClientRequestAndReceive) {
 
   // Test creating a node and subscriber
   {
-    rix::core::Node node("test_node", rix::ipc::Endpoint("127.0.0.1", 8000), mock_create_socket);
+    rix::Node node("test_node", rix::Endpoint("127.0.0.1", 8000), mock_create_socket);
     EXPECT_TRUE(node.ok());
 
     // Specify endpoint as different than the one that will be assigned by the OS to ensure that the
@@ -478,5 +478,5 @@ TEST(MessageTests, ServiceClientRequestAndReceive) {
   socket_index = 0;
 
   poller = nullptr;
-  rix::ipc::GenericSocket::set_poller(nullptr);
+  rix::GenericSocket::set_poller(nullptr);
 }

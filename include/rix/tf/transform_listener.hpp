@@ -12,46 +12,46 @@
 #include "rix/tf/frame_graph.hpp"
 #include "rix/util/log.hpp"
 
-namespace rix::tf {
+namespace rix {
 
 class TransformListener {
    public:
-    TransformListener(std::shared_ptr<rix::core::Node> node,
-                      const rix::util::Duration &duration = rix::util::Duration(10.0), const std::string &topic = "/tf",
-                      const rix::ipc::Endpoint &endpoint = rix::ipc::Endpoint("127.0.0.1", 0));
-    TransformListener(rix::core::Node &node, const rix::util::Duration &duration = rix::util::Duration(10.0),
+    TransformListener(std::shared_ptr<Node> node,
+                      const Duration &duration = Duration(10.0), const std::string &topic = "/tf",
+                      const Endpoint &endpoint = Endpoint("127.0.0.1", 0));
+    TransformListener(Node &node, const Duration &duration = Duration(10.0),
                       const std::string &topic = "/tf",
-                      const rix::ipc::Endpoint &endpoint = rix::ipc::Endpoint("127.0.0.1", 0));
+                      const Endpoint &endpoint = Endpoint("127.0.0.1", 0));
     TransformListener(const TransformListener &other);
     TransformListener &operator=(const TransformListener &other);
 
-    bool get_transform(const std::string &target_frame, const std::string &source_frame, rix::util::Time time,
-                       rix::msg::geometry::TransformStamped &transform) const;
+    bool get_transform(const std::string &target_frame, const std::string &source_frame, Time time,
+                       msg::geometry::TransformStamped &transform) const;
 
-    bool transform_point(const std::string &target_frame, const std::string &source_frame, rix::util::Time time,
-                         const rix::msg::geometry::Point &point, rix::msg::geometry::Point &transformed_point) const;
-    bool transform_point_cloud(const std::string &target_frame, const std::string &source_frame, rix::util::Time time,
-                               const rix::msg::sensor::PointCloud &point_cloud,
-                               rix::msg::sensor::PointCloud &transformed_point_cloud) const;
-    bool transform_pose(const std::string &target_frame, const std::string &source_frame, rix::util::Time time,
-                        const rix::msg::geometry::Pose &pose, rix::msg::geometry::Pose &transformed_pose) const;
-    bool transform_quaternion(const std::string &target_frame, const std::string &source_frame, rix::util::Time time,
-                              const rix::msg::geometry::Quaternion &quaternion,
-                              rix::msg::geometry::Quaternion &transformed_quaternion) const;
-    bool transform_vector(const std::string &target_frame, const std::string &source_frame, rix::util::Time time,
-                          const rix::msg::geometry::Vector3 &vector,
-                          rix::msg::geometry::Vector3 &transformed_vector) const;
+    bool transform_point(const std::string &target_frame, const std::string &source_frame, Time time,
+                         const msg::geometry::Point &point, msg::geometry::Point &transformed_point) const;
+    bool transform_point_cloud(const std::string &target_frame, const std::string &source_frame, Time time,
+                               const msg::sensor::PointCloud &point_cloud,
+                               msg::sensor::PointCloud &transformed_point_cloud) const;
+    bool transform_pose(const std::string &target_frame, const std::string &source_frame, Time time,
+                        const msg::geometry::Pose &pose, msg::geometry::Pose &transformed_pose) const;
+    bool transform_quaternion(const std::string &target_frame, const std::string &source_frame, Time time,
+                              const msg::geometry::Quaternion &quaternion,
+                              msg::geometry::Quaternion &transformed_quaternion) const;
+    bool transform_vector(const std::string &target_frame, const std::string &source_frame, Time time,
+                          const msg::geometry::Vector3 &vector,
+                          msg::geometry::Vector3 &transformed_vector) const;
 
     bool ok() const;
 
     const FrameGraph &graph() const;
-    rix::util::Duration duration() const;
-    void set_duration(const rix::util::Duration &duration);
+    Duration duration() const;
+    void set_duration(const Duration &duration);
 
    private:
-    std::shared_ptr<rix::core::Subscriber> subscriber_;
+    std::shared_ptr<Subscriber> subscriber_;
     FrameGraph graph_;
-    rix::util::Duration duration_;
+    Duration duration_;
 };
 
-}  // namespace rix::tf
+}  // namespace rix

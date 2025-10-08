@@ -4,7 +4,7 @@
 #include "rix/rob/robot_model.hpp"
 #include "robots.hpp"
 
-using namespace rix::rob;
+using namespace rix;
 
 // Need to test: get_joints_in_chain, get_transforms, and get_joint_states
 

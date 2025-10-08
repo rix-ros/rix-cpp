@@ -7,7 +7,7 @@
 #include "rix/msg/standard/Color.hpp"
 #include "rix/rob/msg_util.hpp"
 
-namespace rix::rob {
+namespace rix {
 
 class Geometry {
 public:
@@ -25,7 +25,7 @@ public:
 class Box : public Geometry {
 public:
   Box() { type = BOX; };
-  rix::msg::geometry::Vector3 dim;
+  msg::geometry::Vector3 dim;
 };
 
 class Cylinder : public Geometry {
@@ -39,7 +39,7 @@ class Mesh : public Geometry {
 public:
   Mesh() { type = MESH; };
   std::string filename;
-  rix::msg::geometry::Vector3 scale;
+  msg::geometry::Vector3 scale;
 };
 
 class Material {
@@ -47,13 +47,13 @@ public:
   Material() {};
   std::string name;
   std::string texture_filename;
-  rix::msg::standard::Color color;
+  msg::standard::Color color;
 };
 
 class Inertial {
 public:
   Inertial() {};
-  rix::msg::geometry::Transform origin;
+  msg::geometry::Transform origin;
   double mass;
   double ixx, ixy, ixz, iyy, iyz, izz;
 };
@@ -61,7 +61,7 @@ public:
 class Visual {
 public:
   Visual() {};
-  rix::msg::geometry::Transform origin;
+  msg::geometry::Transform origin;
   std::shared_ptr<Geometry> geometry;
   Material material;
 };
@@ -69,7 +69,7 @@ public:
 class Collision {
 public:
   Collision() {};
-  rix::msg::geometry::Transform origin;
+  msg::geometry::Transform origin;
   std::shared_ptr<Geometry> geometry;
 };
 
@@ -92,7 +92,7 @@ public:
   const Inertial &inertial() const;                 // Transform from link frame to center of mass frame
   const std::vector<Visual> &visuals() const;       // Transform from link frame to visual frame
   const std::vector<Collision> &collisions() const; // Transform from link frame to collision frame
-  rix::msg::geometry::Inertia get_inertia() const;  // Get the inertia as a message type
+  msg::geometry::Inertia get_inertia() const;  // Get the inertia as a message type
 
 private:
   std::vector<Visual> visuals_;       // The transform from the link frame to the visual frame
@@ -103,4 +103,4 @@ private:
   std::vector<std::string> children_; // The names of the child joints (empty of end effector)
 };
 
-} // namespace rix::rob
+} // namespace rix

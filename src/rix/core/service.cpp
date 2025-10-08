@@ -1,16 +1,16 @@
 #include "rix/core/service.hpp"
 
-namespace rix::core {
+namespace rix {
 
-Service::Service(const rix::msg::mediator::SrvInfo &info, SocketFactory socket_factory,
-                 const rix::ipc::Endpoint &rixhub_endpoint)
+Service::Service(const msg::mediator::SrvInfo &info, SocketFactory socket_factory,
+                 const Endpoint &rixhub_endpoint)
     : info_(info), socket_factory_(socket_factory), rixhub_endpoint_(rixhub_endpoint), registered_flag_(false),
       request_instance_(nullptr), response_instance_(nullptr) {
 
   server_ = socket_factory_();
   server_->set_reuse_address(true);
-  server_->bind(rix::ipc::Endpoint(info_.endpoint.address, info_.endpoint.port));
-  server_->listen(rix::ipc::MAX_CONN);
+  server_->bind(Endpoint(info_.endpoint.address, info_.endpoint.port));
+  server_->listen(MAX_CONN);
 
   // Ensure server was intitialized properly
   if (server_->is_exception()) {
@@ -35,8 +35,8 @@ Service::Service(const rix::msg::mediator::SrvInfo &info, SocketFactory socket_f
     return;
   }
 
-  rix::msg::mediator::Operation op;
-  rix::msg::mediator::Status status;
+  msg::mediator::Operation op;
+  msg::mediator::Status status;
   if (!client->recv_message(op, status)) {
     shutdown();
     return;
@@ -48,7 +48,7 @@ Service::Service(const rix::msg::mediator::SrvInfo &info, SocketFactory socket_f
 
   registered_flag_ = true;
 
-  rix::util::Log::debug << "Service created for \"" << info_.name << "\"." << std::endl;
+  Log::debug << "Service created for \"" << info_.name << "\"." << std::endl;
 
 #ifdef RIX_MULTITHREADED
   spin_thread_ = std::thread([this]() { this->spin(); });
@@ -70,7 +70,7 @@ Service::~Service() {
   }
 #endif
 
-  rix::util::Log::debug << "Service for \"" << info_.name << "\" destroyed." << std::endl;
+  Log::debug << "Service for \"" << info_.name << "\" destroyed." << std::endl;
 }
 
 void Service::spin_once() {
@@ -85,7 +85,7 @@ void Service::spin_once() {
   }
 
   // Read the request message
-  rix::msg::mediator::Operation op;
+  msg::mediator::Operation op;
   if (!conn->recv_message(op, *request_instance_))
     return;
 
@@ -99,7 +99,7 @@ void Service::spin_once() {
   // Send response back
   conn->send_message(OPCODE::SRV_RESPONSE_MESSAGE, *response_instance_);
 
-  rix::util::Log::debug << "Processed service request for \"" << info_.name << "\"." << std::endl;
+  Log::debug << "Processed service request for \"" << info_.name << "\"." << std::endl;
 }
 
-} // namespace rix::core
+} // namespace rix

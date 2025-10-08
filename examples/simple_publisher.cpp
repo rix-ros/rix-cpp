@@ -1,13 +1,11 @@
 #include "rix/msg/standard/Header.hpp"
 #include "rix/rix.hpp"
 
-using namespace rix::core;
-using namespace rix::util;
-using namespace rix::ipc;
+using namespace rix;
 
 const std::string NAME = "simple_publisher";
-int PORT = 8001;
-double RATE = 1.0; // Hz
+int               PORT = 8001;
+double            RATE = 1.0; // Hz
 
 class SimplePublisher : public Node {
 public:
@@ -21,7 +19,8 @@ public:
     }
 
     // Create a publisher on topic /chatter with message type Header
-    pub = create_publisher<rix::msg::standard::Header>("/chatter", Endpoint(DEFAULT_IP, PORT));
+    pub = create_publisher<rix::msg::standard::Header>("/chatter",
+                                                       Endpoint(DEFAULT_IP, PORT));
 
     // If the publisher failed to initialize, then ok() will return false
     if (!pub->ok()) {
@@ -34,20 +33,21 @@ public:
     message.frame_id = "Hello, world!";
     message.seq = 0;
 
-    timer =
-        create_timer(Duration(1.0 / RATE), std::bind(&SimplePublisher::timer_callback, this, std::placeholders::_1));
+    timer = create_timer(
+        Duration(1.0 / RATE),
+        std::bind(&SimplePublisher::timer_callback, this, std::placeholders::_1));
   }
 
 private:
-  std::shared_ptr<Publisher> pub;
-  std::shared_ptr<rix::core::Timer> timer;
-  rix::msg::standard::Header message;
+  std::shared_ptr<Publisher>          pub;
+  std::shared_ptr<rix::TimerCallback> timer;
+  rix::msg::standard::Header          message;
 
   /**
-   * @brief Timer callback that is invoked by the Node at 1.0 Hz during spin
+   * @brief TimerCallback callback that is invoked by the Node at 1.0 Hz during spin
    *
    */
-  void timer_callback(const rix::core::Timer::Event &event) {
+  void timer_callback(const rix::TimerCallback::Event& event) {
     message.frame_id = "Hello, world!";
     message.seq += 1;
     message.stamp = Time::now().to_msg();
@@ -55,7 +55,7 @@ private:
   }
 };
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   Log::init(NAME);
   Log::set_log_level(Log::Level::DEBUG);
 
