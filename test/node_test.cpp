@@ -4,7 +4,7 @@
 
 using namespace rix;
 
-TEST(NodeRegistrationV2, RegisterAndDeregisterNode) {
+TEST(NodeTest, RegisterAndDeregisterNode) {
   // Clear, self-documenting test
   auto fixture = NodeTestFixture().register_node().deregister_node();
 
@@ -14,14 +14,14 @@ TEST(NodeRegistrationV2, RegisterAndDeregisterNode) {
   } // Node destructor triggers deregistration
 }
 
-TEST(NodeRegistrationV2, RegisterNodeFailure) {
+TEST(NodeTest, RegisterNodeFailure) {
   auto fixture = NodeTestFixture().register_node(true);
 
   auto node = fixture.build();
   EXPECT_FALSE(node->ok());
 }
 
-TEST(NodeRegistrationV2, RegisterComponentsAfterNodeShutdown) {
+TEST(NodeTest, RegisterComponentsAfterNodeShutdown) {
   auto fixture = NodeTestFixture().register_node(true);
 
   {
@@ -49,7 +49,7 @@ TEST(NodeRegistrationV2, RegisterComponentsAfterNodeShutdown) {
   }
 }
 
-TEST(NodeRegistrationV2, RegisterComponentsAfterManualNodeShutdown) {
+TEST(NodeTest, RegisterComponentsAfterManualNodeShutdown) {
   auto fixture = NodeTestFixture().register_node().deregister_node();
 
   {
@@ -80,7 +80,7 @@ TEST(NodeRegistrationV2, RegisterComponentsAfterManualNodeShutdown) {
   }
 }
 
-TEST(NodeRegistrationV2, RegisterAndDeregisterPublisher) {
+TEST(NodeTest, RegisterAndDeregisterPublisher) {
   auto fixture = NodeTestFixture()
                      .register_node()
                      .create_server()
@@ -100,7 +100,7 @@ TEST(NodeRegistrationV2, RegisterAndDeregisterPublisher) {
   }
 }
 
-TEST(NodeRegistrationV2, RegisterPublisherFailure) {
+TEST(NodeTest, RegisterPublisherFailure) {
   auto fixture =
       NodeTestFixture()
           .register_node()
@@ -120,7 +120,7 @@ TEST(NodeRegistrationV2, RegisterPublisherFailure) {
   }
 }
 
-TEST(NodeRegistrationV2, RegisterAndDeregisterPublisherFromShutdown) {
+TEST(NodeTest, RegisterAndDeregisterPublisherFromShutdown) {
   auto fixture = NodeTestFixture()
                      .register_node()
                      .create_server()
@@ -146,7 +146,7 @@ TEST(NodeRegistrationV2, RegisterAndDeregisterPublisherFromShutdown) {
   }
 }
 
-TEST(NodeRegistrationV2, RegisterSubscriberFailure) {
+TEST(NodeTest, RegisterSubscriberFailure) {
   auto fixture =
       NodeTestFixture()
           .register_node()
@@ -166,7 +166,7 @@ TEST(NodeRegistrationV2, RegisterSubscriberFailure) {
   }
 }
 
-TEST(NodeRegistrationV2, RegisterAndDeregisterSubscriber) {
+TEST(NodeTest, RegisterAndDeregisterSubscriber) {
   auto fixture = NodeTestFixture()
                      .register_node()
                      .create_server()
@@ -186,7 +186,7 @@ TEST(NodeRegistrationV2, RegisterAndDeregisterSubscriber) {
   }
 }
 
-TEST(NodeRegistrationV2, RegisterAndDeregisterSubscriberFromShutdown) {
+TEST(NodeTest, RegisterAndDeregisterSubscriberFromShutdown) {
   auto fixture = NodeTestFixture()
                      .register_node()
                      .create_server()
@@ -211,7 +211,7 @@ TEST(NodeRegistrationV2, RegisterAndDeregisterSubscriberFromShutdown) {
   }
 }
 
-TEST(NodeRegistrationV2, RegisterServiceFailure) {
+TEST(NodeTest, RegisterServiceFailure) {
   auto fixture = NodeTestFixture()
                      .register_node()
                      .create_server()
@@ -235,7 +235,7 @@ TEST(NodeRegistrationV2, RegisterServiceFailure) {
   }
 }
 
-TEST(NodeRegistrationV2, RegisterAndDeregisterService) {
+TEST(NodeTest, RegisterAndDeregisterService) {
   auto fixture = NodeTestFixture()
                      .register_node()
                      .create_server()
@@ -261,7 +261,7 @@ TEST(NodeRegistrationV2, RegisterAndDeregisterService) {
   }
 }
 
-TEST(NodeRegistrationV2, RegisterAndDeregisterServiceFromShutdown) {
+TEST(NodeTest, RegisterAndDeregisterServiceFromShutdown) {
   auto fixture = NodeTestFixture()
                      .register_node()
                      .create_server()
@@ -292,7 +292,7 @@ TEST(NodeRegistrationV2, RegisterAndDeregisterServiceFromShutdown) {
   }
 }
 
-TEST(NodeRegistrationV2, RequestServiceClientFailure) {
+TEST(NodeTest, RequestServiceClientFailure) {
   auto fixture = NodeTestFixture()
                      .register_node()
                      .request_service_client("test_service",
@@ -314,7 +314,7 @@ TEST(NodeRegistrationV2, RequestServiceClientFailure) {
   }
 }
 
-TEST(NodeRegistrationV2, RequestServiceClient) {
+TEST(NodeTest, RequestServiceClient) {
   auto fixture = NodeTestFixture()
                      .register_node()
                      .request_service_client("test_service",
@@ -335,7 +335,7 @@ TEST(NodeRegistrationV2, RequestServiceClient) {
   }
 }
 
-TEST(NodeRegistrationV2, RequestServiceClientShutdown) {
+TEST(NodeTest, RequestServiceClientShutdown) {
   auto fixture = NodeTestFixture()
                      .register_node()
                      .request_service_client("test_service",
@@ -361,7 +361,7 @@ TEST(NodeRegistrationV2, RequestServiceClientShutdown) {
   }
 }
 
-TEST(NodeRegistrationV2, RegisterAndDeregisterMultipleOfAll) {
+TEST(NodeTest, RegisterAndDeregisterMultipleOfAll) {
   auto fixture = NodeTestFixture()
                      .register_node()
                      .create_server()
@@ -498,7 +498,7 @@ TEST(NodeRegistrationV2, RegisterAndDeregisterMultipleOfAll) {
   }
 }
 
-TEST(NodeRegistrationV2, ParameterSetRequest) {
+TEST(NodeTest, ParameterSetRequest) {
   auto param = std::make_shared<msg::standard::String>();
   param->data = "test_value";
 
@@ -516,7 +516,7 @@ TEST(NodeRegistrationV2, ParameterSetRequest) {
   }
 }
 
-TEST(NodeRegistrationV2, ParameterSetRequestFailure) {
+TEST(NodeTest, ParameterSetRequestFailure) {
   auto param = std::make_shared<msg::standard::String>();
   param->data = "test_value";
 
@@ -534,7 +534,7 @@ TEST(NodeRegistrationV2, ParameterSetRequestFailure) {
   }
 }
 
-TEST(NodeRegistrationV2, ParameterGetRequest) {
+TEST(NodeTest, ParameterGetRequest) {
   auto param = std::make_shared<msg::standard::String>();
   param->data = "test_value";
 
@@ -554,7 +554,7 @@ TEST(NodeRegistrationV2, ParameterGetRequest) {
   }
 }
 
-TEST(NodeRegistrationV2, ParameterGetRequestFailure) {
+TEST(NodeTest, ParameterGetRequestFailure) {
   auto param = std::make_shared<msg::standard::String>();
   param->data = "test_value";
 
@@ -573,7 +573,7 @@ TEST(NodeRegistrationV2, ParameterGetRequestFailure) {
   }
 }
 
-TEST(NodeRegistrationV2, SystemInfoGetRequest) {
+TEST(NodeTest, SystemInfoGetRequest) {
   msg::mediator::SystemInfo sys_info;
   sys_info.nodes.resize(1);
   sys_info.nodes[0].name = "test_node";
@@ -646,7 +646,7 @@ TEST(NodeRegistrationV2, SystemInfoGetRequest) {
   }
 }
 
-TEST(NodeRegistrationV2, SystemInfoGetRequestFailure) {
+TEST(NodeTest, SystemInfoGetRequestFailure) {
   msg::mediator::SystemInfo sys_info;
   sys_info.nodes.resize(1);
   sys_info.nodes[0].name = "test_node";

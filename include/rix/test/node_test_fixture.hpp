@@ -180,7 +180,10 @@ public:
     msg::mediator::ParamInfo param_info;
     param_info.name = name;
     param_info.message_hash = value->hash();
-    SocketBuilder(socket).as_param_get(rixhub_endpoint_, param_info, value, should_fail);
+    param_info.data.resize(value->size());
+    size_t offset = 0;
+    value->serialize(param_info.data.data(), offset);
+    SocketBuilder(socket).as_param_get(rixhub_endpoint_, param_info, should_fail);
     return *this;
   }
 
@@ -201,7 +204,7 @@ public:
     SocketBuilder(socket).as_server(
         endpoint,
         bound_endpoint,
-        [this]() { return this->socket_manager_.create_socket(); },
+        [this]() { return this->socket_manager_.get_factory()(); },
         accept_count);
     return *this;
   }

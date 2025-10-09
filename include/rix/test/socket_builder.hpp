@@ -305,7 +305,6 @@ public:
   // Configure parameter get request
   SocketBuilder& as_param_get(const Endpoint& rixhub_endpoint,
                               const msg::mediator::ParamInfo& param_info,
-                              std::shared_ptr<msg::Message> value,
                               bool should_fail = false) {
     connect_to_rixhub(rixhub_endpoint);
 
@@ -330,38 +329,36 @@ public:
         .WillRepeatedly(::testing::Invoke([is_readable]() { return *is_readable; }));
     EXPECT_CALL(*socket_, recv_message(::testing::_, ::testing::_))
         .Times(2)
-        .WillOnce(::testing::Invoke([value](msg::Message& msg, size_t size) {
+        .WillOnce(::testing::Invoke([param_info](msg::Message& msg, size_t size) {
           EXPECT_EQ(size, msg::mediator::Operation().size());
           auto op = dynamic_cast<msg::mediator::Operation*>(&msg);
           EXPECT_NE(op, nullptr);
           if (op) {
             op->opcode = OPCODE::PARAM_GET_RESPONSE;
-            op->len = value->size();
+            op->len = param_info.size();
             return true;
           }
           return false;
         }))
-        .WillOnce(::testing::Invoke([should_fail, is_readable, param_info, value](
-                                        msg::Message& msg, size_t size) {
-          EXPECT_EQ(size, value->size());
-          *is_readable = false;
-          auto info = dynamic_cast<msg::mediator::ParamInfo*>(&msg);
-          EXPECT_NE(info, nullptr);
-          if (info) {
-            if (should_fail) {
-              // Simulate failure by not setting the value
-              return true;
-            } else {
-              info->name = param_info.name;
-              info->message_hash = param_info.message_hash;
-              info->data.resize(value->size());
-              size_t offset = 0;
-              value->serialize(info->data.data(), offset);
-              return true;
-            }
-          }
-          return false;
-        }));
+        .WillOnce(::testing::Invoke(
+            [should_fail, is_readable, param_info](msg::Message& msg, size_t size) {
+              EXPECT_EQ(size, param_info.size());
+              *is_readable = false;
+              auto info = dynamic_cast<msg::mediator::ParamInfo*>(&msg);
+              EXPECT_NE(info, nullptr);
+              if (info) {
+                if (should_fail) {
+                  // Simulate failure by not setting the value
+                  return true;
+                } else {
+                  info->name = param_info.name;
+                  info->message_hash = param_info.message_hash;
+                  info->data = param_info.data;
+                  return true;
+                }
+              }
+              return false;
+            }));
     EXPECT_CALL(*socket_, close()).Times(1);
     return *this;
   }
@@ -458,6 +455,645 @@ public:
     return *this;
   }
 
+  // Configure as a mediator socket for node registration
+  SocketBuilder& as_med_node_register(const msg::mediator::NodeInfo& node_info,
+                                      bool should_fail = false) {
+    auto is_readable = std::make_shared<bool>(true);
+    EXPECT_CALL(*socket_, wait_readable(::testing::_))
+        .Times(::testing::AtLeast(0))
+        .WillRepeatedly(::testing::Invoke([is_readable]() { return *is_readable; }));
+    EXPECT_CALL(*socket_, recv_message(::testing::_, ::testing::_))
+        .Times(2)
+        .WillOnce(::testing::Invoke([node_info](msg::Message& msg, size_t size) {
+          EXPECT_EQ(size, msg::mediator::Operation().size());
+          auto op = dynamic_cast<msg::mediator::Operation*>(&msg);
+          EXPECT_NE(op, nullptr);
+          if (op) {
+            op->opcode = OPCODE::NODE_REGISTER;
+            op->len = node_info.size();
+            return true;
+          }
+          return false;
+        }))
+        .WillOnce(::testing::Invoke(
+            [should_fail, is_readable, node_info](msg::Message& msg, size_t size) {
+              EXPECT_EQ(size, node_info.size());
+              *is_readable = false;
+              auto info = dynamic_cast<msg::mediator::NodeInfo*>(&msg);
+              EXPECT_NE(info, nullptr);
+              if (info) {
+                info->name = node_info.name;
+                info->id = node_info.id;
+                info->endpoint.address = node_info.endpoint.address;
+                info->endpoint.port = node_info.endpoint.port;
+                return true;
+              }
+              return false;
+            }));
+    send_status_response(should_fail);
+    EXPECT_CALL(*socket_, close()).Times(1);
+    return *this;
+  }
+
+  // Configure as a mediator socket for node deregistration
+  SocketBuilder& as_med_node_deregister(const msg::mediator::NodeInfo& node_info,
+                                        bool should_fail = false) {
+    auto is_readable = std::make_shared<bool>(true);
+    EXPECT_CALL(*socket_, wait_readable(::testing::_))
+        .Times(::testing::AtLeast(0))
+        .WillRepeatedly(::testing::Invoke([is_readable]() { return *is_readable; }));
+    EXPECT_CALL(*socket_, recv_message(::testing::_, ::testing::_))
+        .Times(2)
+        .WillOnce(::testing::Invoke([node_info](msg::Message& msg, size_t size) {
+          EXPECT_EQ(size, msg::mediator::Operation().size());
+          auto op = dynamic_cast<msg::mediator::Operation*>(&msg);
+          EXPECT_NE(op, nullptr);
+          if (op) {
+            op->opcode = OPCODE::NODE_DEREGISTER;
+            op->len = node_info.size();
+            return true;
+          }
+          return false;
+        }))
+        .WillOnce(::testing::Invoke(
+            [should_fail, is_readable, node_info](msg::Message& msg, size_t size) {
+              EXPECT_EQ(size, node_info.size());
+              *is_readable = false;
+              auto info = dynamic_cast<msg::mediator::NodeInfo*>(&msg);
+              EXPECT_NE(info, nullptr);
+              if (info) {
+                info->name = node_info.name;
+                info->id = node_info.id;
+                info->endpoint.address = node_info.endpoint.address;
+                info->endpoint.port = node_info.endpoint.port;
+                return true;
+              }
+              return false;
+            }));
+    EXPECT_CALL(*socket_, close()).Times(1);
+    return *this;
+  }
+
+  // Configure as a mediator socket for pub registration
+  SocketBuilder& as_med_pub_register(const msg::mediator::PubInfo& pub_info,
+                                     bool should_fail = false) {
+    auto is_readable = std::make_shared<bool>(true);
+    EXPECT_CALL(*socket_, wait_readable(::testing::_))
+        .Times(::testing::AtLeast(0))
+        .WillRepeatedly(::testing::Invoke([is_readable]() { return *is_readable; }));
+    EXPECT_CALL(*socket_, recv_message(::testing::_, ::testing::_))
+        .Times(2)
+        .WillOnce(::testing::Invoke([pub_info](msg::Message& msg, size_t size) {
+          EXPECT_EQ(size, msg::mediator::Operation().size());
+          auto op = dynamic_cast<msg::mediator::Operation*>(&msg);
+          EXPECT_NE(op, nullptr);
+          if (op) {
+            op->opcode = OPCODE::PUB_REGISTER;
+            op->len = pub_info.size();
+            return true;
+          }
+          return false;
+        }))
+        .WillOnce(::testing::Invoke(
+            [should_fail, is_readable, pub_info](msg::Message& msg, size_t size) {
+              EXPECT_EQ(size, pub_info.size());
+              *is_readable = false;
+              auto info = dynamic_cast<msg::mediator::PubInfo*>(&msg);
+              EXPECT_NE(info, nullptr);
+              if (info) {
+                info->id = pub_info.id;
+                info->node_id = pub_info.node_id;
+                info->topic_info.name = pub_info.topic_info.name;
+                info->topic_info.message_hash = pub_info.topic_info.message_hash;
+                info->endpoint.address = pub_info.endpoint.address;
+                info->endpoint.port = pub_info.endpoint.port;
+                return true;
+              }
+              return false;
+            }));
+    send_status_response(should_fail);
+    EXPECT_CALL(*socket_, close()).Times(1);
+    return *this;
+  }
+
+  // Configure as a mediator socket for pub deregistration
+  SocketBuilder& as_med_pub_deregister(const msg::mediator::PubInfo& pub_info,
+                                       bool should_fail = false) {
+    auto is_readable = std::make_shared<bool>(true);
+    EXPECT_CALL(*socket_, wait_readable(::testing::_))
+        .Times(::testing::AtLeast(0))
+        .WillRepeatedly(::testing::Invoke([is_readable]() { return *is_readable; }));
+    EXPECT_CALL(*socket_, recv_message(::testing::_, ::testing::_))
+        .Times(2)
+        .WillOnce(::testing::Invoke([pub_info](msg::Message& msg, size_t size) {
+          EXPECT_EQ(size, msg::mediator::Operation().size());
+          auto op = dynamic_cast<msg::mediator::Operation*>(&msg);
+          EXPECT_NE(op, nullptr);
+          if (op) {
+            op->opcode = OPCODE::PUB_DEREGISTER;
+            op->len = pub_info.size();
+            return true;
+          }
+          return false;
+        }))
+        .WillOnce(::testing::Invoke(
+            [should_fail, is_readable, pub_info](msg::Message& msg, size_t size) {
+              EXPECT_EQ(size, pub_info.size());
+              *is_readable = false;
+              auto info = dynamic_cast<msg::mediator::PubInfo*>(&msg);
+              EXPECT_NE(info, nullptr);
+              if (info) {
+                info->id = pub_info.id;
+                info->node_id = pub_info.node_id;
+                info->topic_info.name = pub_info.topic_info.name;
+                info->topic_info.message_hash = pub_info.topic_info.message_hash;
+                info->endpoint.address = pub_info.endpoint.address;
+                info->endpoint.port = pub_info.endpoint.port;
+                return true;
+              }
+              return false;
+            }));
+    EXPECT_CALL(*socket_, close()).Times(1);
+    return *this;
+  }
+
+  // Configure as a mediator socket for sub registration
+  SocketBuilder& as_med_sub_register(const msg::mediator::SubInfo& sub_info,
+                                     bool should_fail = false) {
+    auto is_readable = std::make_shared<bool>(true);
+    EXPECT_CALL(*socket_, wait_readable(::testing::_))
+        .Times(::testing::AtLeast(0))
+        .WillRepeatedly(::testing::Invoke([is_readable]() { return *is_readable; }));
+    EXPECT_CALL(*socket_, recv_message(::testing::_, ::testing::_))
+        .Times(2)
+        .WillOnce(::testing::Invoke([sub_info](msg::Message& msg, size_t size) {
+          EXPECT_EQ(size, msg::mediator::Operation().size());
+          auto op = dynamic_cast<msg::mediator::Operation*>(&msg);
+          EXPECT_NE(op, nullptr);
+          if (op) {
+            op->opcode = OPCODE::SUB_REGISTER;
+            op->len = sub_info.size();
+            return true;
+          }
+          return false;
+        }))
+        .WillOnce(::testing::Invoke(
+            [should_fail, is_readable, sub_info](msg::Message& msg, size_t size) {
+              EXPECT_EQ(size, sub_info.size());
+              *is_readable = false;
+              auto info = dynamic_cast<msg::mediator::SubInfo*>(&msg);
+              EXPECT_NE(info, nullptr);
+              if (info) {
+                info->id = sub_info.id;
+                info->node_id = sub_info.node_id;
+                info->topic_info.name = sub_info.topic_info.name;
+                info->topic_info.message_hash = sub_info.topic_info.message_hash;
+                info->endpoint.address = sub_info.endpoint.address;
+                info->endpoint.port = sub_info.endpoint.port;
+                return true;
+              }
+              return false;
+            }));
+    send_status_response(should_fail);
+    EXPECT_CALL(*socket_, close()).Times(1);
+    return *this;
+  }
+
+  // Configure as a mediator socket for sub deregistration
+  SocketBuilder& as_med_sub_deregister(const msg::mediator::SubInfo& sub_info,
+                                       bool should_fail = false) {
+    auto is_readable = std::make_shared<bool>(true);
+    EXPECT_CALL(*socket_, wait_readable(::testing::_))
+        .Times(::testing::AtLeast(0))
+        .WillRepeatedly(::testing::Invoke([is_readable]() { return *is_readable; }));
+    EXPECT_CALL(*socket_, recv_message(::testing::_, ::testing::_))
+        .Times(2)
+        .WillOnce(::testing::Invoke([sub_info](msg::Message& msg, size_t size) {
+          EXPECT_EQ(size, msg::mediator::Operation().size());
+          auto op = dynamic_cast<msg::mediator::Operation*>(&msg);
+          EXPECT_NE(op, nullptr);
+          if (op) {
+            op->opcode = OPCODE::SUB_DEREGISTER;
+            op->len = sub_info.size();
+            return true;
+          }
+          return false;
+        }))
+        .WillOnce(::testing::Invoke(
+            [should_fail, is_readable, sub_info](msg::Message& msg, size_t size) {
+              EXPECT_EQ(size, sub_info.size());
+              *is_readable = false;
+              auto info = dynamic_cast<msg::mediator::SubInfo*>(&msg);
+              EXPECT_NE(info, nullptr);
+              if (info) {
+                info->id = sub_info.id;
+                info->node_id = sub_info.node_id;
+                info->topic_info.name = sub_info.topic_info.name;
+                info->topic_info.message_hash = sub_info.topic_info.message_hash;
+                info->endpoint.address = sub_info.endpoint.address;
+                info->endpoint.port = sub_info.endpoint.port;
+                return true;
+              }
+              return false;
+            }));
+    EXPECT_CALL(*socket_, close()).Times(1);
+    return *this;
+  }
+
+  // Configure as a mediator socket for srv registration
+  SocketBuilder& as_med_srv_register(const msg::mediator::SrvInfo& srv_info,
+                                     bool should_fail = false) {
+    auto is_readable = std::make_shared<bool>(true);
+    EXPECT_CALL(*socket_, wait_readable(::testing::_))
+        .Times(::testing::AtLeast(0))
+        .WillRepeatedly(::testing::Invoke([is_readable]() { return *is_readable; }));
+    EXPECT_CALL(*socket_, recv_message(::testing::_, ::testing::_))
+        .Times(2)
+        .WillOnce(::testing::Invoke([srv_info](msg::Message& msg, size_t size) {
+          EXPECT_EQ(size, msg::mediator::Operation().size());
+          auto op = dynamic_cast<msg::mediator::Operation*>(&msg);
+          EXPECT_NE(op, nullptr);
+          if (op) {
+            op->opcode = OPCODE::SRV_REGISTER;
+            op->len = srv_info.size();
+            return true;
+          }
+          return false;
+        }))
+        .WillOnce(::testing::Invoke(
+            [should_fail, is_readable, srv_info](msg::Message& msg, size_t size) {
+              EXPECT_EQ(size, srv_info.size());
+              *is_readable = false;
+              auto info = dynamic_cast<msg::mediator::SrvInfo*>(&msg);
+              EXPECT_NE(info, nullptr);
+              if (info) {
+                info->id = srv_info.id;
+                info->node_id = srv_info.node_id;
+                info->name = srv_info.name;
+                info->request_hash = srv_info.request_hash;
+                info->response_hash = srv_info.response_hash;
+                info->endpoint.address = srv_info.endpoint.address;
+                info->endpoint.port = srv_info.endpoint.port;
+                return true;
+              }
+              return false;
+            }));
+    send_status_response(should_fail);
+    EXPECT_CALL(*socket_, close()).Times(1);
+    return *this;
+  }
+
+  // Configure as a mediator socket for srv deregistration
+  SocketBuilder& as_med_srv_deregister(const msg::mediator::SrvInfo& srv_info,
+                                       bool should_fail = false) {
+    auto is_readable = std::make_shared<bool>(true);
+    EXPECT_CALL(*socket_, wait_readable(::testing::_))
+        .Times(::testing::AtLeast(0))
+        .WillRepeatedly(::testing::Invoke([is_readable]() { return *is_readable; }));
+    EXPECT_CALL(*socket_, recv_message(::testing::_, ::testing::_))
+        .Times(2)
+        .WillOnce(::testing::Invoke([srv_info](msg::Message& msg, size_t size) {
+          EXPECT_EQ(size, msg::mediator::Operation().size());
+          auto op = dynamic_cast<msg::mediator::Operation*>(&msg);
+          EXPECT_NE(op, nullptr);
+          if (op) {
+            op->opcode = OPCODE::SRV_DEREGISTER;
+            op->len = srv_info.size();
+            return true;
+          }
+          return false;
+        }))
+        .WillOnce(::testing::Invoke(
+            [should_fail, is_readable, srv_info](msg::Message& msg, size_t size) {
+              EXPECT_EQ(size, srv_info.size());
+              *is_readable = false;
+              auto info = dynamic_cast<msg::mediator::SrvInfo*>(&msg);
+              EXPECT_NE(info, nullptr);
+              if (info) {
+                info->id = srv_info.id;
+                info->node_id = srv_info.node_id;
+                info->name = srv_info.name;
+                info->request_hash = srv_info.request_hash;
+                info->response_hash = srv_info.response_hash;
+                info->endpoint.address = srv_info.endpoint.address;
+                info->endpoint.port = srv_info.endpoint.port;
+                return true;
+              }
+              return false;
+            }));
+    EXPECT_CALL(*socket_, close()).Times(1);
+    return *this;
+  }
+
+  // Configure as mediator socket for service client request
+  SocketBuilder& as_med_srv_cli_request(const msg::mediator::SrvRequest& srv_req,
+                                        const msg::mediator::SrvResponse& srv_res,
+                                        bool should_fail = false) {
+    auto is_readable = std::make_shared<bool>(true);
+    EXPECT_CALL(*socket_, wait_readable(::testing::_))
+        .Times(::testing::AtLeast(0))
+        .WillRepeatedly(::testing::Invoke([is_readable]() { return *is_readable; }));
+    EXPECT_CALL(*socket_, recv_message(::testing::_, ::testing::_))
+        .Times(2)
+        .WillOnce(::testing::Invoke([srv_req](msg::Message& msg, size_t size) {
+          EXPECT_EQ(size, msg::mediator::Operation().size());
+          auto op = dynamic_cast<msg::mediator::Operation*>(&msg);
+          EXPECT_NE(op, nullptr);
+          if (op) {
+            op->opcode = OPCODE::SRV_REQUEST;
+            op->len = srv_req.size();
+            return true;
+          }
+          return false;
+        }))
+        .WillOnce(::testing::Invoke(
+            [should_fail, is_readable, srv_req](msg::Message& msg, size_t size) {
+              EXPECT_EQ(size, srv_req.size());
+              *is_readable = false;
+              auto req = dynamic_cast<msg::mediator::SrvRequest*>(&msg);
+              EXPECT_NE(req, nullptr);
+              if (req) {
+                req->node_id = srv_req.node_id;
+                req->name = srv_req.name;
+                req->request_hash = srv_req.request_hash;
+                req->response_hash = srv_req.response_hash;
+                return true;
+              }
+              return false;
+            }));
+    EXPECT_CALL(*socket_, send_message)
+        .Times(1)
+        .WillOnce(::testing::Invoke(
+            [should_fail, srv_res](uint8_t opcode, const msg::Message& msg) {
+              EXPECT_EQ(opcode, OPCODE::SRV_RESPONSE);
+              auto res = dynamic_cast<const msg::mediator::SrvResponse*>(&msg);
+              EXPECT_NE(res, nullptr);
+              if (res) {
+                if (should_fail) {
+                  EXPECT_NE(res->error, 0);
+                } else {
+                  EXPECT_EQ(res->error, 0);
+                  EXPECT_EQ(res->srv_info.id, srv_res.srv_info.id);
+                  EXPECT_EQ(res->srv_info.node_id, srv_res.srv_info.node_id);
+                  EXPECT_EQ(res->srv_info.name, srv_res.srv_info.name);
+                  EXPECT_EQ(res->srv_info.request_hash, srv_res.srv_info.request_hash);
+                  EXPECT_EQ(res->srv_info.response_hash, srv_res.srv_info.response_hash);
+                  EXPECT_EQ(res->srv_info.endpoint.address,
+                            srv_res.srv_info.endpoint.address);
+                  EXPECT_EQ(res->srv_info.endpoint.port, srv_res.srv_info.endpoint.port);
+                }
+                return true;
+              }
+              return false;
+            }));
+    EXPECT_CALL(*socket_, close()).Times(1);
+    return *this;
+  }
+
+  // Configure as a mediator socket for parameter get request
+  SocketBuilder& as_med_param_get(const msg::mediator::ParamInfo& param_info,
+                                  bool should_fail = false) {
+    auto is_readable = std::make_shared<bool>(true);
+    EXPECT_CALL(*socket_, wait_readable(::testing::_))
+        .Times(::testing::AtLeast(0))
+        .WillRepeatedly(::testing::Invoke([is_readable]() { return *is_readable; }));
+    EXPECT_CALL(*socket_, recv_message(::testing::_, ::testing::_))
+        .Times(2)
+        .WillOnce(::testing::Invoke([param_info](msg::Message& msg, size_t size) {
+          EXPECT_EQ(size, msg::mediator::Operation().size());
+          auto op = dynamic_cast<msg::mediator::Operation*>(&msg);
+          EXPECT_NE(op, nullptr);
+          if (op) {
+            op->opcode = OPCODE::PARAM_GET_REQUEST;
+            op->len = param_info.size();
+            return true;
+          }
+          return false;
+        }))
+        .WillOnce(::testing::Invoke(
+            [should_fail, is_readable, param_info](msg::Message& msg, size_t size) {
+              EXPECT_EQ(size, param_info.size());
+              *is_readable = false;
+              auto info = dynamic_cast<msg::mediator::ParamInfo*>(&msg);
+              EXPECT_NE(info, nullptr);
+              if (info) {
+                info->id = param_info.id;
+                info->name = param_info.name;
+                info->message_hash = param_info.message_hash;
+                info->data.clear();
+                return true;
+              }
+              return false;
+            }));
+    EXPECT_CALL(*socket_, send_message)
+        .Times(1)
+        .WillOnce(::testing::Invoke(
+            [should_fail, param_info](uint8_t opcode, const msg::Message& msg) {
+              EXPECT_EQ(opcode, OPCODE::PARAM_GET_RESPONSE);
+              auto info = dynamic_cast<const msg::mediator::ParamInfo*>(&msg);
+              EXPECT_NE(info, nullptr);
+              if (info) {
+                EXPECT_EQ(info->name, param_info.name);
+                EXPECT_EQ(info->message_hash, param_info.message_hash);
+                if (should_fail) {
+                  // Simulate failure by not setting the value
+                  EXPECT_TRUE(info->data.empty());
+                } else {
+                  // Check that value data matches the serialized message
+                  EXPECT_FALSE(info->data.empty());
+                  EXPECT_EQ(info->data.size(), param_info.data.size());
+                  EXPECT_EQ(info->data, param_info.data);
+                }
+                return true;
+              }
+              return false;
+            }));
+    EXPECT_CALL(*socket_, close()).Times(1);
+    return *this;
+  }
+
+  // Configure as a mediator socket for parameter set request
+  SocketBuilder& as_med_param_set(const msg::mediator::ParamInfo& param_info,
+                                  bool should_fail = false) {
+    auto is_readable = std::make_shared<bool>(true);
+    EXPECT_CALL(*socket_, wait_readable(::testing::_))
+        .Times(::testing::AtLeast(0))
+        .WillRepeatedly(::testing::Invoke([is_readable]() { return *is_readable; }));
+    EXPECT_CALL(*socket_, recv_message(::testing::_, ::testing::_))
+        .Times(2)
+        .WillOnce(::testing::Invoke([param_info](msg::Message& msg, size_t size) {
+          EXPECT_EQ(size, msg::mediator::Operation().size());
+          auto op = dynamic_cast<msg::mediator::Operation*>(&msg);
+          EXPECT_NE(op, nullptr);
+          if (op) {
+            op->opcode = OPCODE::PARAM_SET_REQUEST;
+            op->len = param_info.size();
+            return true;
+          }
+          return false;
+        }))
+        .WillOnce(::testing::Invoke(
+            [should_fail, is_readable, param_info](msg::Message& msg, size_t size) {
+              EXPECT_EQ(size, param_info.size());
+              *is_readable = false;
+              auto info = dynamic_cast<msg::mediator::ParamInfo*>(&msg);
+              EXPECT_NE(info, nullptr);
+              if (info) {
+                info->id = param_info.id;
+                info->name = param_info.name;
+                info->message_hash = param_info.message_hash;
+                info->data = param_info.data;
+                return true;
+              }
+              return false;
+            }));
+    send_status_response(should_fail);
+    EXPECT_CALL(*socket_, close()).Times(1);
+    return *this;
+  }
+
+  // Configure as a mediator socket for system info request
+  SocketBuilder& as_med_sys_info_request(const msg::mediator::SystemInfo& sys_info,
+                                         uint64_t node_id,
+                                         bool should_fail = false) {
+    auto is_readable = std::make_shared<bool>(true);
+    EXPECT_CALL(*socket_, wait_readable(::testing::_))
+        .Times(::testing::AtLeast(0))
+        .WillRepeatedly(::testing::Invoke([is_readable]() { return *is_readable; }));
+    EXPECT_CALL(*socket_, recv_message(::testing::_, ::testing::_))
+        .Times(2)
+        .WillOnce(::testing::Invoke([](msg::Message& msg, size_t size) {
+          EXPECT_EQ(size, msg::mediator::Operation().size());
+          auto op = dynamic_cast<msg::mediator::Operation*>(&msg);
+          EXPECT_NE(op, nullptr);
+          if (op) {
+            op->opcode = OPCODE::SYSTEM_GET_REQUEST;
+            op->len = msg::standard::UInt64().size();
+            return true;
+          }
+          return false;
+        }))
+        .WillOnce(::testing::Invoke(
+            [should_fail, is_readable, node_id](msg::Message& msg, size_t size) {
+              EXPECT_EQ(size, msg::standard::UInt64().size());
+              *is_readable = false;
+              auto info = dynamic_cast<msg::standard::UInt64*>(&msg);
+              EXPECT_NE(info, nullptr);
+              if (info) {
+                info->data = node_id;
+                return true;
+              }
+              return false;
+            }));
+    EXPECT_CALL(*socket_, send_message)
+        .Times(1)
+        .WillOnce(::testing::Invoke([should_fail, sys_info](uint8_t opcode,
+                                                            const msg::Message& msg) {
+          EXPECT_EQ(opcode, OPCODE::SYSTEM_GET_RESPONSE);
+          auto info = dynamic_cast<const msg::mediator::SystemInfo*>(&msg);
+          EXPECT_NE(info, nullptr);
+          if (info) {
+            if (should_fail) {
+              // Simulate failure by not setting the value
+              EXPECT_TRUE(info->nodes.empty());
+              EXPECT_TRUE(info->publishers.empty());
+              EXPECT_TRUE(info->subscribers.empty());
+              EXPECT_TRUE(info->services.empty());
+              EXPECT_TRUE(info->actions.empty());
+              EXPECT_TRUE(info->topics.empty());
+            } else {
+              EXPECT_EQ(info->nodes.size(), sys_info.nodes.size());
+              EXPECT_EQ(info->publishers.size(), sys_info.publishers.size());
+              EXPECT_EQ(info->subscribers.size(), sys_info.subscribers.size());
+              EXPECT_EQ(info->services.size(), sys_info.services.size());
+              EXPECT_EQ(info->topics.size(), sys_info.topics.size());
+              for (size_t i = 0; i < info->nodes.size(); i++) {
+                EXPECT_EQ(info->nodes[i].id, sys_info.nodes[i].id);
+                EXPECT_EQ(info->nodes[i].name, sys_info.nodes[i].name);
+                EXPECT_EQ(info->nodes[i].endpoint.address,
+                          sys_info.nodes[i].endpoint.address);
+                EXPECT_EQ(info->nodes[i].endpoint.port, sys_info.nodes[i].endpoint.port);
+              }
+              for (size_t i = 0; i < info->publishers.size(); i++) {
+                EXPECT_EQ(info->publishers[i].id, sys_info.publishers[i].id);
+                EXPECT_EQ(info->publishers[i].node_id, sys_info.publishers[i].node_id);
+                EXPECT_EQ(info->publishers[i].topic_info.name,
+                          sys_info.publishers[i].topic_info.name);
+                EXPECT_EQ(info->publishers[i].topic_info.message_hash,
+                          sys_info.publishers[i].topic_info.message_hash);
+                EXPECT_EQ(info->publishers[i].endpoint.address,
+                          sys_info.publishers[i].endpoint.address);
+                EXPECT_EQ(info->publishers[i].endpoint.port,
+                          sys_info.publishers[i].endpoint.port);
+              }
+              for (size_t i = 0; i < info->subscribers.size(); i++) {
+                EXPECT_EQ(info->subscribers[i].id, sys_info.subscribers[i].id);
+                EXPECT_EQ(info->subscribers[i].node_id, sys_info.subscribers[i].node_id);
+                EXPECT_EQ(info->subscribers[i].topic_info.name,
+                          sys_info.subscribers[i].topic_info.name);
+                EXPECT_EQ(info->subscribers[i].topic_info.message_hash,
+                          sys_info.subscribers[i].topic_info.message_hash);
+                EXPECT_EQ(info->subscribers[i].endpoint.address,
+                          sys_info.subscribers[i].endpoint.address);
+                EXPECT_EQ(info->subscribers[i].endpoint.port,
+                          sys_info.subscribers[i].endpoint.port);
+              }
+              for (size_t i = 0; i < info->services.size(); i++) {
+                EXPECT_EQ(info->services[i].id, sys_info.services[i].id);
+                EXPECT_EQ(info->services[i].node_id, sys_info.services[i].node_id);
+                EXPECT_EQ(info->services[i].name, sys_info.services[i].name);
+                EXPECT_EQ(info->services[i].request_hash,
+                          sys_info.services[i].request_hash);
+                EXPECT_EQ(info->services[i].response_hash,
+                          sys_info.services[i].response_hash);
+                EXPECT_EQ(info->services[i].endpoint.address,
+                          sys_info.services[i].endpoint.address);
+                EXPECT_EQ(info->services[i].endpoint.port,
+                          sys_info.services[i].endpoint.port);
+              }
+            }
+            return true;
+          }
+          return false;
+        }));
+    EXPECT_CALL(*socket_, close()).Times(1);
+    return *this;
+  }
+
+  // Configure as a mediator socket for sub notification
+  SocketBuilder& as_med_sub_notify(const msg::mediator::SubNotify& sub_notify) {
+    EXPECT_CALL(*socket_, connect(::testing::_))
+        .Times(1)
+        .WillOnce(::testing::Return(true));
+    EXPECT_CALL(*socket_, send_message(::testing::_, ::testing::_))
+        .Times(1)
+        .WillOnce(::testing::Invoke([sub_notify](uint8_t opcode,
+                                                 const msg::Message& msg) {
+          EXPECT_EQ(opcode, OPCODE::SUB_NOTIFY);
+          auto notify = dynamic_cast<const msg::mediator::SubNotify*>(&msg);
+          EXPECT_NE(notify, nullptr);
+          if (notify) {
+            EXPECT_EQ(notify->id, sub_notify.id);
+            for (size_t i = 0; i < notify->publishers.size(); i++) {
+              EXPECT_EQ(notify->publishers[i].id, sub_notify.publishers[i].id);
+              EXPECT_EQ(notify->publishers[i].node_id, sub_notify.publishers[i].node_id);
+              EXPECT_EQ(notify->publishers[i].topic_info.name,
+                        sub_notify.publishers[i].topic_info.name);
+              EXPECT_EQ(notify->publishers[i].topic_info.message_hash,
+                        sub_notify.publishers[i].topic_info.message_hash);
+              EXPECT_EQ(notify->publishers[i].endpoint.address,
+                        sub_notify.publishers[i].endpoint.address);
+              EXPECT_EQ(notify->publishers[i].endpoint.port,
+                        sub_notify.publishers[i].endpoint.port);
+            }
+            return true;
+          }
+          return false;
+        }));
+    EXPECT_CALL(*socket_, close()).Times(1);
+    return *this;
+  }
+
 private:
   std::shared_ptr<MockSocket> socket_;
 
@@ -489,6 +1125,26 @@ private:
               EXPECT_NE(status, nullptr);
               if (status) {
                 status->error = should_fail ? -1 : 0;
+                return true;
+              }
+              return false;
+            }));
+  }
+
+  void send_status_response(bool should_fail) {
+    EXPECT_CALL(*socket_, send_message)
+        .Times(1)
+        .WillOnce(
+            ::testing::Invoke([should_fail](uint8_t opcode, const msg::Message& msg) {
+              EXPECT_EQ(opcode, OPCODE::STATUS_RESPONSE);
+              auto status = dynamic_cast<const msg::mediator::Status*>(&msg);
+              EXPECT_NE(status, nullptr);
+              if (status) {
+                if (should_fail) {
+                  EXPECT_NE(status->error, 0);
+                } else {
+                  EXPECT_EQ(status->error, 0);
+                }
                 return true;
               }
               return false;

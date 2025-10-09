@@ -81,6 +81,10 @@ if(BUILD_TESTS)
         test/node_test.cpp
     )
     target_link_libraries(node_test GTest::gtest_main GTest::gmock rix)
+    add_executable(mediator_test
+        test/mediator_test.cpp
+    )
+    target_link_libraries(mediator_test GTest::gtest_main GTest::gmock rix)
     #   add_executable(node_registration_tests
     #     unit_tests/rix/node_registration_tests.cpp
     #   )
