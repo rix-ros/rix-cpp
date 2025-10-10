@@ -13,7 +13,15 @@ namespace rix {
 // Builder for configuring mock sockets with a fluent API
 class SocketBuilder {
 public:
-  SocketBuilder(std::shared_ptr<MockSocket> socket) : socket_(socket) {}
+  SocketBuilder(std::shared_ptr<MockSocket> socket)
+      : socket_(socket), enable_notifications_(false) {}
+
+  // Enable automatic notifications on operation completion
+  // Call this before setting up expectations if you want to use wait_for_operations
+  SocketBuilder& enable_operation_notifications() {
+    enable_notifications_ = true;
+    return *this;
+  }
 
   // Configure as a node registration socket
   SocketBuilder& as_node_register(const Endpoint& rixhub_endpoint,
@@ -436,6 +444,8 @@ public:
       // Wait readable will return true until we have accepted the expected number of
       // connections
       auto accepted = std::make_shared<int>(0);
+      std::weak_ptr<MockSocket> socket = socket_;
+      auto notify = enable_notifications_;
       EXPECT_CALL(*socket_, wait_readable(::testing::_))
           .Times(::testing::AtLeast(0))
           .WillRepeatedly(::testing::Invoke(
@@ -443,11 +453,17 @@ public:
 
       EXPECT_CALL(*socket_, accept(::testing::_))
           .Times(accept_count)
-          .WillRepeatedly(::testing::Invoke([create_socket, accepted](Endpoint&) {
-            auto sock = create_socket();
-            (*accepted)++;
-            return sock;
-          }));
+          .WillRepeatedly(
+              ::testing::Invoke([create_socket, accepted, socket, notify](Endpoint&) {
+                auto sock = create_socket();
+                (*accepted)++;
+                if (notify) {
+                  if (auto s = socket.lock()) {
+                    s->notify_operation_complete();
+                  }
+                }
+                return sock;
+              }));
     }
 
     EXPECT_CALL(*socket_, close()).Times(1);
@@ -475,8 +491,8 @@ public:
           }
           return false;
         }))
-        .WillOnce(::testing::Invoke(
-            [should_fail, is_readable, node_info](msg::Message& msg, size_t size) {
+        .WillOnce(
+            ::testing::Invoke([is_readable, node_info](msg::Message& msg, size_t size) {
               EXPECT_EQ(size, node_info.size());
               *is_readable = false;
               auto info = dynamic_cast<msg::mediator::NodeInfo*>(&msg);
@@ -515,8 +531,8 @@ public:
           }
           return false;
         }))
-        .WillOnce(::testing::Invoke(
-            [should_fail, is_readable, node_info](msg::Message& msg, size_t size) {
+        .WillOnce(
+            ::testing::Invoke([is_readable, node_info](msg::Message& msg, size_t size) {
               EXPECT_EQ(size, node_info.size());
               *is_readable = false;
               auto info = dynamic_cast<msg::mediator::NodeInfo*>(&msg);
@@ -554,8 +570,8 @@ public:
           }
           return false;
         }))
-        .WillOnce(::testing::Invoke(
-            [should_fail, is_readable, pub_info](msg::Message& msg, size_t size) {
+        .WillOnce(
+            ::testing::Invoke([is_readable, pub_info](msg::Message& msg, size_t size) {
               EXPECT_EQ(size, pub_info.size());
               *is_readable = false;
               auto info = dynamic_cast<msg::mediator::PubInfo*>(&msg);
@@ -596,8 +612,8 @@ public:
           }
           return false;
         }))
-        .WillOnce(::testing::Invoke(
-            [should_fail, is_readable, pub_info](msg::Message& msg, size_t size) {
+        .WillOnce(
+            ::testing::Invoke([is_readable, pub_info](msg::Message& msg, size_t size) {
               EXPECT_EQ(size, pub_info.size());
               *is_readable = false;
               auto info = dynamic_cast<msg::mediator::PubInfo*>(&msg);
@@ -637,8 +653,8 @@ public:
           }
           return false;
         }))
-        .WillOnce(::testing::Invoke(
-            [should_fail, is_readable, sub_info](msg::Message& msg, size_t size) {
+        .WillOnce(
+            ::testing::Invoke([is_readable, sub_info](msg::Message& msg, size_t size) {
               EXPECT_EQ(size, sub_info.size());
               *is_readable = false;
               auto info = dynamic_cast<msg::mediator::SubInfo*>(&msg);
@@ -679,8 +695,8 @@ public:
           }
           return false;
         }))
-        .WillOnce(::testing::Invoke(
-            [should_fail, is_readable, sub_info](msg::Message& msg, size_t size) {
+        .WillOnce(
+            ::testing::Invoke([is_readable, sub_info](msg::Message& msg, size_t size) {
               EXPECT_EQ(size, sub_info.size());
               *is_readable = false;
               auto info = dynamic_cast<msg::mediator::SubInfo*>(&msg);
@@ -720,8 +736,8 @@ public:
           }
           return false;
         }))
-        .WillOnce(::testing::Invoke(
-            [should_fail, is_readable, srv_info](msg::Message& msg, size_t size) {
+        .WillOnce(
+            ::testing::Invoke([is_readable, srv_info](msg::Message& msg, size_t size) {
               EXPECT_EQ(size, srv_info.size());
               *is_readable = false;
               auto info = dynamic_cast<msg::mediator::SrvInfo*>(&msg);
@@ -763,8 +779,8 @@ public:
           }
           return false;
         }))
-        .WillOnce(::testing::Invoke(
-            [should_fail, is_readable, srv_info](msg::Message& msg, size_t size) {
+        .WillOnce(
+            ::testing::Invoke([is_readable, srv_info](msg::Message& msg, size_t size) {
               EXPECT_EQ(size, srv_info.size());
               *is_readable = false;
               auto info = dynamic_cast<msg::mediator::SrvInfo*>(&msg);
@@ -806,8 +822,8 @@ public:
           }
           return false;
         }))
-        .WillOnce(::testing::Invoke(
-            [should_fail, is_readable, srv_req](msg::Message& msg, size_t size) {
+        .WillOnce(
+            ::testing::Invoke([is_readable, srv_req](msg::Message& msg, size_t size) {
               EXPECT_EQ(size, srv_req.size());
               *is_readable = false;
               auto req = dynamic_cast<msg::mediator::SrvRequest*>(&msg);
@@ -870,8 +886,8 @@ public:
           }
           return false;
         }))
-        .WillOnce(::testing::Invoke(
-            [should_fail, is_readable, param_info](msg::Message& msg, size_t size) {
+        .WillOnce(
+            ::testing::Invoke([is_readable, param_info](msg::Message& msg, size_t size) {
               EXPECT_EQ(size, param_info.size());
               *is_readable = false;
               auto info = dynamic_cast<msg::mediator::ParamInfo*>(&msg);
@@ -932,8 +948,8 @@ public:
           }
           return false;
         }))
-        .WillOnce(::testing::Invoke(
-            [should_fail, is_readable, param_info](msg::Message& msg, size_t size) {
+        .WillOnce(
+            ::testing::Invoke([is_readable, param_info](msg::Message& msg, size_t size) {
               EXPECT_EQ(size, param_info.size());
               *is_readable = false;
               auto info = dynamic_cast<msg::mediator::ParamInfo*>(&msg);
@@ -973,8 +989,8 @@ public:
           }
           return false;
         }))
-        .WillOnce(::testing::Invoke(
-            [should_fail, is_readable, node_id](msg::Message& msg, size_t size) {
+        .WillOnce(
+            ::testing::Invoke([is_readable, node_id](msg::Message& msg, size_t size) {
               EXPECT_EQ(size, msg::standard::UInt64().size());
               *is_readable = false;
               auto info = dynamic_cast<msg::standard::UInt64*>(&msg);
@@ -1094,8 +1110,231 @@ public:
     return *this;
   }
 
+  // Configure as a publisher connection socket (accepts and sends messages)
+  template <typename TMsg>
+  SocketBuilder& as_pub_connection(int send_count,
+                                   const std::vector<std::shared_ptr<TMsg>>& messages) {
+    auto send_index = std::make_shared<int>(0);
+    std::weak_ptr<MockSocket> socket = socket_;
+    auto notify = enable_notifications_;
+    EXPECT_CALL(*socket_, send_message)
+        .Times(send_count)
+        .WillRepeatedly(::testing::Invoke([send_index, messages, socket, notify](
+                                              uint8_t opcode, const msg::Message& msg) {
+          ++(*send_index);
+          EXPECT_EQ(opcode, OPCODE::PUB_MESSAGE);
+          auto message = dynamic_cast<const TMsg*>(&msg);
+          EXPECT_NE(message, nullptr);
+          if (message) {
+            EXPECT_EQ(msg.size(), messages.at(*send_index - 1)->size());
+            if (notify) {
+              if (auto s = socket.lock()) {
+                s->notify_operation_complete();
+              }
+            }
+            return true;
+          }
+          return false;
+        }));
+    EXPECT_CALL(*socket_, close()).Times(1);
+    return *this;
+  }
+
+  // Configure as a service connection socket (accepts and handles request/response)
+  template <typename TRequest, typename TResponse>
+  SocketBuilder& as_srv_connection(std::shared_ptr<TRequest> request,
+                                   std::shared_ptr<TResponse> response) {
+    static_assert(std::is_base_of<msg::Message, TRequest>::value,
+                  "TRequest must be derived from msg::Message");
+    static_assert(std::is_base_of<msg::Message, TResponse>::value,
+                  "TResponse must be derived from msg::Message");
+    std::weak_ptr<MockSocket> socket = socket_;
+    auto notify = enable_notifications_;
+
+    // Service needs to wait for readable data before processing request
+    auto is_readable = std::make_shared<bool>(true);
+    EXPECT_CALL(*socket_, wait_readable(::testing::_))
+        .Times(::testing::AtLeast(0))
+        .WillRepeatedly(::testing::Invoke([is_readable]() { return *is_readable; }));
+
+    EXPECT_CALL(*socket_, recv_message)
+        .Times(2)
+        .WillOnce(::testing::Invoke([request](msg::Message& msg, size_t len) {
+          auto op = dynamic_cast<msg::mediator::Operation*>(&msg);
+          if (op) {
+            op->len = request->size();
+            op->opcode = OPCODE::SRV_REQUEST_MESSAGE;
+            return true;
+          }
+          return false;
+        }))
+        .WillOnce(
+            ::testing::Invoke([request, is_readable](msg::Message& msg, size_t len) {
+              auto req = dynamic_cast<TRequest*>(&msg);
+              if (req) {
+                *req = *request;
+                *is_readable = false; // After reading the request, no more data
+                return true;
+              }
+              return false;
+            }));
+    EXPECT_CALL(*socket_, send_message)
+        .Times(1)
+        .WillOnce(::testing::Invoke(
+            [response, socket, notify](uint8_t opcode, const msg::Message& msg) {
+              EXPECT_EQ(opcode, OPCODE::SRV_RESPONSE_MESSAGE);
+              auto resp = dynamic_cast<const TResponse*>(&msg);
+              if (resp) {
+                EXPECT_EQ(resp->size(), response->size());
+                if (notify) {
+                  if (auto s = socket.lock()) {
+                    s->notify_operation_complete();
+                  }
+                }
+                return true;
+              }
+              return false;
+            }));
+    EXPECT_CALL(*socket_, close()).Times(1);
+    return *this;
+  }
+
+  // Configure as a subscriber client socket (connects and receives messages)
+  template <typename TMsg>
+  SocketBuilder& as_sub_client(int recv_count,
+                               const Endpoint& endpoint,
+                               const std::vector<std::shared_ptr<TMsg>>& messages) {
+    static_assert(std::is_base_of<msg::Message, TMsg>::value,
+                  "TMsg must be derived from msg::Message");
+    EXPECT_CALL(*socket_, set_blocking(false)).Times(1);
+    EXPECT_CALL(*socket_, connect(endpoint)).Times(1).WillOnce(::testing::Return(true));
+    auto recv_index = std::make_shared<int>(0);
+    std::weak_ptr<MockSocket> socket = socket_;
+    auto notify = enable_notifications_;
+    EXPECT_CALL(*socket_, recv_message)
+        .Times(::testing::AtLeast(recv_count * 2))
+        .WillRepeatedly(::testing::Invoke(
+            [recv_index, messages, socket, notify](msg::Message& msg, size_t len) {
+              int idx = *recv_index;
+              if (idx % 2 == 0) {
+                // Even: Operation
+                auto op = dynamic_cast<msg::mediator::Operation*>(&msg);
+                if (op) {
+                  op->len = messages[idx / 2]->size();
+                  op->opcode = OPCODE::PUB_MESSAGE;
+                  ++(*recv_index);
+                  return true;
+                }
+              } else {
+                // Odd: TMsg
+                if (idx / 2 < static_cast<int>(messages.size())) {
+                  auto message = dynamic_cast<TMsg*>(&msg);
+                  if (message) {
+                    *message = *(messages.at(idx / 2));
+                    ++(*recv_index);
+                    if (notify) {
+                      if (auto s = socket.lock()) {
+                        s->notify_operation_complete();
+                      }
+                    }
+                    return true;
+                  }
+                }
+              }
+              return false;
+            }));
+    EXPECT_CALL(*socket_, close()).Times(1);
+    return *this;
+  }
+
+  // Configure as a service client connection socket (connects, sends request, receives
+  // response)
+  template <typename TRequest, typename TResponse>
+  SocketBuilder& as_srv_cli_client(const Endpoint& endpoint,
+                                   std::shared_ptr<TRequest> request,
+                                   std::shared_ptr<TResponse> response) {
+    static_assert(std::is_base_of<msg::Message, TRequest>::value,
+                  "TRequest must be derived from msg::Message");
+    static_assert(std::is_base_of<msg::Message, TResponse>::value,
+                  "TResponse must be derived from msg::Message");
+    std::weak_ptr<MockSocket> socket = socket_;
+    auto notify = enable_notifications_;
+    EXPECT_CALL(*socket_, connect(endpoint)).Times(1).WillOnce(::testing::Return(true));
+    EXPECT_CALL(*socket_, send_message)
+        .Times(1)
+        .WillOnce(::testing::Invoke([request](uint8_t opcode, const msg::Message& msg) {
+          EXPECT_EQ(opcode, OPCODE::SRV_REQUEST_MESSAGE);
+          auto info = dynamic_cast<const TRequest*>(&msg);
+          if (info) {
+            EXPECT_EQ(msg.size(), request->size());
+            return true;
+          }
+          return false;
+        }));
+    EXPECT_CALL(*socket_, recv_message)
+        .Times(2)
+        .WillOnce(::testing::Invoke([response](msg::Message& msg, size_t len) {
+          auto op = dynamic_cast<msg::mediator::Operation*>(&msg);
+          if (op) {
+            op->len = response->size();
+            op->opcode = OPCODE::SRV_RESPONSE_MESSAGE;
+            return true;
+          }
+          return false;
+        }))
+        .WillOnce(
+            ::testing::Invoke([response, socket, notify](msg::Message& msg, size_t len) {
+              auto resp = dynamic_cast<TResponse*>(&msg);
+              if (resp) {
+                *resp = *response;
+                if (notify) {
+                  if (auto s = socket.lock()) {
+                    s->notify_operation_complete();
+                  }
+                }
+                return true;
+              }
+              return false;
+            }));
+    EXPECT_CALL(*socket_, close()).Times(1);
+    return *this;
+  }
+
+  // Configure as a subscriber notification connection socket
+  SocketBuilder& as_sub_connection(const msg::mediator::SubNotify& notify) {
+    EXPECT_CALL(*socket_, recv_message)
+        .Times(2)
+        .WillOnce(::testing::Invoke([notify](msg::Message& msg, size_t len) {
+          auto op = dynamic_cast<msg::mediator::Operation*>(&msg);
+          if (op) {
+            op->len = notify.size();
+            op->opcode = OPCODE::SUB_NOTIFY;
+            return true;
+          }
+          return false;
+        }))
+        .WillOnce(::testing::Invoke([notify](msg::Message& msg, size_t len) {
+          auto response = dynamic_cast<msg::mediator::SubNotify*>(&msg);
+          if (response) {
+            *response = notify;
+            return true;
+          }
+          return false;
+        }));
+    EXPECT_CALL(*socket_, close()).Times(1);
+    return *this;
+  }
+
 private:
   std::shared_ptr<MockSocket> socket_;
+  bool enable_notifications_;
+
+  // Helper to notify if notifications are enabled
+  void maybe_notify() {
+    if (enable_notifications_) {
+      socket_->notify_operation_complete();
+    }
+  }
 
   void expect_status_response(bool should_fail) {
     // Wait readable will return true until we have read both messages

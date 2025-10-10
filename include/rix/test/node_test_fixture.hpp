@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rix/core/node.hpp"
+#include "rix/ipc/mock_poller.hpp"
 #include "socket_builder.hpp"
 #include "socket_manager.hpp"
 #include <gtest/gtest.h>
@@ -10,9 +11,103 @@ namespace rix {
 // High-level test fixture for Node tests
 template <typename Node = rix::Node> class NodeTestFixture {
 public:
+  static void enable_poller(int max_poll_count = -1) {
+    auto poller = std::make_shared<rix::MockPoller>(max_poll_count);
+    rix::GenericSocket::set_poller(poller);
+    EXPECT_CALL(*poller, poll).Times(::testing::AtLeast(1));
+  }
+
+  static void disable_poller() { rix::GenericSocket::set_poller(nullptr); }
+
   NodeTestFixture(const std::string& node_name = "test_node",
                   const Endpoint& rixhub = Endpoint("127.0.0.1", 8000))
-      : node_name_(node_name), rixhub_endpoint_(rixhub), node_id_(0) {}
+      : node_name_(node_name), rixhub_endpoint_(rixhub), node_id_(0),
+        enable_notifications_(false) {}
+
+  ~NodeTestFixture() {}
+
+  // Enable operation notifications for synchronization in multithreaded tests
+  NodeTestFixture& enable_operation_notifications() {
+    enable_notifications_ = true;
+    return *this;
+  }
+
+  // Get a specific server socket by index (0-based)
+  std::shared_ptr<MockSocket> get_server_socket(size_t index = 0) const {
+    if (index < server_sockets_.size()) {
+      return server_sockets_[index];
+    }
+    return nullptr;
+  }
+
+  // Get a specific connection socket by index (0-based)
+  std::shared_ptr<MockSocket> get_connection_socket(size_t index = 0) const {
+    if (index < connection_sockets_.size()) {
+      return connection_sockets_[index];
+    }
+    return nullptr;
+  }
+
+  // Get a specific client socket by index (0-based)
+  std::shared_ptr<MockSocket> get_client_socket(size_t index = 0) const {
+    if (index < client_sockets_.size()) {
+      return client_sockets_[index];
+    }
+    return nullptr;
+  }
+
+  // Get all server sockets
+  const std::vector<std::shared_ptr<MockSocket>>& get_server_sockets() const {
+    return server_sockets_;
+  }
+
+  // Get connection sockets (pub connections, service connections)
+  const std::vector<std::shared_ptr<MockSocket>>& get_connection_sockets() const {
+    return connection_sockets_;
+  }
+
+  // Get client sockets (subscriber clients, service clients)
+  const std::vector<std::shared_ptr<MockSocket>>& get_client_sockets() const {
+    return client_sockets_;
+  }
+
+  // Convenience methods for waiting on multiple sockets
+
+  // Wait for all server sockets to complete the specified number of operations
+  bool wait_for_all_servers(
+      size_t operations_per_server,
+      std::chrono::milliseconds timeout = std::chrono::milliseconds(5000)) const {
+    for (auto& server : server_sockets_) {
+      if (!server->wait_for_operations(operations_per_server, timeout)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Wait for all connection sockets to complete the specified number of operations
+  bool wait_for_all_connections(
+      size_t operations_per_connection,
+      std::chrono::milliseconds timeout = std::chrono::milliseconds(5000)) const {
+    for (auto& conn : connection_sockets_) {
+      if (!conn->wait_for_operations(operations_per_connection, timeout)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Wait for all client sockets to complete the specified number of operations
+  bool wait_for_all_clients(
+      size_t operations_per_client,
+      std::chrono::milliseconds timeout = std::chrono::milliseconds(5000)) const {
+    for (auto& client : client_sockets_) {
+      if (!client->wait_for_operations(operations_per_client, timeout)) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   // Configure node registration to succeed
   NodeTestFixture& register_node(bool should_fail = false) {
@@ -201,11 +296,84 @@ public:
                                                                            8001),
                                  int accept_count = 0) {
     auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket).as_server(
+    server_sockets_.push_back(socket);
+    auto builder = SocketBuilder(socket);
+    if (enable_notifications_) {
+      builder.enable_operation_notifications();
+    }
+    builder.as_server(
         endpoint,
         bound_endpoint,
         [this]() { return this->socket_manager_.get_factory()(); },
         accept_count);
+    return *this;
+  }
+
+  // Configure publisher server with connection sockets
+  template <typename TMsg>
+  NodeTestFixture&
+  create_pub_connection(int messages_per_connection,
+                        const std::vector<std::shared_ptr<TMsg>>& messages) {
+    // Create connection sockets
+    auto conn_socket = socket_manager_.create_socket();
+    connection_sockets_.push_back(conn_socket);
+    auto builder = SocketBuilder(conn_socket);
+    if (enable_notifications_) {
+      builder.enable_operation_notifications();
+    }
+    builder.as_pub_connection(messages_per_connection, messages);
+    return *this;
+  }
+
+  // Configure subscriber connections
+  NodeTestFixture& create_sub_connection(msg::mediator::SubNotify sub_notify) {
+    // Create notification connection socket
+    auto notify_socket = socket_manager_.create_socket();
+    SocketBuilder(notify_socket).as_sub_connection(sub_notify);
+    return *this;
+  }
+
+  // Configure subscriber clients
+  template <typename TMsg>
+  NodeTestFixture& create_sub_client(const Endpoint& endpoint,
+                                     int messages_to_receive,
+                                     const std::vector<std::shared_ptr<TMsg>>& messages) {
+    auto client_socket = socket_manager_.create_socket();
+    client_sockets_.push_back(client_socket);
+    auto builder = SocketBuilder(client_socket);
+    if (enable_notifications_) {
+      builder.enable_operation_notifications();
+    }
+    builder.as_sub_client(messages_to_receive, endpoint, messages);
+    return *this;
+  }
+
+  // Configure service server with connection sockets
+  template <typename TRequest, typename TResponse>
+  NodeTestFixture& create_srv_connection(std::shared_ptr<TRequest> request,
+                                         std::shared_ptr<TResponse> response) {
+    auto conn_socket = socket_manager_.create_socket();
+    connection_sockets_.push_back(conn_socket);
+    auto builder = SocketBuilder(conn_socket);
+    if (enable_notifications_) {
+      builder.enable_operation_notifications();
+    }
+    builder.as_srv_connection(request, response);
+    return *this;
+  }
+
+  // Configure service client client
+  template <typename TRequest, typename TResponse>
+  NodeTestFixture& create_srv_cli_client(const Endpoint& service_endpoint,
+                                         std::shared_ptr<TRequest> request,
+                                         std::shared_ptr<TResponse> response) {
+    auto socket = socket_manager_.create_socket();
+    client_sockets_.push_back(socket);
+    auto builder = SocketBuilder(socket);
+    if (enable_notifications_) {
+      builder.enable_operation_notifications();
+    }
+    builder.as_srv_cli_client(service_endpoint, request, response);
     return *this;
   }
 
@@ -224,6 +392,15 @@ private:
   std::string node_name_;
   Endpoint rixhub_endpoint_;
   uint64_t node_id_;
+  bool enable_notifications_;
+
+  // Categorized socket tracking
+  std::vector<std::shared_ptr<MockSocket>>
+      server_sockets_; // Server sockets (accept connections)
+  std::vector<std::shared_ptr<MockSocket>>
+      connection_sockets_; // Connection sockets (pub/srv connections)
+  std::vector<std::shared_ptr<MockSocket>>
+      client_sockets_; // Client sockets (sub/srv clients)
 
   msg::mediator::NodeInfo make_node_info() const {
     msg::mediator::NodeInfo info;

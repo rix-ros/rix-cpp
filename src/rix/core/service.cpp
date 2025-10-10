@@ -2,10 +2,11 @@
 
 namespace rix {
 
-Service::Service(const msg::mediator::SrvInfo &info, SocketFactory socket_factory,
-                 const Endpoint &rixhub_endpoint)
-    : info_(info), socket_factory_(socket_factory), rixhub_endpoint_(rixhub_endpoint), registered_flag_(false),
-      request_instance_(nullptr), response_instance_(nullptr) {
+Service::Service(const msg::mediator::SrvInfo& info,
+                 SocketFactory socket_factory,
+                 const Endpoint& rixhub_endpoint)
+    : info_(info), socket_factory_(socket_factory), rixhub_endpoint_(rixhub_endpoint),
+      registered_flag_(false), request_instance_(nullptr), response_instance_(nullptr) {
 
   server_ = socket_factory_();
   server_->set_reuse_address(true);
@@ -74,6 +75,11 @@ Service::~Service() {
 }
 
 void Service::spin_once() {
+  if (!callback_) {
+    return;
+  }
+  std::lock_guard lock(callback_mutex_);
+
   // Check to see if a subscriber has made a connection
   if (!server_->is_readable())
     return;

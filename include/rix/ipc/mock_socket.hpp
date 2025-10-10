@@ -1,5 +1,7 @@
 #pragma once
 
+#include <condition_variable>
+#include <mutex>
 #include <queue>
 #include <vector>
 
@@ -58,12 +60,12 @@ public:
     ON_CALL(*this, remote_endpoint).WillByDefault([]() -> Endpoint { return {}; });
   }
 
+  ~MockSocket() { close(); }
+
   MockSocket(const MockSocket&) = delete;
   MockSocket& operator=(const MockSocket&) = delete;
   MockSocket(MockSocket&&) = delete;
   MockSocket& operator=(MockSocket&&) = delete;
-
-  ~MockSocket() { close(); }
 
   MOCK_METHOD(bool, bind, (const Endpoint& endpoint), (const, override));
   MOCK_METHOD(bool, listen, (int backlog), (const, override));
@@ -94,6 +96,44 @@ public:
 
   MOCK_METHOD(Endpoint, local_endpoint, (), (const, override));
   MOCK_METHOD(Endpoint, remote_endpoint, (), (const, override));
+
+  // Synchronization support for multithreaded tests
+  // Allows tests to wait for specific operations to complete instead of sleeping
+
+  // Notify that an operation has completed
+  void notify_operation_complete() {
+    std::lock_guard<std::mutex> lock(sync_mutex_);
+    operation_count_++;
+    sync_cv_.notify_all();
+  }
+
+  // Wait for a specific number of operations to complete
+  // Returns true if the count was reached, false if timeout occurred
+  bool wait_for_operations(
+      size_t expected_count,
+      std::chrono::milliseconds timeout = std::chrono::milliseconds(5000)) {
+    std::unique_lock<std::mutex> lock(sync_mutex_);
+    return sync_cv_.wait_for(lock, timeout, [this, expected_count]() {
+      return operation_count_ >= expected_count;
+    });
+  }
+
+  // Reset the operation counter
+  void reset_operation_count() {
+    std::lock_guard<std::mutex> lock(sync_mutex_);
+    operation_count_ = 0;
+  }
+
+  // Get current operation count
+  size_t get_operation_count() const {
+    std::lock_guard<std::mutex> lock(sync_mutex_);
+    return operation_count_;
+  }
+
+private:
+  mutable std::mutex sync_mutex_;
+  std::condition_variable sync_cv_;
+  size_t operation_count_ = 0;
 };
 
 } // namespace rix
