@@ -54,23 +54,23 @@ target_include_directories(tf PUBLIC
 )
 
 # Build examples
-add_executable(parameter_server examples/parameter_server.cpp)
-target_link_libraries(parameter_server rix)
+# add_executable(parameter_server examples/parameter_server.cpp)
+# target_link_libraries(parameter_server rix)
 
-add_executable(system_info examples/system_info.cpp)
-target_link_libraries(system_info rix)
+# add_executable(system_info examples/system_info.cpp)
+# target_link_libraries(system_info rix)
 
-add_executable(simple_publisher examples/simple_publisher.cpp)
-target_link_libraries(simple_publisher rix)
+# add_executable(simple_publisher examples/simple_publisher.cpp)
+# target_link_libraries(simple_publisher rix)
 
-add_executable(simple_subscriber examples/simple_subscriber.cpp)
-target_link_libraries(simple_subscriber rix)
+# add_executable(simple_subscriber examples/simple_subscriber.cpp)
+# target_link_libraries(simple_subscriber rix)
 
-add_executable(simple_service examples/simple_service.cpp)
-target_link_libraries(simple_service rix)
+# add_executable(simple_service examples/simple_service.cpp)
+# target_link_libraries(simple_service rix)
 
-add_executable(simple_service_client examples/simple_service_client.cpp)
-target_link_libraries(simple_service_client rix)
+# add_executable(simple_service_client examples/simple_service_client.cpp)
+# target_link_libraries(simple_service_client rix)
 
 # Build unit tests
 if(BUILD_TESTS)

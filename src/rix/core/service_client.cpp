@@ -2,12 +2,18 @@
 
 namespace rix {
 
-ServiceClient::ServiceClient(const msg::mediator::SrvRequest &request, SocketFactory socket_factory,
-                             const Endpoint &rixhub_endpoint)
+ServiceClient::ServiceClient(const msg::mediator::SrvRequest& request,
+                             SocketFactory socket_factory,
+                             const Endpoint& rixhub_endpoint)
     : request_(request), socket_factory_(socket_factory) {
   msg::mediator::SrvResponse response;
 
   auto client = socket_factory_();
+  if (!client) {
+    shutdown();
+    return;
+  }
+
   if (!client->connect(rixhub_endpoint)) {
     shutdown();
     return;
@@ -42,20 +48,32 @@ ServiceClient::~ServiceClient() {}
 
 void ServiceClient::spin_once() {}
 
-bool ServiceClient::call(const msg::Message &request, msg::Message &response) {
-  auto client = socket_factory_();
-  if (!client->connect(endpoint_))
+bool ServiceClient::call(const msg::Message& request, msg::Message& response) {
+  if (!ok()) {
     return false;
+  }
 
-  if (!client->send_message(OPCODE::SRV_REQUEST_MESSAGE, request))
+  auto client = socket_factory_();
+  if (!client) {
     return false;
+  }
+
+  if (!client->connect(endpoint_)) {
+    return false;
+  }
+
+  if (!client->send_message(OPCODE::SRV_REQUEST_MESSAGE, request)) {
+    return false;
+  }
 
   msg::mediator::Operation op;
-  if (!client->recv_message(op, response))
+  if (!client->recv_message(op, response)) {
     return false;
+  }
 
-  if (op.opcode != OPCODE::SRV_RESPONSE_MESSAGE)
+  if (op.opcode != OPCODE::SRV_RESPONSE_MESSAGE) {
     return false;
+  }
 
   return true;
 }

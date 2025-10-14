@@ -2,15 +2,16 @@
 
 namespace rix {
 
-Node::Node(const std::string& name,
-           const Endpoint&    rixhub_endpoint,
-           SocketFactory      socket_factory)
-    : rixhub_endpoint_(rixhub_endpoint), socket_factory_(socket_factory),
-      registered_flag_(false) {
+Node::Node(const std::string& name)
+    : rixhub_endpoint_(Endpoint(RIXHUB_IP, RIXHUB_PORT)), registered_flag_(false) {
   info_.id = generate_id();
   info_.name = name;
 
   auto client = socket_factory_();
+  if (!client) {
+    shutdown();
+    return;
+  }
   if (!client->connect(rixhub_endpoint_)) {
     shutdown();
     return;
@@ -21,7 +22,7 @@ Node::Node(const std::string& name,
   }
 
   msg::mediator::Operation op;
-  msg::mediator::Status    status;
+  msg::mediator::Status status;
   if (!client->recv_message(op, status)) {
     shutdown();
     return;
@@ -37,6 +38,9 @@ Node::Node(const std::string& name,
 Node::~Node() {
   if (registered_flag_) {
     auto client = socket_factory_();
+    if (!client) {
+      return;
+    }
     if (client->connect(rixhub_endpoint_)) {
       client->send_message(OPCODE::NODE_DEREGISTER, info_);
     }
@@ -66,8 +70,8 @@ void Node::spin_once() {
 
 std::shared_ptr<Publisher>
 Node::create_publisher(const msg::mediator::TopicInfo& topic_info,
-                       const Endpoint&                 rixhub_endpoint,
-                       const Endpoint&                 endpoint) {
+                       const Endpoint& rixhub_endpoint,
+                       const Endpoint& endpoint) {
   msg::mediator::PubInfo pub_info;
   pub_info.id = generate_id();
   pub_info.node_id = info_.id;
@@ -82,8 +86,8 @@ Node::create_publisher(const msg::mediator::TopicInfo& topic_info,
 
 std::shared_ptr<Subscriber>
 Node::create_subscriber(const msg::mediator::TopicInfo& topic_info,
-                        const Endpoint&                 rixhub_endpoint,
-                        const Endpoint&                 endpoint) {
+                        const Endpoint& rixhub_endpoint,
+                        const Endpoint& endpoint) {
   msg::mediator::SubInfo sub_info;
   sub_info.id = generate_id();
   sub_info.node_id = info_.id;
@@ -97,8 +101,8 @@ Node::create_subscriber(const msg::mediator::TopicInfo& topic_info,
 }
 
 std::shared_ptr<Service> Node::create_service(msg::mediator::SrvInfo& service_info,
-                                              const Endpoint&         rixhub_endpoint,
-                                              const Endpoint&         endpoint) {
+                                              const Endpoint& rixhub_endpoint,
+                                              const Endpoint& endpoint) {
   service_info.id = generate_id();
   service_info.node_id = info_.id;
   service_info.endpoint.address = endpoint.address;

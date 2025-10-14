@@ -59,6 +59,9 @@ Service::Service(const msg::mediator::SrvInfo& info,
 Service::~Service() {
   if (registered_flag_) {
     auto client = socket_factory_();
+    if (!client) {
+      return;
+    }
     if (client->connect(rixhub_endpoint_)) {
       client->send_message(OPCODE::SRV_DEREGISTER, info_);
     }

@@ -2,8 +2,7 @@
 
 namespace rix {
 
-TimerCallback::TimerCallback(const Duration &duration, Callback callback)
-    : duration_(duration), callback_(callback) {
+TimerCallback::TimerCallback(const Duration& duration, Callback callback) : duration_(duration), callback_(callback) {
   event_.current_real = Time::now();
   event_.current_expected = event_.last_expected = event_.last_real = Time(0.0);
   event_.last_duration = Duration(0.0);
@@ -24,14 +23,14 @@ TimerCallback::~TimerCallback() {
 
 void TimerCallback::spin_once() {
   event_.current_real = Time::now();
-  if (event_.current_real - event_.last_real > duration_) {
-    std::lock_guard<std::mutex> guard(callback_mutex_);
+  if (event_.current_real - event_.last_real >= duration_) {
     event_.last_duration = event_.current_real - event_.last_real;
     if (event_.current_expected == 0.0) {
       event_.current_expected = event_.current_real;
     } else {
       event_.current_expected += duration_;
     }
+    std::lock_guard<std::mutex> guard(callback_mutex_);
     callback_(event_);
     event_.last_real = event_.current_real;
     event_.last_expected = event_.current_expected;
