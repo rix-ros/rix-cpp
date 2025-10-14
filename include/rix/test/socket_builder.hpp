@@ -3,10 +3,10 @@
 #include <gmock/gmock.h>
 
 #include "rix/core/common.hpp"
-#include "rix/test/mock_socket.hpp"
 #include "rix/msg/mediator/NodeInfo.hpp"
 #include "rix/msg/mediator/PubInfo.hpp"
 #include "rix/msg/mediator/Status.hpp"
+#include "rix/test/mock_socket.hpp"
 
 namespace rix {
 
@@ -23,18 +23,21 @@ public:
   }
 
   // Configure as a node registration socket
-  SocketBuilder& as_node_register(const Endpoint& rixhub_endpoint, bool should_fail = false) {
+  SocketBuilder& as_node_register(const msg::mediator::NodeInfo& node_info,
+                                  const Endpoint& rixhub_endpoint,
+                                  bool should_fail = false) {
     connect_to_rixhub(rixhub_endpoint);
-    EXPECT_CALL(*socket_, send_message).Times(1).WillOnce(::testing::Invoke([](uint8_t, const msg::Message& msg) {
-      auto info = dynamic_cast<const msg::mediator::NodeInfo*>(&msg);
-      EXPECT_NE(info, nullptr);
-      if (info) {
-        EXPECT_GT(info->id, 0);
-        EXPECT_FALSE(info->name.empty());
-        return true;
-      }
-      return false;
-    }));
+    EXPECT_CALL(*socket_, send_message)
+        .Times(1)
+        .WillOnce(::testing::Invoke([node_info](uint8_t, const msg::Message& msg) {
+          auto info = dynamic_cast<const msg::mediator::NodeInfo*>(&msg);
+          EXPECT_NE(info, nullptr);
+          if (info) {
+            EXPECT_EQ(*info, node_info);
+            return true;
+          }
+          return false;
+        }));
 
     expect_status_response(should_fail);
     EXPECT_CALL(*socket_, close()).Times(1);
@@ -43,14 +46,13 @@ public:
   }
 
   // Configure as a node deregistration socket
-  SocketBuilder& as_node_deregister(const Endpoint& rixhub_endpoint) {
+  SocketBuilder& as_node_deregister(const msg::mediator::NodeInfo& node_info, const Endpoint& rixhub_endpoint) {
     connect_to_rixhub(rixhub_endpoint);
-    EXPECT_CALL(*socket_, send_message).Times(1).WillOnce(::testing::Invoke([](uint8_t, const msg::Message& msg) {
+    EXPECT_CALL(*socket_, send_message).Times(1).WillOnce(::testing::Invoke([node_info](uint8_t, const msg::Message& msg) {
       auto info = dynamic_cast<const msg::mediator::NodeInfo*>(&msg);
       EXPECT_NE(info, nullptr);
       if (info) {
-        EXPECT_GT(info->id, 0);
-        EXPECT_FALSE(info->name.empty());
+        EXPECT_EQ(*info, node_info);
         return true;
       }
       return false;
@@ -72,10 +74,7 @@ public:
           auto info = dynamic_cast<const msg::mediator::PubInfo*>(&msg);
           EXPECT_NE(info, nullptr);
           if (info) {
-            EXPECT_EQ(info->topic_info.name, pub_info.topic_info.name);
-            EXPECT_EQ(info->topic_info.message_hash, pub_info.topic_info.message_hash);
-            EXPECT_EQ(info->endpoint.address, pub_info.endpoint.address);
-            EXPECT_EQ(info->endpoint.port, pub_info.endpoint.port);
+            EXPECT_EQ(*info, pub_info);
             return true;
           }
           return false;
@@ -98,10 +97,7 @@ public:
           auto info = dynamic_cast<const msg::mediator::PubInfo*>(&msg);
           EXPECT_NE(info, nullptr);
           if (info) {
-            EXPECT_EQ(info->topic_info.name, pub_info.topic_info.name);
-            EXPECT_EQ(info->topic_info.message_hash, pub_info.topic_info.message_hash);
-            EXPECT_EQ(info->endpoint.address, pub_info.endpoint.address);
-            EXPECT_EQ(info->endpoint.port, pub_info.endpoint.port);
+            EXPECT_EQ(*info, pub_info);
             return true;
           }
           return false;
@@ -123,10 +119,7 @@ public:
           auto info = dynamic_cast<const msg::mediator::SubInfo*>(&msg);
           EXPECT_NE(info, nullptr);
           if (info) {
-            EXPECT_EQ(info->topic_info.name, sub_info.topic_info.name);
-            EXPECT_EQ(info->topic_info.message_hash, sub_info.topic_info.message_hash);
-            EXPECT_EQ(info->endpoint.address, sub_info.endpoint.address);
-            EXPECT_EQ(info->endpoint.port, sub_info.endpoint.port);
+            EXPECT_EQ(*info, sub_info);
             return true;
           }
           return false;
@@ -149,10 +142,7 @@ public:
           auto info = dynamic_cast<const msg::mediator::SubInfo*>(&msg);
           EXPECT_NE(info, nullptr);
           if (info) {
-            EXPECT_EQ(info->topic_info.name, sub_info.topic_info.name);
-            EXPECT_EQ(info->topic_info.message_hash, sub_info.topic_info.message_hash);
-            EXPECT_EQ(info->endpoint.address, sub_info.endpoint.address);
-            EXPECT_EQ(info->endpoint.port, sub_info.endpoint.port);
+            EXPECT_EQ(*info, sub_info);
             return true;
           }
           return false;
@@ -174,11 +164,7 @@ public:
           auto info = dynamic_cast<const msg::mediator::SrvInfo*>(&msg);
           EXPECT_NE(info, nullptr);
           if (info) {
-            EXPECT_EQ(info->name, srv_info.name);
-            EXPECT_EQ(info->request_hash, srv_info.request_hash);
-            EXPECT_EQ(info->response_hash, srv_info.response_hash);
-            EXPECT_EQ(info->endpoint.address, srv_info.endpoint.address);
-            EXPECT_EQ(info->endpoint.port, srv_info.endpoint.port);
+            EXPECT_EQ(*info, srv_info);
             return true;
           }
           return false;
@@ -201,11 +187,7 @@ public:
           auto info = dynamic_cast<const msg::mediator::SrvInfo*>(&msg);
           EXPECT_NE(info, nullptr);
           if (info) {
-            EXPECT_EQ(info->name, srv_info.name);
-            EXPECT_EQ(info->request_hash, srv_info.request_hash);
-            EXPECT_EQ(info->response_hash, srv_info.response_hash);
-            EXPECT_EQ(info->endpoint.address, srv_info.endpoint.address);
-            EXPECT_EQ(info->endpoint.port, srv_info.endpoint.port);
+            EXPECT_EQ(*info, srv_info);
             return true;
           }
           return false;
@@ -229,9 +211,7 @@ public:
           auto info = dynamic_cast<const msg::mediator::SrvRequest*>(&msg);
           EXPECT_NE(info, nullptr);
           if (info) {
-            EXPECT_EQ(info->name, srv_req.name);
-            EXPECT_EQ(info->request_hash, srv_req.request_hash);
-            EXPECT_EQ(info->response_hash, srv_req.response_hash);
+            EXPECT_EQ(*info, srv_req);
             return true;
           }
           return false;
@@ -287,8 +267,7 @@ public:
           auto info = dynamic_cast<const msg::mediator::ParamInfo*>(&msg);
           EXPECT_NE(info, nullptr);
           if (info) {
-            EXPECT_EQ(info->name, param_info.name);
-            EXPECT_EQ(info->message_hash, param_info.message_hash);
+            EXPECT_EQ(*info, param_info);
             return true;
           }
           return false;
@@ -311,8 +290,8 @@ public:
           auto info = dynamic_cast<const msg::mediator::ParamInfo*>(&msg);
           EXPECT_NE(info, nullptr);
           if (info) {
+            EXPECT_EQ(info->id, param_info.id);
             EXPECT_EQ(info->name, param_info.name);
-            EXPECT_EQ(info->message_hash, param_info.message_hash);
             return true;
           }
           return false;
@@ -345,9 +324,7 @@ public:
               // Simulate failure by not setting the value
               return true;
             } else {
-              info->name = param_info.name;
-              info->message_hash = param_info.message_hash;
-              info->data = param_info.data;
+              *info = param_info;
               return true;
             }
           }
@@ -397,12 +374,7 @@ public:
               // Simulate failure by not setting the value
               return true;
             } else {
-              info->nodes = sys_info.nodes;
-              info->publishers = sys_info.publishers;
-              info->subscribers = sys_info.subscribers;
-              info->services = sys_info.services;
-              info->actions = sys_info.actions;
-              info->topics = sys_info.topics;
+              *info = sys_info;
               return true;
             }
           }
@@ -867,16 +839,12 @@ public:
           auto info = dynamic_cast<const msg::mediator::ParamInfo*>(&msg);
           EXPECT_NE(info, nullptr);
           if (info) {
-            EXPECT_EQ(info->name, param_info.name);
-            EXPECT_EQ(info->message_hash, param_info.message_hash);
             if (should_fail) {
               // Simulate failure by not setting the value
               EXPECT_TRUE(info->data.empty());
             } else {
               // Check that value data matches the serialized message
-              EXPECT_FALSE(info->data.empty());
-              EXPECT_EQ(info->data.size(), param_info.data.size());
-              EXPECT_EQ(info->data, param_info.data);
+              EXPECT_EQ(*info, param_info);
             }
             return true;
           }
@@ -1063,7 +1031,7 @@ public:
               auto message = dynamic_cast<const TMsg*>(&msg);
               EXPECT_NE(message, nullptr);
               if (message) {
-                EXPECT_EQ(msg.size(), messages.at(*send_index - 1)->size());
+                EXPECT_EQ(*message, *(messages.at(*send_index - 1)));
                 if (notify) {
                   if (auto s = socket.lock()) {
                     s->notify_operation_complete();
@@ -1119,7 +1087,7 @@ public:
           EXPECT_EQ(opcode, OPCODE::SRV_RESPONSE_MESSAGE);
           auto resp = dynamic_cast<const TResponse*>(&msg);
           if (resp) {
-            EXPECT_EQ(resp->size(), response->size());
+            EXPECT_EQ(*resp, *response);
             if (notify) {
               if (auto s = socket.lock()) {
                 s->notify_operation_complete();
@@ -1208,7 +1176,7 @@ public:
           EXPECT_EQ(opcode, OPCODE::SRV_REQUEST_MESSAGE);
           auto info = dynamic_cast<const TRequest*>(&msg);
           if (info) {
-            EXPECT_EQ(msg.size(), request->size());
+            EXPECT_EQ(*info, *request);
             return true;
           }
           return false;

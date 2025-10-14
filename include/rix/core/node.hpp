@@ -19,6 +19,7 @@
 #include "rix/msg/mediator/SystemInfo.hpp"
 #include "rix/msg/standard/UInt64.hpp"
 #include "rix/msg/standard/Void.hpp"
+#include "rix/util/id.hpp"
 #include "rix/util/log.hpp"
 
 namespace rix {
@@ -118,6 +119,7 @@ public:
   void spin_once() override;
 
   static inline void set_socket_factory(SocketFactory factory) { socket_factory_ = factory; }
+  static inline void set_id_factory(IDFactory factory) { id_factory_ = factory; }
 
 private:
   Endpoint rixhub_endpoint_;
@@ -125,8 +127,7 @@ private:
   std::vector<std::shared_ptr<Spinner>> components_;
   std::atomic<bool> registered_flag_;
   static inline SocketFactory socket_factory_{create_socket};
-
-  static inline uint64_t generate_id();
+  static inline IDFactory id_factory_{default_id_generator};
 
   std::shared_ptr<Publisher> create_publisher(const msg::mediator::TopicInfo& topic_info,
                                               const Endpoint& rixhub_endpoint,
@@ -188,13 +189,6 @@ inline std::shared_ptr<TimerCallback> Node::create_timer(const Duration& d, Time
   auto timer = std::make_shared<TimerCallback>(d, callback);
   components_.push_back(timer);
   return timer;
-}
-
-uint64_t Node::generate_id() {
-  static std::random_device rd;
-  static std::mt19937_64 gen(rd());
-  static std::uniform_int_distribution<uint64_t> dis;
-  return dis(gen);
 }
 
 template <typename TRequest, typename TResponse>

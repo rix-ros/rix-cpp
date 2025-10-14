@@ -5,27 +5,32 @@
 using namespace rix;
 
 TEST(SimpleSubscriberTest, Create) {
+  msg::mediator::NodeInfo node_info;
+  msg::mediator::SubInfo sub_info;
   NodeTestFixture()
-      .register_node()
-      .register_subscriber<msg::standard::Header>("/chatter")
-      .deregister_node()
-      .deregister_subscriber<msg::standard::Header>("/chatter")
+      .register_node("simple_subscriber", node_info)
+      .register_subscriber<msg::standard::Header>("/chatter", sub_info)
+      .deregister_node(node_info)
+      .deregister_subscriber(sub_info)
       .build<SimpleSubscriber>(
           [](NodeTestFixture& fixture, std::unique_ptr<SimpleSubscriber> node) { EXPECT_TRUE(node->ok()); }, 0);
 }
 
 TEST(SimpleSubscriberTest, CreateNodeRegisterFailure) {
+  msg::mediator::NodeInfo node_info;
   NodeTestFixture()
-      .register_node(true) // Simulate failure
+      .register_node("simple_subscriber", node_info, true) // Simulate failure
       .build<SimpleSubscriber>(
           [](NodeTestFixture& fixture, std::unique_ptr<SimpleSubscriber> node) { EXPECT_FALSE(node->ok()); }, 0);
 }
 
 TEST(SimpleSubscriberTest, CreatePublisherRegisterFailure) {
+  msg::mediator::NodeInfo node_info;
+  msg::mediator::SubInfo sub_info;
   NodeTestFixture()
-      .register_node()
-      .register_subscriber<msg::standard::Header>("/chatter", true) // Simulate failure
-      .deregister_node()
+      .register_node("simple_subscriber", node_info)
+      .register_subscriber<msg::standard::Header>("/chatter", sub_info, true) // Simulate failure
+      .deregister_node(node_info)
       .build<SimpleSubscriber>(
           [](NodeTestFixture& fixture, std::unique_ptr<SimpleSubscriber> node) { EXPECT_FALSE(node->ok()); }, 0);
 }
@@ -40,14 +45,16 @@ TEST(SimpleSubscriberTest, SpinWithOperationNotifications) {
     messages.push_back(msg);
   }
 
+  msg::mediator::NodeInfo node_info;
+  msg::mediator::SubInfo sub_info;
   NodeTestFixture()
       .enable_operation_notifications()
-      .register_node()
-      .register_subscriber<msg::standard::Header>("/chatter", false, 1)
+      .register_node("simple_subscriber", node_info)
+      .register_subscriber<msg::standard::Header>("/chatter", sub_info, false, 1)
       .create_sub_connection<msg::standard::Header>("/chatter", {Endpoint(DEFAULT_IP, 8001)})
       .create_sub_client(Endpoint(DEFAULT_IP, 8001), messages)
-      .deregister_node()
-      .deregister_subscriber<msg::standard::Header>("/chatter")
+      .deregister_node(node_info)
+      .deregister_subscriber(sub_info)
       .build<SimpleSubscriber>(
           [](NodeTestFixture& fixture, std::unique_ptr<SimpleSubscriber> node) {
             auto client = fixture.get_client_socket(0);
@@ -71,15 +78,17 @@ TEST(SimpleSubscriberTest, SpinWithPollerAndOperationNotifications) {
     messages.push_back(msg);
   }
 
+  msg::mediator::NodeInfo node_info;
+  msg::mediator::SubInfo sub_info;
   NodeTestFixture()
       .enable_poller(5)
       .enable_operation_notifications()
-      .register_node()
-      .register_subscriber<msg::standard::Header>("/chatter", false, 1)
+      .register_node("simple_subscriber", node_info)
+      .register_subscriber<msg::standard::Header>("/chatter", sub_info, false, 1)
       .create_sub_connection<msg::standard::Header>("/chatter", {Endpoint(DEFAULT_IP, 8001)})
       .create_sub_client(Endpoint(DEFAULT_IP, 8001), messages)
-      .deregister_node()
-      .deregister_subscriber<msg::standard::Header>("/chatter")
+      .deregister_node(node_info)
+      .deregister_subscriber(sub_info)
       .build<SimpleSubscriber>(
           [](NodeTestFixture& fixture, std::unique_ptr<SimpleSubscriber> node) {
             auto client = fixture.get_client_socket(0);

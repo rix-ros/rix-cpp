@@ -2,9 +2,8 @@
 
 namespace rix {
 
-Node::Node(const std::string& name)
-    : rixhub_endpoint_(Endpoint(RIXHUB_IP, RIXHUB_PORT)), registered_flag_(false) {
-  info_.id = generate_id();
+Node::Node(const std::string& name) : rixhub_endpoint_(Endpoint(RIXHUB_IP, RIXHUB_PORT)), registered_flag_(false) {
+  info_.id = id_factory_();
   info_.name = name;
 
   auto client = socket_factory_();
@@ -68,47 +67,41 @@ void Node::spin_once() {
 #endif
 }
 
-std::shared_ptr<Publisher>
-Node::create_publisher(const msg::mediator::TopicInfo& topic_info,
-                       const Endpoint& rixhub_endpoint,
-                       const Endpoint& endpoint) {
+std::shared_ptr<Publisher> Node::create_publisher(const msg::mediator::TopicInfo& topic_info,
+                                                  const Endpoint& rixhub_endpoint,
+                                                  const Endpoint& endpoint) {
   msg::mediator::PubInfo pub_info;
-  pub_info.id = generate_id();
+  pub_info.id = id_factory_();
   pub_info.node_id = info_.id;
   pub_info.topic_info = topic_info;
   pub_info.endpoint.address = endpoint.address;
   pub_info.endpoint.port = endpoint.port;
-  auto pub = std::shared_ptr<Publisher>(
-      new Publisher(pub_info, socket_factory_, rixhub_endpoint_));
+  auto pub = std::shared_ptr<Publisher>(new Publisher(pub_info, socket_factory_, rixhub_endpoint_));
   components_.push_back(pub);
   return pub;
 }
 
-std::shared_ptr<Subscriber>
-Node::create_subscriber(const msg::mediator::TopicInfo& topic_info,
-                        const Endpoint& rixhub_endpoint,
-                        const Endpoint& endpoint) {
+std::shared_ptr<Subscriber> Node::create_subscriber(const msg::mediator::TopicInfo& topic_info,
+                                                    const Endpoint& rixhub_endpoint,
+                                                    const Endpoint& endpoint) {
   msg::mediator::SubInfo sub_info;
-  sub_info.id = generate_id();
+  sub_info.id = id_factory_();
   sub_info.node_id = info_.id;
   sub_info.topic_info = topic_info;
   sub_info.endpoint.address = endpoint.address;
   sub_info.endpoint.port = endpoint.port;
-  auto sub = std::shared_ptr<Subscriber>(
-      new Subscriber(sub_info, socket_factory_, rixhub_endpoint_));
+  auto sub = std::shared_ptr<Subscriber>(new Subscriber(sub_info, socket_factory_, rixhub_endpoint_));
   components_.push_back(sub);
   return sub;
 }
 
-std::shared_ptr<Service> Node::create_service(msg::mediator::SrvInfo& service_info,
-                                              const Endpoint& rixhub_endpoint,
-                                              const Endpoint& endpoint) {
-  service_info.id = generate_id();
+std::shared_ptr<Service>
+Node::create_service(msg::mediator::SrvInfo& service_info, const Endpoint& rixhub_endpoint, const Endpoint& endpoint) {
+  service_info.id = id_factory_();
   service_info.node_id = info_.id;
   service_info.endpoint.address = endpoint.address;
   service_info.endpoint.port = endpoint.port;
-  auto srv = std::shared_ptr<Service>(
-      new Service(service_info, socket_factory_, rixhub_endpoint_));
+  auto srv = std::shared_ptr<Service>(new Service(service_info, socket_factory_, rixhub_endpoint_));
   components_.push_back(srv);
   return srv;
 }

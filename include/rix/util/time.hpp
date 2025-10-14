@@ -147,7 +147,7 @@ public:
   MockClock() = default;
   ~MockClock() = default;
   detail::time_t now() const noexcept override { return current_time.get(); }
-  static inline Time current_time{0};
+  Time current_time{0};
 };
 
 /**
