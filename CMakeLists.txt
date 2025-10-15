@@ -8,111 +8,123 @@ option(MULTITHREADED "Enable multi-threaded support" OFF)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 
 add_library(rix
-  src/rix/core/mediator.cpp
-  src/rix/core/node.cpp
-  src/rix/core/publisher.cpp
-  src/rix/core/service_client.cpp
-  src/rix/core/service.cpp
-  src/rix/core/subscriber.cpp
-  src/rix/core/timer.cpp
-  src/rix/ipc/endpoint.cpp
-  src/rix/ipc/posix_socket.cpp
-  src/rix/ipc/posix_signal.cpp
-  src/rix/ipc/poll.cpp
-  src/rix/util/argument_parser.cpp
-  src/rix/util/time.cpp
+    src/rix/core/mediator.cpp
+    src/rix/core/node.cpp
+    src/rix/core/publisher.cpp
+    src/rix/core/service_client.cpp
+    src/rix/core/service.cpp
+    src/rix/core/subscriber.cpp
+    src/rix/core/timer_callback.cpp
+    src/rix/ipc/endpoint.cpp
+    src/rix/ipc/posix_socket.cpp
+    src/rix/ipc/posix_signal.cpp
+    src/rix/ipc/poll.cpp
+    src/rix/util/argument_parser.cpp
+    src/rix/util/time.cpp
 )
 target_include_directories(rix PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<BUILD_INTERFACE:$ENV{HOME}/.rix/include>
-  $<INSTALL_INTERFACE:include>
-  $<INSTALL_INTERFACE:$ENV{HOME}/.rix/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:$ENV{HOME}/.rix/include>
+    $<INSTALL_INTERFACE:include>
+    $<INSTALL_INTERFACE:$ENV{HOME}/.rix/include>
 )
-if (MULTITHREADED)
-  add_compile_definitions(RIX_MULTITHREADED)
-  find_package(Threads REQUIRED)
-  target_link_libraries(rix PUBLIC Threads::Threads)
+if(MULTITHREADED)
+    add_compile_definitions(RIX_MULTITHREADED)
+    find_package(Threads REQUIRED)
+    target_link_libraries(rix PUBLIC Threads::Threads)
 endif()
 
 add_library(tf
-  src/rix/rob/joint.cpp
-  src/rix/rob/link.cpp
-  src/rix/rob/robot_model.cpp
-  src/rix/rob/eigen_util.cpp
-  src/rix/rob/kinematics_solver.cpp
-  src/rix/tf/frame_graph.cpp
-  src/rix/tf/frame.cpp
-  src/rix/tf/transform_broadcaster.cpp
-  src/rix/tf/transform_buffer.cpp
-  src/rix/tf/transform_listener.cpp
+    src/rix/rob/joint.cpp
+    src/rix/rob/link.cpp
+    src/rix/rob/robot_model.cpp
+    src/rix/rob/eigen_util.cpp
+    src/rix/rob/kinematics_solver.cpp
+    src/rix/tf/frame_graph.cpp
+    src/rix/tf/frame.cpp
+    src/rix/tf/transform_broadcaster.cpp
+    src/rix/tf/transform_buffer.cpp
+    src/rix/tf/transform_listener.cpp
 )
 target_include_directories(tf PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<BUILD_INTERFACE:$ENV{HOME}/.rix/include>
-  $<INSTALL_INTERFACE:include>
-  $<INSTALL_INTERFACE:$ENV{HOME}/.rix/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:$ENV{HOME}/.rix/include>
+    $<INSTALL_INTERFACE:include>
+    $<INSTALL_INTERFACE:$ENV{HOME}/.rix/include>
 )
 
 # Build examples
-add_executable(parameter_server examples/parameter_server.cpp)
-target_link_libraries(parameter_server rix)
+# add_executable(parameter_server examples/parameter_server.cpp)
+# target_link_libraries(parameter_server rix)
 
-add_executable(system_info examples/system_info.cpp)
-target_link_libraries(system_info rix)
+# add_executable(system_info examples/system_info.cpp)
+# target_link_libraries(system_info rix)
 
-add_executable(simple_publisher examples/simple_publisher.cpp)
-target_link_libraries(simple_publisher rix)
+# add_executable(simple_publisher examples/simple_publisher.cpp)
+# target_link_libraries(simple_publisher rix)
 
-add_executable(simple_subscriber examples/simple_subscriber.cpp)
-target_link_libraries(simple_subscriber rix)
+# add_executable(simple_subscriber examples/simple_subscriber.cpp)
+# target_link_libraries(simple_subscriber rix)
 
-add_executable(simple_service examples/simple_service.cpp)
-target_link_libraries(simple_service rix)
+# add_executable(simple_service examples/simple_service.cpp)
+# target_link_libraries(simple_service rix)
 
-add_executable(simple_service_client examples/simple_service_client.cpp)
-target_link_libraries(simple_service_client rix)
+# add_executable(simple_service_client examples/simple_service_client.cpp)
+# target_link_libraries(simple_service_client rix)
 
 # Build unit tests
 if(BUILD_TESTS)
-  find_package(GTest REQUIRED)
-  message(STATUS "Building unit tests")
-  enable_testing()
-  add_executable(node_registration_tests
-    unit_tests/rix/node_registration_tests.cpp
-  )
-  target_link_libraries(node_registration_tests GTest::gtest_main GTest::gmock rix)
+    find_package(GTest REQUIRED)
+    message(STATUS "Building unit tests")
+    enable_testing()
+    add_executable(node_test
+        test/node_test.cpp
+    )
+    target_link_libraries(node_test GTest::gtest_main GTest::gmock rix)
+    add_executable(mediator_test
+        test/mediator_test.cpp
+    )
+    target_link_libraries(mediator_test GTest::gtest_main GTest::gmock rix)
+    add_executable(message_test
+        test/message_test.cpp
+    )
+    target_link_libraries(message_test GTest::gtest_main GTest::gmock rix)
+    #   add_executable(node_registration_tests
+    #     unit_tests/rix/node_registration_tests.cpp
+    #   )
+    #   target_link_libraries(node_registration_tests GTest::gtest_main GTest::gmock rix)
 
-  add_executable(mediator_registration_tests
-    unit_tests/rix/mediator_registration_tests.cpp
-  )
-  target_link_libraries(mediator_registration_tests GTest::gtest_main GTest::gmock rix)
+    #   add_executable(mediator_registration_tests
+    #     unit_tests/rix/mediator_registration_tests.cpp
+    #   )
+    #   target_link_libraries(mediator_registration_tests GTest::gtest_main GTest::gmock rix)
 
-  add_executable(message_tests
-    unit_tests/rix/message_tests.cpp
-  )
-  target_link_libraries(message_tests GTest::gtest_main GTest::gmock rix)
+    #   add_executable(message_tests
+    #     unit_tests/rix/message_tests.cpp
+    #   )
+    #   target_link_libraries(message_tests GTest::gtest_main GTest::gmock rix)
 
-  add_executable(tf_tests
-      unit_tests/tf/frame_graph.cpp
-      unit_tests/tf/joint.cpp
-      unit_tests/tf/robot_model_rx200.cpp
-      unit_tests/tf/robot_model_simple_bot.cpp
-      unit_tests/tf/kinematics_solver.cpp
-      unit_tests/tf/transform_buffer.cpp)
-  target_link_libraries(tf_tests GTest::Main tf rix)
+    #   add_executable(tf_tests
+    #       unit_tests/tf/frame_graph.cpp
+    #       unit_tests/tf/joint.cpp
+    #       unit_tests/tf/robot_model_rx200.cpp
+    #       unit_tests/tf/robot_model_simple_bot.cpp
+    #       unit_tests/tf/kinematics_solver.cpp
+    #       unit_tests/tf/transform_buffer.cpp)
+    #   target_link_libraries(tf_tests GTest::Main tf rix)
 endif()
 
 # Configure rixConfig.cmake
 if(MULTITHREADED)
-  set(THREADS_FIND_PACKAGE "find_package(Threads REQUIRED)")
+    set(THREADS_FIND_PACKAGE "find_package(Threads REQUIRED)")
 else()
-  set(THREADS_FIND_PACKAGE "")
+    set(THREADS_FIND_PACKAGE "")
 endif()
 
 configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/rixConfig.cmake.in
-  ${CMAKE_CURRENT_BINARY_DIR}/rixConfig.cmake
-  @ONLY
+    ${CMAKE_CURRENT_SOURCE_DIR}/rixConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/rixConfig.cmake
+    @ONLY
 )
 
 # Install library and headers

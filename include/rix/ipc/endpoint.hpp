@@ -7,7 +7,7 @@
 
 #include "rix/msg/mediator/Endpoint.hpp"
 
-namespace rix::ipc {
+namespace rix {
 
 /**
  * @brief Class for representing Endpoints.
@@ -26,7 +26,7 @@ public:
    * @param port The port number.
    */
   Endpoint(const std::string &address, int port);
-  Endpoint(const rix::msg::mediator::Endpoint &msg);
+  Endpoint(const msg::mediator::Endpoint &msg);
 
   /**
    * @brief Constructs a Endpoint from a string representation.
@@ -95,4 +95,4 @@ public:
   int port;
 };
 
-} // namespace rix::ipc
+} // namespace rix

@@ -5,8 +5,7 @@
 
 #include "rix/rix.hpp"
 
-using namespace rix::core;
-using namespace rix::util;
+using namespace rix;
 
 std::array<uint64_t, 2> str_to_id(std::string id) {
   std::array<uint64_t, 2> arr;
@@ -70,7 +69,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  rix::msg::mediator::SystemInfo system_info;
+  msg::mediator::SystemInfo system_info;
   if (!node.get_system_info(system_info)) {
     Log::error << "Failed to get system info" << std::endl;
     return 1;

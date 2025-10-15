@@ -13,7 +13,7 @@
 #include "rix/msg/standard/UInt32.hpp"
 #include "rix/util/log.hpp"
 
-namespace rix::core {
+namespace rix {
 
 class Node; // Forward declaration
 
@@ -28,18 +28,18 @@ public:
 
   ~ServiceClient();
 
-  bool call(const rix::msg::Message &request, rix::msg::Message &response);
+  bool call(const msg::Message &request, msg::Message &response);
 
 private:
-  rix::msg::mediator::SrvRequest request_;
+  msg::mediator::SrvRequest request_;
   SocketFactory socket_factory_;
-  rix::ipc::Endpoint endpoint_;
+  Endpoint endpoint_;
 
   using Spinner::spin;
   void spin_once() override;
 
-  ServiceClient(const rix::msg::mediator::SrvRequest &request, SocketFactory factory,
-                const rix::ipc::Endpoint &rixhub_endpoint);
+  ServiceClient(const msg::mediator::SrvRequest &request, SocketFactory factory,
+                const Endpoint &rixhub_endpoint);
 };
 
-} // namespace rix::core
+} // namespace rix

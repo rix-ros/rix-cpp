@@ -8,7 +8,7 @@
 #include "rix/msg/sensor/JointState.hpp"
 #include "rix/rob/msg_util.hpp"
 
-namespace rix::rob {
+namespace rix {
 
 class JointDynamics {
 public:
@@ -41,8 +41,8 @@ class Joint {
 public:
   enum Type { UNKNOWN, FIXED, CONTINUOUS, REVOLUTE, PRISMATIC };
 
-  Joint(const rix::msg::geometry::Vector3 &axis = rix::rob::vector3_zeros(),
-        const rix::msg::geometry::Transform &origin = rix::rob::transform_identity(), 
+  Joint(const msg::geometry::Vector3 &axis = vector3_zeros(),
+        const msg::geometry::Transform &origin = transform_identity(), 
         const Type &type = FIXED,
         const JointLimits &limits = {}, 
         const JointDynamics &dynamics = {}, 
@@ -69,13 +69,13 @@ public:
   double position() const; // rad or m
   double velocity() const; // rad/s or m/s
   double effort() const;   // Nm or N
-  rix::msg::sensor::JointState get_state() const;
+  msg::sensor::JointState get_state() const;
   void set_state(double position, double velocity, double effort);
-  void set_state(const rix::msg::sensor::JointState &js);
+  void set_state(const msg::sensor::JointState &js);
 
-  const rix::msg::geometry::Vector3 &axis() const;     // Axis of rotation or translation
-  const rix::msg::geometry::Transform &origin() const; // Transform from parent link frame to joint frame
-  rix::msg::geometry::Transform transform() const;     // Transform based from joint frame to child link frame
+  const msg::geometry::Vector3 &axis() const;     // Axis of rotation or translation
+  const msg::geometry::Transform &origin() const; // Transform from parent link frame to joint frame
+  msg::geometry::Transform transform() const;     // Transform based from joint frame to child link frame
 
 private:
   double position_; // The current position (rad or m)
@@ -89,8 +89,8 @@ private:
   std::string name_;                     // The name of the joint
   std::string parent_;                   // The name of the joint's parent link
   std::string child_;                    // The name of the joint's child link
-  rix::msg::geometry::Vector3 axis_;     // The unit vector along the actuation axis in the parent link frame
-  rix::msg::geometry::Transform origin_; // The transform from parent frame to child frame when the position is 0
+  msg::geometry::Vector3 axis_;     // The unit vector along the actuation axis in the parent link frame
+  msg::geometry::Transform origin_; // The transform from parent frame to child frame when the position is 0
 };
 
-} // namespace rix::rob
+} // namespace rix

@@ -2,9 +2,9 @@
 
 #include "rix/rob/eigen_util.hpp"
 
-namespace rix::tf {
+namespace rix {
 
-FrameGraph::FrameGraph(const std::string &root, const rix::util::Duration &duration)
+FrameGraph::FrameGraph(const std::string &root, const Duration &duration)
     : graph_(1), frames_(1, Frame(root, duration)), duration_(duration) {
     name_to_index_[root] = 0;
 }
@@ -37,7 +37,7 @@ std::vector<std::string> FrameGraph::get_leaves() const {
     return leaves;
 }
 
-bool FrameGraph::update(const rix::msg::geometry::TF &tf) {
+bool FrameGraph::update(const msg::geometry::TF &tf) {
     for (const auto &transform : tf.transforms) {
         if (!update(transform)) return false;
     }
@@ -45,7 +45,7 @@ bool FrameGraph::update(const rix::msg::geometry::TF &tf) {
 }
 
 /**< TODO: Implement the update method. */
-bool FrameGraph::update(const rix::msg::geometry::TransformStamped &transform) {
+bool FrameGraph::update(const msg::geometry::TransformStamped &transform) {
     // If the parent frame does not exist, return false because there is no connection to the graph
     auto parent_it = name_to_index_.find(transform.header.frame_id);
     if (parent_it == name_to_index_.end()) {
@@ -75,13 +75,13 @@ bool FrameGraph::update(const rix::msg::geometry::TransformStamped &transform) {
     }
 
     // Update the transform in the child frame
-    frames_[child_index].buffer.insert(rix::util::Time(transform.header.stamp), transform.transform);
+    frames_[child_index].buffer.insert(Time(transform.header.stamp), transform.transform);
     return true;
 }
 
 /**< TODO: Implement the get_transform method. */
-bool FrameGraph::get_transform(const std::string &target_frame, const std::string &source_frame, rix::util::Time time,
-                               rix::msg::geometry::TransformStamped &transform) const {
+bool FrameGraph::get_transform(const std::string &target_frame, const std::string &source_frame, Time time,
+                               msg::geometry::TransformStamped &transform) const {
     // Assign information to output transform
     transform.header.frame_id = source_frame;
     transform.header.seq = 0;
@@ -102,7 +102,7 @@ bool FrameGraph::get_transform(const std::string &target_frame, const std::strin
 
     // Check if the target and source frames are the same
     if (tgt_it == src_it) {
-        transform.transform = rix::rob::transform_identity();
+        transform.transform = transform_identity();
         return true;
     }
 
@@ -113,13 +113,13 @@ bool FrameGraph::get_transform(const std::string &target_frame, const std::strin
     }
 
     // Build transform from source to common ancestor
-    rix::msg::geometry::Transform t;
+    msg::geometry::Transform t;
     Eigen::Affine3d src_transform = Eigen::Affine3d::Identity();
     while (src_it != common_ancestor_it) {
         if (!src_it->buffer.get(time, t)) {
             return false;
         }
-        src_transform = src_transform * rix::rob::msg_to_eigen(t);
+        src_transform = src_transform * msg_to_eigen(t);
         --src_it;
     }
 
@@ -129,12 +129,12 @@ bool FrameGraph::get_transform(const std::string &target_frame, const std::strin
         if (!tgt_it->buffer.get(time, t)) {
             return false;
         }
-        tgt_transform = rix::rob::msg_to_eigen(t) * tgt_transform;
+        tgt_transform = msg_to_eigen(t) * tgt_transform;
         --tgt_it;
     }
 
     // Chain the transforms together
-    transform.transform = rix::rob::eigen_to_msg(src_transform * tgt_transform);
+    transform.transform = eigen_to_msg(src_transform * tgt_transform);
 
     return true;
 }
@@ -208,4 +208,4 @@ bool FrameGraph::Iterator::operator>(const Iterator &other) const { return index
 bool FrameGraph::Iterator::operator<=(const Iterator &other) const { return index_ <= other.index_; }
 bool FrameGraph::Iterator::operator>=(const Iterator &other) const { return index_ >= other.index_; }
 
-}  // namespace rix::tf
+}  // namespace rix

@@ -1,13 +1,19 @@
 #include "rix/core/service_client.hpp"
 
-namespace rix::core {
+namespace rix {
 
-ServiceClient::ServiceClient(const rix::msg::mediator::SrvRequest &request, SocketFactory socket_factory,
-                             const rix::ipc::Endpoint &rixhub_endpoint)
+ServiceClient::ServiceClient(const msg::mediator::SrvRequest& request,
+                             SocketFactory socket_factory,
+                             const Endpoint& rixhub_endpoint)
     : request_(request), socket_factory_(socket_factory) {
-  rix::msg::mediator::SrvResponse response;
+  msg::mediator::SrvResponse response;
 
   auto client = socket_factory_();
+  if (!client) {
+    shutdown();
+    return;
+  }
+
   if (!client->connect(rixhub_endpoint)) {
     shutdown();
     return;
@@ -18,7 +24,7 @@ ServiceClient::ServiceClient(const rix::msg::mediator::SrvRequest &request, Sock
     return;
   }
 
-  rix::msg::mediator::Operation op;
+  msg::mediator::Operation op;
   if (!client->recv_message(op, response)) {
     shutdown();
     return;
@@ -42,22 +48,34 @@ ServiceClient::~ServiceClient() {}
 
 void ServiceClient::spin_once() {}
 
-bool ServiceClient::call(const rix::msg::Message &request, rix::msg::Message &response) {
+bool ServiceClient::call(const msg::Message& request, msg::Message& response) {
+  if (!ok()) {
+    return false;
+  }
+
   auto client = socket_factory_();
-  if (!client->connect(endpoint_))
+  if (!client) {
     return false;
+  }
 
-  if (!client->send_message(OPCODE::SRV_REQUEST_MESSAGE, request))
+  if (!client->connect(endpoint_)) {
     return false;
+  }
 
-  rix::msg::mediator::Operation op;
-  if (!client->recv_message(op, response))
+  if (!client->send_message(OPCODE::SRV_REQUEST_MESSAGE, request)) {
     return false;
+  }
 
-  if (op.opcode != OPCODE::SRV_RESPONSE_MESSAGE)
+  msg::mediator::Operation op;
+  if (!client->recv_message(op, response)) {
     return false;
+  }
+
+  if (op.opcode != OPCODE::SRV_RESPONSE_MESSAGE) {
+    return false;
+  }
 
   return true;
 }
 
-} // namespace rix::core
+} // namespace rix

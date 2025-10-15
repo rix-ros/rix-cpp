@@ -10,7 +10,7 @@
 
 #include "rix/util/time.hpp"
 
-namespace rix::util {
+namespace rix {
 
 namespace detail {
 
@@ -251,4 +251,4 @@ inline std::string Log::get_level_string(Level level) {
   }
 }
 
-} // namespace rix::util
+} // namespace rix

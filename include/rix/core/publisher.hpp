@@ -13,7 +13,7 @@
 #include "rix/msg/standard/UInt32.hpp"
 #include "rix/util/log.hpp"
 
-namespace rix::core {
+namespace rix {
 
 class Node; // Forward declaration
 
@@ -27,26 +27,26 @@ public:
   Publisher &operator=(Publisher &&) = delete;
   ~Publisher();
 
-  void publish(const rix::msg::Message &msg);
+  void publish(const msg::Message &msg);
   size_t get_subscriber_count() const;
 
 private:
-  rix::msg::mediator::PubInfo info_;
+  msg::mediator::PubInfo info_;
   SocketFactory socket_factory_;
-  std::shared_ptr<rix::ipc::GenericSocket> server_;
-  std::set<std::shared_ptr<rix::ipc::GenericSocket>> connections_;
+  std::shared_ptr<GenericSocket> server_;
+  std::set<std::shared_ptr<GenericSocket>> connections_;
   mutable std::mutex connections_mutex_;
-  rix::ipc::Endpoint rixhub_endpoint_;
+  Endpoint rixhub_endpoint_;
   std::atomic<bool> registered_flag_;
 
 #ifdef RIX_MULTITHREADED
   std::thread spin_thread_;
 #endif
 
-  Publisher(const rix::msg::mediator::PubInfo &info, SocketFactory factory, rix::ipc::Endpoint rixhub_endpoint);
+  Publisher(const msg::mediator::PubInfo &info, SocketFactory factory, Endpoint rixhub_endpoint);
 
   using Spinner::spin;
   void spin_once() override;
 };
 
-} // namespace rix::core
+} // namespace rix

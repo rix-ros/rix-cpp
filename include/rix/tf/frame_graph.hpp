@@ -15,7 +15,7 @@
 #include "rix/util/log.hpp"
 #include "rix/util/time.hpp"
 
-namespace rix::tf {
+namespace rix {
 
 // This class is for storing and interpolating frames in a graph structure.
 class FrameGraph {
@@ -45,7 +45,7 @@ class FrameGraph {
         int index_;
     };
 
-    FrameGraph(const std::string &root, const rix::util::Duration &duration);
+    FrameGraph(const std::string &root, const Duration &duration);
     FrameGraph(const FrameGraph &other);
     FrameGraph &operator=(const FrameGraph &other);
 
@@ -65,7 +65,7 @@ class FrameGraph {
      * @return true if all transforms were successfully update, false if at
      * least one transform failed
      */
-    bool update(const rix::msg::geometry::TF &tf);
+    bool update(const msg::geometry::TF &tf);
 
     /**
      * @brief Updates the FrameGraph with the transform
@@ -73,16 +73,16 @@ class FrameGraph {
      * @param transform The transform to update the FrameGraph with
      * @return true if the transform was successfully udpated
      */
-    bool update(const rix::msg::geometry::TransformStamped &transform);
+    bool update(const msg::geometry::TransformStamped &transform);
 
-    bool get_transform(const std::string &target_frame, const std::string &source_frame, rix::util::Time time,
-                       rix::msg::geometry::TransformStamped &transform) const;
+    bool get_transform(const std::string &target_frame, const std::string &source_frame, Time time,
+                       msg::geometry::TransformStamped &transform) const;
 
    private:
     std::vector<std::vector<int>> graph_;
     std::vector<Frame> frames_;
     std::unordered_map<std::string, int> name_to_index_;
-    rix::util::Duration duration_;
+    Duration duration_;
 };
 
-}  // namespace rix::tf
+}  // namespace rix

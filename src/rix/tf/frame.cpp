@@ -1,12 +1,12 @@
 #include "rix/tf/frame.hpp"
 
-namespace rix::tf {
+namespace rix {
 
 Frame::Frame() {}
 
 Frame::Frame(const std::string &name, const TransformBuffer &buffer) : buffer(buffer), name(name) {}
 
-Frame::Frame(const std::string &name, const rix::util::Duration &duration)
+Frame::Frame(const std::string &name, const Duration &duration)
     : buffer(duration), name(name) {}
 
 Frame::Frame(const Frame &other) : buffer(other.buffer), name(other.name) {}
@@ -19,4 +19,4 @@ Frame &Frame::operator=(const Frame &other) {
     return *this;
 }
 
-}  // namespace rix::tf
+}  // namespace rix

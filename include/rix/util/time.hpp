@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <string>
@@ -7,43 +8,82 @@
 #include "rix/msg/standard/Duration.hpp"
 #include "rix/msg/standard/Time.hpp"
 
-namespace rix::util {
+namespace rix {
 
-using Clock = std::chrono::system_clock;
+namespace detail {
+
+using clock_t = std::chrono::system_clock;
+using duration_t = std::chrono::nanoseconds;
+using time_t = std::chrono::time_point<clock_t, duration_t>;
+
+} // namespace detail
 
 class Duration; // Forward declaration
+class Time;     // Forward declaration
+
+class GenericClock {
+public:
+  GenericClock() = default;
+  virtual ~GenericClock() = default;
+  virtual Time now() const noexcept = 0;
+  virtual void sleep_for(const Duration& duration) = 0;
+  virtual void sleep_until(const Time& time) = 0;
+};
+
+class Clock : public GenericClock {
+public:
+  Clock() = default;
+  ~Clock() = default;
+  Time now() const noexcept override;
+  void sleep_for(const Duration& duration) override;
+  void sleep_until(const Time& time) override;
+};
 
 class Time {
+  static inline std::shared_ptr<GenericClock> clock_{std::make_shared<Clock>()};
+
 public:
-  using Type = std::chrono::time_point<Clock, std::chrono::nanoseconds>;
+  using Type = detail::time_t;
+
+  static void set_clock(std::shared_ptr<GenericClock> clock) { clock_ = clock; }
   static Time now();
-  static Time max() { return Time(Clock::time_point::max()); }
-  static Time min() { return Time(Clock::time_point::min()); }
+
+  /**
+   * @brief Sleep for a given duration
+   * @param duration The duration to sleep for.
+   */
+  static void sleep_for(const Duration& duration);
+
+  /**
+   * @brief Sleep until a given time
+   * @param time The time to sleep until.
+   */
+  static void sleep_until(const Time& time);
 
   Time();
-  Time(const Type &time_point);
+  Time(const Type& time_point);
   Time(double seconds);
   Time(int32_t seconds, int32_t nanoseconds);
-  Time(const rix::msg::standard::Time &msg);
+  Time(const msg::standard::Time& msg);
 
-  Time(const Time &other);
-  Time &operator=(const Time &other);
+  Time(const Time& other);
+  Time& operator=(const Time& other);
 
-  Time operator+(const Duration &other) const;
-  Time operator-(const Duration &other) const;
-  Duration operator-(const Time &other) const;
+  Time operator+(const Duration& other) const;
+  Time operator-(const Duration& other) const;
+  Duration operator-(const Time& other) const;
 
-  Time &operator+=(const Duration &other);
-  Time &operator-=(const Duration &other);
-  bool operator==(const Time &other) const;
-  bool operator!=(const Time &other) const;
-  bool operator<(const Time &other) const;
-  bool operator<=(const Time &other) const;
-  bool operator>(const Time &other) const;
-  bool operator>=(const Time &other) const;
+  Time& operator+=(const Duration& other);
+  Time& operator-=(const Duration& other);
+  bool operator==(const Time& other) const;
+  bool operator!=(const Time& other) const;
+  bool operator<(const Time& other) const;
+  bool operator<=(const Time& other) const;
+  bool operator>(const Time& other) const;
+  bool operator>=(const Time& other) const;
 
   std::string to_string(bool local_time = false) const;
-  rix::msg::standard::Time to_msg();
+  msg::standard::Time to_msg();
 
   enum RoundType { FLOOR = 0, CEIL, NEAREST };
 
@@ -52,8 +92,8 @@ public:
   int64_t to_microseconds(RoundType type = RoundType::FLOOR) const;
   int64_t to_nanoseconds() const;
 
-  const Type &get() const;
-  Type &get();
+  Type& raw();
+  const Type& raw() const;
 
 private:
   Type tp;
@@ -61,10 +101,10 @@ private:
 
 class Duration {
 public:
-  using Type = std::chrono::nanoseconds;
+  using Type = detail::duration_t;
 
-  static Duration max() { return Duration(std::chrono::nanoseconds::max()); }
-  static Duration min() { return Duration(std::chrono::nanoseconds::min()); }
+  static Duration max() { return Duration(Type::max()); }
+  static Duration min() { return Duration(Type::min()); }
 
   /**
    * @brief Duration to be used to represent "forever" without causing integer
@@ -72,65 +112,51 @@ public:
    *
    * @return Duration
    */
-  static Duration safe_forever() {
-    return Duration(std::chrono::nanoseconds(315'360'000'000'000'000));
-  } // 10 years in nanoseconds
+  static Duration safe_forever() { return Duration(Type(315'360'000'000'000'000)); } // 10 years in nanoseconds
 
   Duration();
-  Duration(const Type &duration);
+  Duration(const Type& duration);
   Duration(double seconds);
   Duration(int32_t seconds, int32_t nanoseconds);
-  Duration(const rix::msg::standard::Duration &msg);
+  Duration(const msg::standard::Duration& msg);
 
-  Duration(const Duration &other);
-  Duration &operator=(const Duration &other);
+  Duration(const Duration& other);
+  Duration& operator=(const Duration& other);
 
-  Time operator+(const Time &other) const;
-  Duration operator+(const Duration &other) const;
-  Duration operator-(const Duration &other) const;
+  Time operator+(const Time& other) const;
+  Duration operator+(const Duration& other) const;
+  Duration operator-(const Duration& other) const;
   Duration operator*(double factor) const;
   Duration operator/(double factor) const;
   Duration operator*(int factor) const;
   Duration operator/(int factor) const;
   Duration operator-() const;
-  Duration &operator+=(const Duration &other);
-  Duration &operator-=(const Duration &other);
-  Duration &operator*=(double factor);
-  Duration &operator/=(double factor);
-  Duration &operator*=(int factor);
-  Duration &operator/=(int factor);
-  bool operator==(const Duration &other) const;
-  bool operator!=(const Duration &other) const;
-  bool operator<(const Duration &other) const;
-  bool operator<=(const Duration &other) const;
-  bool operator>(const Duration &other) const;
-  bool operator>=(const Duration &other) const;
+  Duration& operator+=(const Duration& other);
+  Duration& operator-=(const Duration& other);
+  Duration& operator*=(double factor);
+  Duration& operator/=(double factor);
+  Duration& operator*=(int factor);
+  Duration& operator/=(int factor);
+  bool operator==(const Duration& other) const;
+  bool operator!=(const Duration& other) const;
+  bool operator<(const Duration& other) const;
+  bool operator<=(const Duration& other) const;
+  bool operator>(const Duration& other) const;
+  bool operator>=(const Duration& other) const;
 
-  rix::msg::standard::Duration to_msg();
+  msg::standard::Duration to_msg();
 
   int64_t to_seconds(Time::RoundType type = Time::RoundType::FLOOR) const;
   int64_t to_milliseconds(Time::RoundType type = Time::RoundType::FLOOR) const;
   int64_t to_microseconds(Time::RoundType type = Time::RoundType::FLOOR) const;
   int64_t to_nanoseconds() const;
 
-  const Type &get() const;
-  Type &get();
+  Type& raw();
+  const Type& raw() const;
 
 private:
   Type d;
 };
-
-/**
- * @brief Sleep for a given duration
- * @param duration The duration to sleep for.
- */
-void sleep_for(const Duration &duration);
-
-/**
- * @brief Sleep until a given time
- * @param time The time to sleep until.
- */
-void sleep_until(const Time &time);
 
 /**
  * @brief A class for measuring time.
@@ -142,8 +168,8 @@ public:
    */
   Timer();
 
-  Timer(const Timer &other);
-  Timer &operator=(const Timer &other);
+  Timer(const Timer& other);
+  Timer& operator=(const Timer& other);
 
   /**
    * @brief Starts the timer.
@@ -178,14 +204,10 @@ private:
  */
 class Rate {
 public:
-  static inline double min_frequency() {
-    return (1e9 / std::chrono::nanoseconds::max().count());
-  }
+  static inline double min_frequency() { return (1e9 / std::chrono::nanoseconds::max().count()); }
   static inline double max_frequency() { return 1e9; }
   static inline Duration min_period() { return Duration(0, 1); }
-  static inline Duration max_period() {
-    return Duration(std::chrono::nanoseconds::max());
-  }
+  static inline Duration max_period() { return Duration(std::chrono::nanoseconds::max()); }
 
   Rate();
   /**
@@ -197,8 +219,8 @@ public:
   explicit Rate(Duration period);  //(Done By Waj) Handle case of 0 duration
                                    //(infinite frequency)
 
-  Rate(const Rate &other);
-  Rate &operator=(const Rate &other);
+  Rate(const Rate& other);
+  Rate& operator=(const Rate& other);
 
   /**
    * @brief Sleeps for the time required to maintain the rate.
@@ -207,7 +229,7 @@ public:
   bool sleep();
 
   Duration period() const;
-  void set_period(const Duration &period);
+  void set_period(const Duration& period);
   double frequency() const;
   void set_frequency(double frequency);
 
@@ -216,4 +238,4 @@ private:
   Time start_;
 };
 
-} // namespace rix::util
+} // namespace rix

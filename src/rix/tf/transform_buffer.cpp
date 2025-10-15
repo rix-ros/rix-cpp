@@ -5,11 +5,11 @@
 
 #include "rix/rob/eigen_util.hpp"
 
-namespace rix::tf {
+namespace rix {
 
 TransformBuffer::TransformBuffer() {}
 
-TransformBuffer::TransformBuffer(const rix::util::Duration &duration) : duration_(duration) {}
+TransformBuffer::TransformBuffer(const Duration &duration) : duration_(duration) {}
 
 TransformBuffer::TransformBuffer(const TransformBuffer &other) : duration_(other.duration_), buffer_(other.buffer_) {}
 
@@ -28,11 +28,11 @@ bool TransformBuffer::empty() const { return buffer_.empty(); }
 void TransformBuffer::clear() { buffer_.clear(); }
 
 /*< TODO: Implement the insert method. */
-void TransformBuffer::insert(const rix::util::Time &time, const rix::msg::geometry::Transform &transform) {
+void TransformBuffer::insert(const Time &time, const msg::geometry::Transform &transform) {
     // Insert new entry with binary search
     auto it = std::lower_bound(buffer_.begin(), buffer_.end(), time,
-                               [](const std::pair<rix::util::Time, rix::msg::geometry::Transform> &a,
-                                  const rix::util::Time &b) { return a.first < b; });
+                               [](const std::pair<Time, msg::geometry::Transform> &a,
+                                  const Time &b) { return a.first < b; });
     // If the times are equal, overwrite
     if (it != buffer_.end() && it->first == time) {
         it->second = transform;
@@ -48,7 +48,7 @@ void TransformBuffer::insert(const rix::util::Time &time, const rix::msg::geomet
 }
 
 /*< TODO: Implement the get method. */
-bool TransformBuffer::get(const rix::util::Time &time, rix::msg::geometry::Transform &transform) const {
+bool TransformBuffer::get(const Time &time, msg::geometry::Transform &transform) const {
     if (buffer_.empty()) {
         return false;
     }
@@ -61,8 +61,8 @@ bool TransformBuffer::get(const rix::util::Time &time, rix::msg::geometry::Trans
 
     // Find the closest entry in the buffer
     auto it = std::lower_bound(buffer_.begin(), buffer_.end(), time,
-                               [](const std::pair<rix::util::Time, rix::msg::geometry::Transform> &a,
-                                  const rix::util::Time &b) { return a.first < b; });
+                               [](const std::pair<Time, msg::geometry::Transform> &a,
+                                  const Time &b) { return a.first < b; });
 
     // If the input time is later than the last entry, return the last entry
     if (it == buffer_.end()) {
@@ -87,16 +87,16 @@ bool TransformBuffer::get(const rix::util::Time &time, rix::msg::geometry::Trans
     auto it_prev = it - 1;
     double t = static_cast<double>((time - it_prev->first).to_nanoseconds()) /
                static_cast<double>((it->first - it_prev->first).to_nanoseconds());
-    transform = rix::rob::interpolate(it_prev->second, it->second, t);
+    transform = interpolate(it_prev->second, it->second, t);
     return true;
 }
 
-const std::deque<std::pair<rix::util::Time, rix::msg::geometry::Transform>> &TransformBuffer::data() const {
+const std::deque<std::pair<Time, msg::geometry::Transform>> &TransformBuffer::data() const {
     return buffer_;
 }
 
-rix::util::Duration TransformBuffer::duration() const { return duration_; }
+Duration TransformBuffer::duration() const { return duration_; }
 
-void TransformBuffer::set_duration(const rix::util::Duration &duration) { duration_ = duration; }
+void TransformBuffer::set_duration(const Duration &duration) { duration_ = duration; }
 
-}  // namespace rix::tf
+}  // namespace rix

@@ -1,6 +1,6 @@
 #include "rix/rob/link.hpp"
 
-namespace rix::rob {
+namespace rix {
 
 Link::Link(const std::vector<Visual> &visuals,
            const std::vector<Collision> &collisions,
@@ -46,8 +46,8 @@ const Inertial &Link::inertial() const { return inertial_; }
 const std::vector<Visual> &Link::visuals() const { return visuals_; }
 const std::vector<Collision> &Link::collisions() const { return collisions_; }
 
-rix::msg::geometry::Inertia Link::get_inertia() const {
-    rix::msg::geometry::Inertia inertia;
+msg::geometry::Inertia Link::get_inertia() const {
+    msg::geometry::Inertia inertia;
     inertia.mass = inertial_.mass;
     inertia.center_of_mass = inertial_.origin.translation;
     inertia.ixx = inertial_.ixx;
@@ -59,4 +59,4 @@ rix::msg::geometry::Inertia Link::get_inertia() const {
     return inertia;
 }
 
-}  // namespace rix::rob
+}  // namespace rix
