@@ -107,8 +107,3 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/rixConfig.cmake" DESTINATION lib/cmak
 add_executable(rixhub src/rixhub.cpp)
 target_link_libraries(rixhub rix)
 install(TARGETS rixhub DESTINATION bin)
-
-# Build RIXInfo
-add_executable(rixinfo src/rixinfo.cpp)
-target_link_libraries(rixinfo rix)
-install(TARGETS rixinfo DESTINATION bin)
