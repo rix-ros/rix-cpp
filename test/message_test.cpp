@@ -4,7 +4,7 @@
 #include "rix/msg/standard/String.hpp"
 #include "rix/msg/standard/Time.hpp"
 #include "rix/msg/standard/UInt32.hpp"
-#include "rix/test/node_test_fixture.hpp"
+#include "rix/test/test_fixture.hpp"
 #include <gtest/gtest.h>
 
 using namespace rix;

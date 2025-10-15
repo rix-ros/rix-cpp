@@ -1,4 +1,4 @@
-#include "rix/test/node_test_fixture.hpp"
+#include "rix/test/test_fixture.hpp"
 #include "simple_subscriber.hpp"
 #include <gtest/gtest.h>
 

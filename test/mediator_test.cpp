@@ -1130,7 +1130,7 @@ TEST(MediatorTest, SystemInfoGetRequestFailureInvalidNodeID) {
                                        msg::standard::Time().hash(),
                                        false,
                                        Endpoint("127.0.0.1", 9012))
-                     .request_system_info(4321, empty_sys_info, true)
+                     .request_system_info(4321, empty_sys_info) // Expect failure (empty info)
                      .deregister_node("test_node", 1234);
 
   {

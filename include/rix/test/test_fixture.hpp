@@ -152,14 +152,21 @@ public:
     auto socket = socket_manager_.create_socket();
     node_info.id = expected_id_++;
     node_info.name = name;
-    SocketBuilder(socket).as_node_register(node_info, rixhub_endpoint_, should_fail);
+    msg::mediator::Status status;
+    status.error = should_fail ? -1 : 0;
+    status.id = node_info.id;
+    SocketBuilder(socket)
+        .connect(rixhub_endpoint_)
+        .send_message(OPCODE::NODE_REGISTER, node_info)
+        .recv_message(OPCODE::STATUS_RESPONSE, status)
+        .close();
     return *this;
   }
 
   // Configure node deregistration
   TestFixture& destroy_node(const msg::mediator::NodeInfo& node_info) {
     auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket).as_node_deregister(node_info, rixhub_endpoint_);
+    SocketBuilder(socket).connect(rixhub_endpoint_).send_message(OPCODE::NODE_DEREGISTER, node_info).close();
     return *this;
   }
 
@@ -177,15 +184,24 @@ public:
     // Create the server socket for publisher connections
     create_server(endpoint, bound_endpoint, subscriber_count);
 
-    // Registration socket
-    auto reg_socket = socket_manager_.create_socket();
     pub_info.node_id = node_info.id;
     pub_info.id = expected_id_++;
     pub_info.topic_info.name = topic;
     pub_info.topic_info.message_hash = TMsg().hash();
     pub_info.endpoint.address = bound_endpoint.address;
     pub_info.endpoint.port = bound_endpoint.port;
-    SocketBuilder(reg_socket).as_pub_register(rixhub_endpoint_, pub_info, should_fail);
+
+    msg::mediator::Status status;
+    status.error = should_fail ? -1 : 0;
+    status.id = pub_info.id;
+
+    // Registration socket
+    auto reg_socket = socket_manager_.create_socket();
+    SocketBuilder(reg_socket)
+        .connect(rixhub_endpoint_)
+        .send_message(OPCODE::PUB_REGISTER, pub_info)
+        .recv_message(OPCODE::STATUS_RESPONSE, status)
+        .close();
 
     return *this;
   }
@@ -193,7 +209,7 @@ public:
   // Configure publisher deregistration
   TestFixture& destroy_publisher(const msg::mediator::PubInfo& pub_info) {
     auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket).as_pub_deregister(rixhub_endpoint_, pub_info);
+    SocketBuilder(socket).connect(rixhub_endpoint_).send_message(OPCODE::PUB_DEREGISTER, pub_info).close();
     return *this;
   }
 
@@ -211,15 +227,24 @@ public:
     // Create the client socket for subscriber connections
     create_server(endpoint, bound_endpoint, notification_count);
 
-    // Registration socket
-    auto reg_socket = socket_manager_.create_socket();
     sub_info.node_id = node_info.id;
     sub_info.id = expected_id_++;
     sub_info.topic_info.name = topic;
     sub_info.topic_info.message_hash = TMsg().hash();
     sub_info.endpoint.address = bound_endpoint.address;
     sub_info.endpoint.port = bound_endpoint.port;
-    SocketBuilder(reg_socket).as_sub_register(rixhub_endpoint_, sub_info, should_fail);
+
+    msg::mediator::Status status;
+    status.error = should_fail ? -1 : 0;
+    status.id = sub_info.id;
+
+    // Registration socket
+    auto reg_socket = socket_manager_.create_socket();
+    SocketBuilder(reg_socket)
+        .connect(rixhub_endpoint_)
+        .send_message(OPCODE::SUB_REGISTER, sub_info)
+        .recv_message(OPCODE::STATUS_RESPONSE, status)
+        .close();
 
     return *this;
   }
@@ -227,7 +252,7 @@ public:
   // Configure subscriber deregistration
   TestFixture& destroy_subscriber(const msg::mediator::SubInfo& sub_info) {
     auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket).as_sub_deregister(rixhub_endpoint_, sub_info);
+    SocketBuilder(socket).connect(rixhub_endpoint_).send_message(OPCODE::SUB_DEREGISTER, sub_info).close();
     return *this;
   }
 
@@ -245,8 +270,6 @@ public:
     // Create the server socket for service connections
     create_server(endpoint, bound_endpoint, client_count);
 
-    // Registration socket
-    auto reg_socket = socket_manager_.create_socket();
     srv_info.node_id = node_info.id;
     srv_info.id = expected_id_++;
     srv_info.name = service;
@@ -254,7 +277,18 @@ public:
     srv_info.response_hash = TRes().hash();
     srv_info.endpoint.address = bound_endpoint.address;
     srv_info.endpoint.port = bound_endpoint.port;
-    SocketBuilder(reg_socket).as_srv_register(rixhub_endpoint_, srv_info, should_fail);
+
+    msg::mediator::Status status;
+    status.error = should_fail ? -1 : 0;
+    status.id = srv_info.id;
+
+    // Registration socket
+    auto reg_socket = socket_manager_.create_socket();
+    SocketBuilder(reg_socket)
+        .connect(rixhub_endpoint_)
+        .send_message(OPCODE::SRV_REGISTER, srv_info)
+        .recv_message(OPCODE::STATUS_RESPONSE, status)
+        .close();
 
     return *this;
   }
@@ -262,7 +296,7 @@ public:
   // Configure service deregistration
   TestFixture& destroy_service(msg::mediator::SrvInfo& srv_info) {
     auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket).as_srv_deregister(rixhub_endpoint_, srv_info);
+    SocketBuilder(socket).connect(rixhub_endpoint_).send_message(OPCODE::SRV_DEREGISTER, srv_info).close();
     return *this;
   }
 
@@ -272,20 +306,29 @@ public:
                                      const msg::mediator::NodeInfo& node_info,
                                      bool should_fail = false,
                                      const Endpoint& service_endpoint = Endpoint(DEFAULT_IP, 8000)) {
-    // Registration socket
-    auto reg_socket = socket_manager_.create_socket();
     msg::mediator::SrvRequest srv_req;
     srv_req.node_id = node_info.id;
     srv_req.name = service;
     srv_req.request_hash = TReq().hash();
     srv_req.response_hash = TRes().hash();
+
     msg::mediator::SrvResponse srv_res;
-    srv_res.srv_info.name = service;
-    srv_res.srv_info.request_hash = TReq().hash();
-    srv_res.srv_info.response_hash = TRes().hash();
-    srv_res.srv_info.endpoint.address = service_endpoint.address;
-    srv_res.srv_info.endpoint.port = service_endpoint.port;
-    SocketBuilder(reg_socket).as_srv_cli_request(rixhub_endpoint_, srv_req, srv_res, should_fail);
+    srv_res.error = should_fail ? -1 : 0;
+    if (!should_fail) {
+      srv_res.srv_info.name = service;
+      srv_res.srv_info.request_hash = TReq().hash();
+      srv_res.srv_info.response_hash = TRes().hash();
+      srv_res.srv_info.endpoint.address = service_endpoint.address;
+      srv_res.srv_info.endpoint.port = service_endpoint.port;
+    }
+
+    // Registration socket
+    auto reg_socket = socket_manager_.create_socket();
+    SocketBuilder(reg_socket)
+        .connect(rixhub_endpoint_)
+        .send_message(OPCODE::SRV_REQUEST, srv_req)
+        .recv_message(OPCODE::SRV_RESPONSE, srv_res)
+        .close();
     return *this;
   }
 
@@ -294,7 +337,6 @@ public:
                              const msg::mediator::NodeInfo& node_info,
                              std::shared_ptr<msg::Message> value,
                              bool should_fail = false) {
-    auto socket = socket_manager_.create_socket();
     msg::mediator::ParamInfo param_info;
     param_info.id = node_info.id;
     param_info.name = name;
@@ -302,7 +344,17 @@ public:
     param_info.data.resize(value->size());
     size_t offset = 0;
     value->serialize(param_info.data.data(), offset);
-    SocketBuilder(socket).as_param_set(rixhub_endpoint_, param_info, should_fail);
+
+    msg::mediator::Status status;
+    status.error = should_fail ? -1 : 0;
+    status.id = param_info.id;
+
+    auto socket = socket_manager_.create_socket();
+    SocketBuilder(socket)
+        .connect(rixhub_endpoint_)
+        .send_message(OPCODE::PARAM_SET_REQUEST, param_info)
+        .recv_message(OPCODE::STATUS_RESPONSE, status)
+        .close();
     return *this;
   }
 
@@ -311,23 +363,40 @@ public:
                              const msg::mediator::NodeInfo& node_info,
                              std::shared_ptr<msg::Message> value,
                              bool should_fail = false) {
+    msg::mediator::ParamInfo request;
+    request.id = node_info.id;
+    request.name = name;
+    request.message_hash = value->hash();
+
+    msg::mediator::ParamInfo response;
+    response.id = request.id;
+    response.name = request.name;
+    response.message_hash = request.message_hash;
+    if (!should_fail) {
+      response.data.resize(value->size());
+      size_t offset = 0;
+      value->serialize(response.data.data(), offset);
+    }
+
     auto socket = socket_manager_.create_socket();
-    msg::mediator::ParamInfo param_info;
-    param_info.id = node_info.id;
-    param_info.name = name;
-    param_info.message_hash = value->hash();
-    param_info.data.resize(value->size());
-    size_t offset = 0;
-    value->serialize(param_info.data.data(), offset);
-    SocketBuilder(socket).as_param_get(rixhub_endpoint_, param_info, should_fail);
+    SocketBuilder(socket)
+        .connect(rixhub_endpoint_)
+        .send_message(OPCODE::PARAM_GET_REQUEST, request)
+        .recv_message(OPCODE::PARAM_GET_RESPONSE, response)
+        .close();
     return *this;
   }
 
   // Configure system info get request
-  TestFixture&
-  get_system_info(msg::mediator::SystemInfo info, const msg::mediator::NodeInfo& node_info, bool should_fail = false) {
+  TestFixture& get_system_info(msg::mediator::SystemInfo info, const msg::mediator::NodeInfo& node_info) {
+    msg::standard::UInt64 id;
+    id.data = node_info.id;
     auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket).as_sys_info_request(rixhub_endpoint_, node_info.id, info, should_fail);
+    SocketBuilder(socket)
+        .connect(rixhub_endpoint_)
+        .send_message(OPCODE::SYSTEM_GET_REQUEST, id)
+        .recv_message(OPCODE::SYSTEM_GET_RESPONSE, info)
+        .close();
     return *this;
   }
 
@@ -340,7 +409,7 @@ public:
     if (enable_notifications_) {
       builder.enable_operation_notifications();
     }
-    builder.as_pub_connection(messages);
+    builder.send_message(OPCODE::PUB_MESSAGE, messages).close();
     return *this;
   }
 
@@ -364,7 +433,7 @@ public:
     if (enable_notifications_) {
       builder.enable_operation_notifications();
     }
-    builder.as_sub_connection(sub_notify);
+    builder.recv_message(OPCODE::SUB_NOTIFY, sub_notify).close();
     return *this;
   }
 
@@ -378,7 +447,7 @@ public:
     if (enable_notifications_) {
       builder.enable_operation_notifications();
     }
-    builder.as_sub_client(publisher_endpoint, messages);
+    builder.set_blocking(false).connect(publisher_endpoint).recv_message(OPCODE::PUB_MESSAGE, messages).close();
     return *this;
   }
 
@@ -391,7 +460,9 @@ public:
     if (enable_notifications_) {
       builder.enable_operation_notifications();
     }
-    builder.as_srv_connection(request, response);
+    builder.recv_message(OPCODE::SRV_REQUEST_MESSAGE, *request)
+        .send_message(OPCODE::SRV_RESPONSE_MESSAGE, *response)
+        .close();
     return *this;
   }
 
@@ -406,7 +477,10 @@ public:
     if (enable_notifications_) {
       builder.enable_operation_notifications();
     }
-    builder.as_srv_cli_client(service_endpoint, request, response);
+    builder.connect(service_endpoint)
+        .send_message(OPCODE::SRV_REQUEST_MESSAGE, *request)
+        .recv_message(OPCODE::SRV_RESPONSE_MESSAGE, *response)
+        .close();
     return *this;
   }
 

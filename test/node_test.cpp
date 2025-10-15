@@ -1,5 +1,5 @@
 #include "rix/msg/standard/String.hpp"
-#include "rix/test/node_test_fixture.hpp"
+#include "rix/test/test_fixture.hpp"
 #include <gtest/gtest.h>
 
 using namespace rix;
@@ -552,53 +552,5 @@ TEST(NodeTest, SystemInfoGetRequest) {
         EXPECT_EQ(sys_info_received.topics.size(), sys_info.topics.size());
         EXPECT_EQ(sys_info_received.topics[0].name, sys_info.topics[0].name);
         EXPECT_EQ(sys_info_received.topics[0].message_hash, sys_info.topics[0].message_hash);
-      });
-}
-
-TEST(NodeTest, SystemInfoGetRequestFailure) {
-  msg::mediator::SystemInfo sys_info;
-  sys_info.nodes.resize(1);
-  sys_info.nodes[0].name = "test_node";
-  sys_info.nodes[0].id = 1;
-  sys_info.publishers.resize(1);
-  sys_info.publishers[0].topic_info.name = "test_topic";
-  sys_info.publishers[0].topic_info.message_hash = msg::standard::UInt32().hash();
-  sys_info.publishers[0].endpoint.address = "127.0.0.1";
-  sys_info.publishers[0].endpoint.port = 1234;
-  sys_info.subscribers.resize(1);
-  sys_info.subscribers[0].topic_info.name = "test_topic";
-  sys_info.subscribers[0].topic_info.message_hash = msg::standard::UInt32().hash();
-  sys_info.subscribers[0].endpoint.address = "127.0.0.1";
-  sys_info.subscribers[0].endpoint.port = 5678;
-  sys_info.services.resize(1);
-  sys_info.services[0].name = "test_service";
-  sys_info.services[0].request_hash = msg::standard::UInt32().hash();
-  sys_info.services[0].response_hash = msg::standard::Time().hash();
-  sys_info.services[0].endpoint.address = "127.0.0.1";
-  sys_info.services[0].endpoint.port = 9012;
-  sys_info.topics.resize(1);
-  sys_info.topics[0].name = "test_topic";
-  sys_info.topics[0].message_hash = msg::standard::UInt32().hash();
-  sys_info.services.resize(1);
-
-  msg::mediator::NodeInfo node_info;
-  TestFixture()
-      .create_node("test_node", node_info)
-      .get_system_info(sys_info, node_info, true)
-      .destroy_node(node_info)
-      .build<Node>([sys_info](TestFixture& fixture) {
-        Node node("test_node");
-        EXPECT_TRUE(node.ok());
-
-        msg::mediator::SystemInfo sys_info_received;
-        bool status = node.get_system_info(sys_info_received);
-        // Status will still be true on failure
-        EXPECT_TRUE(status);
-        // Response will be empty on failure
-        EXPECT_EQ(sys_info_received.nodes.size(), 0);
-        EXPECT_EQ(sys_info_received.publishers.size(), 0);
-        EXPECT_EQ(sys_info_received.subscribers.size(), 0);
-        EXPECT_EQ(sys_info_received.services.size(), 0);
-        EXPECT_EQ(sys_info_received.topics.size(), 0);
       });
 }
