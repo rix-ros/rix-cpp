@@ -3,7 +3,6 @@
 #include <iostream>
 
 namespace rix {
-namespace ipc {
 
 std::array<POSIXSignal::Notifier, 32> POSIXSignal::notifier = {};
 
@@ -49,7 +48,7 @@ bool POSIXSignal::raise() const {
   return ::raise(signum_) == 0;
 }
 
-bool POSIXSignal::wait(const rix::util::Duration &d) const {
+bool POSIXSignal::wait(const Duration& d) const {
   if (signum_ < 1 || signum_ > 32)
     return false;
 
@@ -61,13 +60,14 @@ bool POSIXSignal::wait(const rix::util::Duration &d) const {
   struct timeval timeout;
   timeout.tv_sec = d.to_nanoseconds() / 1'000'000'000;
   timeout.tv_usec = (d.to_nanoseconds() % 1'000'000'000) / 1'000;
-  is_readable = select(notifier[signum_ - 1].pipe[0] + 1, &read_fds, nullptr,
-                       nullptr, &timeout) > 0;
+  is_readable =
+      select(notifier[signum_ - 1].pipe[0] + 1, &read_fds, nullptr, nullptr, &timeout) >
+      0;
 
   if (is_readable) {
-    int signum_read = -1;
-    ssize_t bytes_read = read(notifier[signum_ - 1].pipe[0],
-                              (uint8_t *)&signum_read, sizeof(int));
+    int     signum_read = -1;
+    ssize_t bytes_read =
+        read(notifier[signum_ - 1].pipe[0], (uint8_t*)&signum_read, sizeof(int));
     if (bytes_read != sizeof(int))
       return false;
     return signum_read == signum_;
@@ -77,10 +77,10 @@ bool POSIXSignal::wait(const rix::util::Duration &d) const {
 
 void POSIXSignal::handler(int signum) {
   if (notifier[signum - 1].is_init) {
-    int ret = write(notifier[signum - 1].pipe[1], (uint8_t *)&signum, sizeof(int));
-    if (ret < 0) return;
+    int ret = write(notifier[signum - 1].pipe[1], (uint8_t*)&signum, sizeof(int));
+    if (ret < 0)
+      return;
   }
 }
 
-} // namespace ipc
 } // namespace rix

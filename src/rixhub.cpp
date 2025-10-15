@@ -4,9 +4,9 @@
 #include "rix/ipc/signal.hpp"
 #include "rix/rix.hpp"
 
-using namespace rix::core;
-using namespace rix::ipc;
-using namespace rix::util;
+using namespace rix;
+using namespace rix;
+using namespace rix;
 
 int main(int argc, char **argv) {
   auto parser = ArgumentParser("rixhub", "The RIXHub is a central mediator for RIX nodes to discover each other.");
@@ -26,8 +26,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  auto sig = create_signal(SIGINT);
-  mediator->spin(std::move(sig));
+  mediator->spin();
 
   return 0;
 }

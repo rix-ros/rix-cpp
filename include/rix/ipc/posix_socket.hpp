@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <signal.h>
 
-namespace rix::ipc {
+namespace rix {
 
 class POSIXSocket : public GenericSocket {
 public:
@@ -28,9 +28,9 @@ public:
   void close() const override;
   ssize_t send(const void *buf, size_t len, int flags) const override;
   ssize_t recv(void *buf, size_t len, int flags) const override;
-  bool wait_readable(const rix::util::Duration &timeout) const override;
-  bool wait_writable(const rix::util::Duration &timeout) const override;
-  bool wait_exception(const rix::util::Duration &timeout) const override;
+  bool wait_readable(const Duration &timeout) const override;
+  bool wait_writable(const Duration &timeout) const override;
+  bool wait_exception(const Duration &timeout) const override;
   bool set_blocking(bool blocking) const override;
   bool get_blocking() const override;
   bool set_reuse_address(bool reuse) const override;
@@ -44,4 +44,4 @@ private:
   int fd_;
 };
 
-} // namespace rix::ipc
+} // namespace rix

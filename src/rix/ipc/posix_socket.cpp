@@ -1,6 +1,6 @@
 #include "rix/ipc/posix_socket.hpp"
 
-namespace rix::ipc {
+namespace rix {
 
 POSIXSocket::POSIXSocket() : fd_(::socket(AF_INET, SOCK_STREAM, 0)) {
   static bool sigpipe_flag = false;
@@ -52,7 +52,7 @@ ssize_t POSIXSocket::send(const void *buf, size_t len, int flags) const { return
 
 ssize_t POSIXSocket::recv(void *buf, size_t len, int flags) const { return ::recv(fd_, buf, len, flags); }
 
-bool POSIXSocket::wait_readable(const rix::util::Duration &timeout) const {
+bool POSIXSocket::wait_readable(const Duration &timeout) const {
   // Implement with poll
   struct pollfd pfd;
   pfd.fd = fd_;
@@ -62,7 +62,7 @@ bool POSIXSocket::wait_readable(const rix::util::Duration &timeout) const {
   return ret > 0 && (pfd.revents & POLLIN);
 }
 
-bool POSIXSocket::wait_writable(const rix::util::Duration &timeout) const {
+bool POSIXSocket::wait_writable(const Duration &timeout) const {
   struct pollfd pfd;
   pfd.fd = fd_;
   pfd.events = POLLOUT;
@@ -72,7 +72,7 @@ bool POSIXSocket::wait_writable(const rix::util::Duration &timeout) const {
   return ret > 0 && (pfd.revents & POLLOUT);
 }
 
-bool POSIXSocket::wait_exception(const rix::util::Duration &timeout) const {
+bool POSIXSocket::wait_exception(const Duration &timeout) const {
   struct pollfd pfd;
   pfd.fd = fd_;
   pfd.events = 0;
@@ -149,4 +149,4 @@ Endpoint POSIXSocket::remote_endpoint() const {
 
 int POSIXSocket::get_fd() const { return fd_; }
 
-} // namespace rix::ipc
+} // namespace rix
