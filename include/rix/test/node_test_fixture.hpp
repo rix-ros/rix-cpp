@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rix/core/node.hpp"
+#include "rix/test/mock_clock.hpp"
 #include "rix/test/mock_poller.hpp"
 #include "socket_builder.hpp"
 #include "socket_manager.hpp"
@@ -9,50 +10,49 @@
 namespace rix {
 
 // TODO: Revise the functions for waiting on operations, should instead be
-// "wait_for_publisher_accept" or "wait_for_subscriber_connect". The NodeTestFixture
+// "wait_for_publisher_accept" or "wait_for_subscriber_connect". The TestFixture
 // should not communicate details at the socket level, but rather at the higher level of
 // publishers and subscribers.
 
 // High-level test fixture for Node tests
-class NodeTestFixture : std::enable_shared_from_this<NodeTestFixture> {
+class TestFixture : std::enable_shared_from_this<TestFixture> {
 public:
-  NodeTestFixture()
+  TestFixture()
       : rixhub_endpoint_(RIXHUB_IP, RIXHUB_PORT), enable_notifications_(false), enable_poller_(false),
-        enable_debug_clock_(false), node_id_(0), expected_id_(1), current_id_(0) {
+        enable_clock_(false), expected_id_(1), current_id_(0) {
     GenericSocket::set_poller(nullptr);
   }
 
-  template <typename TNode> using TestFunction = std::function<void(NodeTestFixture&, std::unique_ptr<TNode>)>;
+  template <typename TNode> using TestFunction = std::function<void(TestFixture&)>;
 
   // Build and return the configured node
-  template <typename TNode = Node, typename... Args> void build(TestFunction<TNode> test_func, Args&&... args) {
+  template <typename TNode = Node> void build(TestFunction<TNode> test_func) {
     static_assert(std::is_base_of<Node, TNode>::value, "TNode must be Node or derived from Node");
     TNode::set_socket_factory(socket_manager_.get_factory());
     TNode::set_id_factory([this]() { return ++current_id_; });
-    auto node = std::make_unique<TNode>(std::forward<Args>(args)...);
-    test_func(*this, std::move(node));
+    test_func(*this);
   }
 
-  ~NodeTestFixture() {
+  ~TestFixture() {
     if (enable_poller_) {
       rix::GenericSocket::set_poller(nullptr);
     }
-    if (enable_debug_clock_) {
+    if (enable_clock_) {
       rix::Time::set_clock(std::make_shared<Clock>());
     }
   }
 
-  NodeTestFixture& enable_debug_clock(std::shared_ptr<MockClock>& clock) {
-    if (enable_debug_clock_) {
-      throw std::runtime_error("Debug clock already enabled");
+  TestFixture& enable_clock(std::shared_ptr<MockClock>& clock) {
+    if (enable_clock_) {
+      throw std::runtime_error("Clock already enabled");
     }
     clock = std::make_shared<MockClock>();
     rix::Time::set_clock(clock);
-    enable_debug_clock_ = true;
+    enable_clock_ = true;
     return *this;
   }
 
-  NodeTestFixture& enable_poller(int max_poll_count = -1) {
+  TestFixture& enable_poller(int max_poll_count = -1) {
     if (enable_poller_) {
       throw std::runtime_error("Poller already enabled");
     }
@@ -64,7 +64,7 @@ public:
   }
 
   // Enable operation notifications for synchronization in multithreaded tests
-  NodeTestFixture& enable_operation_notifications() {
+  TestFixture& enable_operation_notifications() {
     if (enable_notifications_) {
       throw std::runtime_error("Operation notifications already enabled");
     }
@@ -73,7 +73,7 @@ public:
   }
 
   // Disable operation notifications
-  NodeTestFixture& disable_operation_notifications() {
+  TestFixture& disable_operation_notifications() {
     if (!enable_notifications_) {
       throw std::runtime_error("Operation notifications not enabled");
     }
@@ -148,18 +148,16 @@ public:
   }
 
   // Configure node registration to succeed
-  NodeTestFixture&
-  register_node(const std::string& name, msg::mediator::NodeInfo& node_info, bool should_fail = false) {
+  TestFixture& create_node(const std::string& name, msg::mediator::NodeInfo& node_info, bool should_fail = false) {
     auto socket = socket_manager_.create_socket();
-    node_id_ = expected_id_++;
-    node_info.id = node_id_;
+    node_info.id = expected_id_++;
     node_info.name = name;
     SocketBuilder(socket).as_node_register(node_info, rixhub_endpoint_, should_fail);
     return *this;
   }
 
   // Configure node deregistration
-  NodeTestFixture& deregister_node(const msg::mediator::NodeInfo& node_info) {
+  TestFixture& destroy_node(const msg::mediator::NodeInfo& node_info) {
     auto socket = socket_manager_.create_socket();
     SocketBuilder(socket).as_node_deregister(node_info, rixhub_endpoint_);
     return *this;
@@ -167,12 +165,13 @@ public:
 
   // Configure publisher registration
   template <typename TMsg>
-  NodeTestFixture& register_publisher(const std::string& topic,
-                                      msg::mediator::PubInfo& pub_info,
-                                      bool should_fail = false,
-                                      int subscriber_count = 0,
-                                      const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
-                                      const Endpoint& bound_endpoint = Endpoint(DEFAULT_IP, 8000)) {
+  TestFixture& create_publisher(const std::string& topic,
+                                msg::mediator::PubInfo& pub_info,
+                                const msg::mediator::NodeInfo& node_info,
+                                bool should_fail = false,
+                                int subscriber_count = 0,
+                                const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
+                                const Endpoint& bound_endpoint = Endpoint(DEFAULT_IP, 8000)) {
     static_assert(std::is_base_of<msg::Message, TMsg>::value, "TMsg must be derived from msg::Message");
 
     // Create the server socket for publisher connections
@@ -180,7 +179,7 @@ public:
 
     // Registration socket
     auto reg_socket = socket_manager_.create_socket();
-    pub_info.node_id = node_id_;
+    pub_info.node_id = node_info.id;
     pub_info.id = expected_id_++;
     pub_info.topic_info.name = topic;
     pub_info.topic_info.message_hash = TMsg().hash();
@@ -192,7 +191,7 @@ public:
   }
 
   // Configure publisher deregistration
-  NodeTestFixture& deregister_publisher(const msg::mediator::PubInfo& pub_info) {
+  TestFixture& destroy_publisher(const msg::mediator::PubInfo& pub_info) {
     auto socket = socket_manager_.create_socket();
     SocketBuilder(socket).as_pub_deregister(rixhub_endpoint_, pub_info);
     return *this;
@@ -200,12 +199,13 @@ public:
 
   // Configure subscriber registration
   template <typename TMsg>
-  NodeTestFixture& register_subscriber(const std::string& topic,
-                                       msg::mediator::SubInfo& sub_info,
-                                       bool should_fail = false,
-                                       int notification_count = 0,
-                                       const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
-                                       const Endpoint& bound_endpoint = Endpoint(DEFAULT_IP, 8000)) {
+  TestFixture& create_subscriber(const std::string& topic,
+                                 msg::mediator::SubInfo& sub_info,
+                                 const msg::mediator::NodeInfo& node_info,
+                                 bool should_fail = false,
+                                 int notification_count = 0,
+                                 const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
+                                 const Endpoint& bound_endpoint = Endpoint(DEFAULT_IP, 8000)) {
     static_assert(std::is_base_of<msg::Message, TMsg>::value, "TMsg must be derived from msg::Message");
 
     // Create the client socket for subscriber connections
@@ -213,7 +213,7 @@ public:
 
     // Registration socket
     auto reg_socket = socket_manager_.create_socket();
-    sub_info.node_id = node_id_;
+    sub_info.node_id = node_info.id;
     sub_info.id = expected_id_++;
     sub_info.topic_info.name = topic;
     sub_info.topic_info.message_hash = TMsg().hash();
@@ -225,7 +225,7 @@ public:
   }
 
   // Configure subscriber deregistration
-  NodeTestFixture& deregister_subscriber(const msg::mediator::SubInfo& sub_info) {
+  TestFixture& destroy_subscriber(const msg::mediator::SubInfo& sub_info) {
     auto socket = socket_manager_.create_socket();
     SocketBuilder(socket).as_sub_deregister(rixhub_endpoint_, sub_info);
     return *this;
@@ -233,12 +233,13 @@ public:
 
   // Configure service registration
   template <typename TReq, typename TRes>
-  NodeTestFixture& register_service(const std::string& service,
-                                    msg::mediator::SrvInfo& srv_info,
-                                    bool should_fail = false,
-                                    int client_count = 0,
-                                    const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
-                                    const Endpoint& bound_endpoint = Endpoint(DEFAULT_IP, 8000)) {
+  TestFixture& create_service(const std::string& service,
+                              msg::mediator::SrvInfo& srv_info,
+                              const msg::mediator::NodeInfo& node_info,
+                              bool should_fail = false,
+                              int client_count = 0,
+                              const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
+                              const Endpoint& bound_endpoint = Endpoint(DEFAULT_IP, 8000)) {
     static_assert(std::is_base_of<msg::Message, TReq>::value, "TReq must be derived from msg::Message");
     static_assert(std::is_base_of<msg::Message, TRes>::value, "TRes must be derived from msg::Message");
     // Create the server socket for service connections
@@ -246,7 +247,7 @@ public:
 
     // Registration socket
     auto reg_socket = socket_manager_.create_socket();
-    srv_info.node_id = node_id_;
+    srv_info.node_id = node_info.id;
     srv_info.id = expected_id_++;
     srv_info.name = service;
     srv_info.request_hash = TReq().hash();
@@ -259,7 +260,7 @@ public:
   }
 
   // Configure service deregistration
-  NodeTestFixture& deregister_service(msg::mediator::SrvInfo& srv_info) {
+  TestFixture& destroy_service(msg::mediator::SrvInfo& srv_info) {
     auto socket = socket_manager_.create_socket();
     SocketBuilder(socket).as_srv_deregister(rixhub_endpoint_, srv_info);
     return *this;
@@ -267,13 +268,14 @@ public:
 
   // Configure service client request
   template <typename TReq, typename TRes>
-  NodeTestFixture& request_service_client(const std::string& service,
-                                          bool should_fail = false,
-                                          const Endpoint& service_endpoint = Endpoint(DEFAULT_IP, 8000)) {
+  TestFixture& create_service_client(const std::string& service,
+                                     const msg::mediator::NodeInfo& node_info,
+                                     bool should_fail = false,
+                                     const Endpoint& service_endpoint = Endpoint(DEFAULT_IP, 8000)) {
     // Registration socket
     auto reg_socket = socket_manager_.create_socket();
     msg::mediator::SrvRequest srv_req;
-    srv_req.node_id = node_id_;
+    srv_req.node_id = node_info.id;
     srv_req.name = service;
     srv_req.request_hash = TReq().hash();
     srv_req.response_hash = TRes().hash();
@@ -288,11 +290,13 @@ public:
   }
 
   // Configure parameter set request
-  NodeTestFixture&
-  request_parameter_set(const std::string& name, std::shared_ptr<msg::Message> value, bool should_fail = false) {
+  TestFixture& set_parameter(const std::string& name,
+                             const msg::mediator::NodeInfo& node_info,
+                             std::shared_ptr<msg::Message> value,
+                             bool should_fail = false) {
     auto socket = socket_manager_.create_socket();
     msg::mediator::ParamInfo param_info;
-    param_info.id = node_id_;
+    param_info.id = node_info.id;
     param_info.name = name;
     param_info.message_hash = value->hash();
     param_info.data.resize(value->size());
@@ -303,11 +307,13 @@ public:
   }
 
   // Configure parameter get request
-  NodeTestFixture&
-  request_parameter_get(const std::string& name, std::shared_ptr<msg::Message> value, bool should_fail = false) {
+  TestFixture& get_parameter(const std::string& name,
+                             const msg::mediator::NodeInfo& node_info,
+                             std::shared_ptr<msg::Message> value,
+                             bool should_fail = false) {
     auto socket = socket_manager_.create_socket();
     msg::mediator::ParamInfo param_info;
-    param_info.id = node_id_;
+    param_info.id = node_info.id;
     param_info.name = name;
     param_info.message_hash = value->hash();
     param_info.data.resize(value->size());
@@ -318,14 +324,15 @@ public:
   }
 
   // Configure system info get request
-  NodeTestFixture& request_system_info(msg::mediator::SystemInfo info, bool should_fail = false) {
+  TestFixture&
+  get_system_info(msg::mediator::SystemInfo info, const msg::mediator::NodeInfo& node_info, bool should_fail = false) {
     auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket).as_sys_info_request(rixhub_endpoint_, info, should_fail);
+    SocketBuilder(socket).as_sys_info_request(rixhub_endpoint_, node_info.id, info, should_fail);
     return *this;
   }
 
   // Configure publisher server with connection sockets
-  template <typename TMsg> NodeTestFixture& create_pub_connection(const std::vector<std::shared_ptr<TMsg>>& messages) {
+  template <typename TMsg> TestFixture& accept_subscriber(const std::vector<std::shared_ptr<TMsg>>& messages) {
     // Create connection sockets
     auto conn_socket = socket_manager_.create_socket();
     connection_sockets_.push_back(conn_socket);
@@ -339,7 +346,7 @@ public:
 
   // Configure subscriber connections
   template <typename TMsg>
-  NodeTestFixture& create_sub_connection(const std::string& topic, const std::vector<Endpoint>& publisher_endpoints) {
+  TestFixture& accept_notification(const std::string& topic, const std::vector<Endpoint>& publisher_endpoints) {
     msg::mediator::SubNotify sub_notify;
     sub_notify.publishers.resize(publisher_endpoints.size());
     for (size_t i = 0; i < publisher_endpoints.size(); i++) {
@@ -363,8 +370,8 @@ public:
 
   // Configure subscriber clients
   template <typename TMsg>
-  NodeTestFixture& create_sub_client(const Endpoint& publisher_endpoint,
-                                     const std::vector<std::shared_ptr<TMsg>>& messages) {
+  TestFixture& connect_to_publisher(const Endpoint& publisher_endpoint,
+                                    const std::vector<std::shared_ptr<TMsg>>& messages) {
     auto client_socket = socket_manager_.create_socket();
     client_sockets_.push_back(client_socket);
     auto builder = SocketBuilder(client_socket);
@@ -377,7 +384,7 @@ public:
 
   // Configure service server with connection sockets
   template <typename TRequest, typename TResponse>
-  NodeTestFixture& create_srv_connection(std::shared_ptr<TRequest> request, std::shared_ptr<TResponse> response) {
+  TestFixture& accept_service_client(std::shared_ptr<TRequest> request, std::shared_ptr<TResponse> response) {
     auto conn_socket = socket_manager_.create_socket();
     connection_sockets_.push_back(conn_socket);
     auto builder = SocketBuilder(conn_socket);
@@ -390,9 +397,9 @@ public:
 
   // Configure service client client
   template <typename TRequest, typename TResponse>
-  NodeTestFixture& create_srv_cli_client(std::shared_ptr<TRequest> request,
-                                         std::shared_ptr<TResponse> response,
-                                         const Endpoint& service_endpoint = Endpoint(DEFAULT_IP, 8000)) {
+  TestFixture& call_service_client(std::shared_ptr<TRequest> request,
+                                   std::shared_ptr<TResponse> response,
+                                   const Endpoint& service_endpoint = Endpoint(DEFAULT_IP, 8000)) {
     auto socket = socket_manager_.create_socket();
     client_sockets_.push_back(socket);
     auto builder = SocketBuilder(socket);
@@ -408,20 +415,19 @@ private:
   Endpoint rixhub_endpoint_;
   bool enable_notifications_;
   bool enable_poller_;
-  bool enable_debug_clock_;
-  uint64_t node_id_;
+  bool enable_clock_;
   uint64_t expected_id_;
   uint64_t current_id_;
 
   // Categorized socket tracking
   std::vector<std::shared_ptr<MockSocket>> server_sockets_;     // Server sockets (accept connections)
-  std::vector<std::shared_ptr<MockSocket>> connection_sockets_; // Connection sockets (pub/srv connections)
-  std::vector<std::shared_ptr<MockSocket>> client_sockets_;     // Client sockets (sub/srv clients)
+  std::vector<std::shared_ptr<MockSocket>> connection_sockets_; // Connection sockets (pub/sub/srv connections)
+  std::vector<std::shared_ptr<MockSocket>> client_sockets_;     // Client sockets (sub/srvcli clients)
 
   // Configure server
-  NodeTestFixture& create_server(const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
-                                 const Endpoint& bound_endpoint = Endpoint(DEFAULT_IP, 8000),
-                                 int accept_count = 0) {
+  TestFixture& create_server(const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
+                             const Endpoint& bound_endpoint = Endpoint(DEFAULT_IP, 8000),
+                             int accept_count = 0) {
     auto socket = socket_manager_.create_socket();
     server_sockets_.push_back(socket);
     auto builder = SocketBuilder(socket);

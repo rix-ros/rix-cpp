@@ -10,13 +10,10 @@ namespace rix {
 // High-level test fixture for Node tests
 class MediatorTestFixture {
 public:
-  MediatorTestFixture(const Endpoint& endpoint = Endpoint("127.0.0.1", 0))
-      : endpoint_(endpoint) {}
+  MediatorTestFixture(const Endpoint& endpoint = Endpoint("127.0.0.1", 0)) : endpoint_(endpoint) {}
 
   // Configure node registration to succeed
-  MediatorTestFixture& register_node(const std::string& node_name,
-                                     uint64_t node_id,
-                                     bool should_fail = false) {
+  MediatorTestFixture& register_node(const std::string& node_name, uint64_t node_id, bool should_fail = false) {
     auto socket = socket_manager_.create_socket();
     msg::mediator::NodeInfo node_info;
     node_info.name = node_name;
@@ -41,8 +38,7 @@ public:
                                           const std::string& topic,
                                           std::array<uint64_t, 2> message_hash,
                                           bool should_fail = false,
-                                          const Endpoint& endpoint = Endpoint("127.0.0.1",
-                                                                              8001)) {
+                                          const Endpoint& endpoint = Endpoint("127.0.0.1", 8001)) {
     // Registration socket
     auto reg_socket = socket_manager_.create_socket();
     msg::mediator::PubInfo pub_info;
@@ -58,12 +54,11 @@ public:
   }
 
   // Configure publisher deregistration
-  MediatorTestFixture&
-  deregister_publisher(uint64_t id,
-                       uint64_t node_id,
-                       const std::string& topic,
-                       std::array<uint64_t, 2> message_hash,
-                       const Endpoint& endpoint = Endpoint("127.0.0.1", 8001)) {
+  MediatorTestFixture& deregister_publisher(uint64_t id,
+                                            uint64_t node_id,
+                                            const std::string& topic,
+                                            std::array<uint64_t, 2> message_hash,
+                                            const Endpoint& endpoint = Endpoint("127.0.0.1", 8001)) {
     auto socket = socket_manager_.create_socket();
     msg::mediator::PubInfo pub_info;
     pub_info.node_id = node_id;
@@ -77,13 +72,12 @@ public:
   }
 
   // Configure subscriber registration
-  MediatorTestFixture&
-  register_subscriber(uint64_t id,
-                      uint64_t node_id,
-                      const std::string& topic,
-                      std::array<uint64_t, 2> message_hash,
-                      bool should_fail = false,
-                      const Endpoint& endpoint = Endpoint("127.0.0.1", 8001)) {
+  MediatorTestFixture& register_subscriber(uint64_t id,
+                                           uint64_t node_id,
+                                           const std::string& topic,
+                                           std::array<uint64_t, 2> message_hash,
+                                           bool should_fail = false,
+                                           const Endpoint& endpoint = Endpoint("127.0.0.1", 8001)) {
     // Registration socket
     auto reg_socket = socket_manager_.create_socket();
     msg::mediator::SubInfo sub_info;
@@ -99,12 +93,11 @@ public:
   }
 
   // Configure subscriber deregistration
-  MediatorTestFixture&
-  deregister_subscriber(uint64_t id,
-                        uint64_t node_id,
-                        const std::string& topic,
-                        std::array<uint64_t, 2> message_hash,
-                        const Endpoint& endpoint = Endpoint("127.0.0.1", 8001)) {
+  MediatorTestFixture& deregister_subscriber(uint64_t id,
+                                             uint64_t node_id,
+                                             const std::string& topic,
+                                             std::array<uint64_t, 2> message_hash,
+                                             const Endpoint& endpoint = Endpoint("127.0.0.1", 8001)) {
     auto socket = socket_manager_.create_socket();
     msg::mediator::SubInfo sub_info;
     sub_info.node_id = node_id;
@@ -124,8 +117,7 @@ public:
                                         std::array<uint64_t, 2> request_hash,
                                         std::array<uint64_t, 2> response_hash,
                                         bool should_fail = false,
-                                        const Endpoint& endpoint = Endpoint("127.0.0.1",
-                                                                            8001)) {
+                                        const Endpoint& endpoint = Endpoint("127.0.0.1", 8001)) {
     // Registration socket
     auto reg_socket = socket_manager_.create_socket();
     msg::mediator::SrvInfo srv_info;
@@ -147,8 +139,7 @@ public:
                                           const std::string& service,
                                           std::array<uint64_t, 2> request_hash,
                                           std::array<uint64_t, 2> response_hash,
-                                          const Endpoint& endpoint = Endpoint("127.0.0.1",
-                                                                              8001)) {
+                                          const Endpoint& endpoint = Endpoint("127.0.0.1", 8001)) {
     auto socket = socket_manager_.create_socket();
     msg::mediator::SrvInfo srv_info;
     srv_info.id = id;
@@ -163,14 +154,13 @@ public:
   }
 
   // Configure service client request
-  MediatorTestFixture&
-  request_service_client(uint64_t node_id,
-                         const std::string& service,
-                         std::array<uint64_t, 2> request_hash,
-                         std::array<uint64_t, 2> response_hash,
-                         uint64_t srv_id,
-                         bool should_fail = false,
-                         const Endpoint& endpoint = Endpoint("127.0.0.1", 8001)) {
+  MediatorTestFixture& request_service_client(uint64_t node_id,
+                                              const std::string& service,
+                                              std::array<uint64_t, 2> request_hash,
+                                              std::array<uint64_t, 2> response_hash,
+                                              uint64_t srv_id,
+                                              bool should_fail = false,
+                                              const Endpoint& endpoint = Endpoint("127.0.0.1", 8001)) {
     // Registration socket
     auto reg_socket = socket_manager_.create_socket();
     msg::mediator::SrvRequest srv_req;
@@ -226,9 +216,8 @@ public:
   }
 
   // Configure system info get request
-  MediatorTestFixture& request_system_info(uint64_t node_id,
-                                           const msg::mediator::SystemInfo& info,
-                                           bool should_fail = false) {
+  MediatorTestFixture&
+  request_system_info(uint64_t node_id, const msg::mediator::SystemInfo& info, bool should_fail = false) {
     auto socket = socket_manager_.create_socket();
     SocketBuilder(socket).as_med_sys_info_request(info, node_id, should_fail);
     return *this;
@@ -236,32 +225,27 @@ public:
 
   // Configure subscriber notification
   MediatorTestFixture& notify_subscriber(uint64_t id,
+                                         const Endpoint& endpoint,
                                          const std::string& topic,
                                          std::array<uint64_t, 2> message_hash,
                                          const msg::mediator::SubNotify& notify) {
     auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket).as_med_sub_notify(notify);
+    SocketBuilder(socket).as_med_sub_notify(endpoint, notify);
     return *this;
   }
 
   // Configure server
-  MediatorTestFixture&
-  create_server(const Endpoint& endpoint = Endpoint("127.0.0.1", 0),
-                const Endpoint& bound_endpoint = Endpoint("127.0.0.1", 8001),
-                int accept_count = 0) {
+  MediatorTestFixture& create_server(const Endpoint& endpoint = Endpoint("127.0.0.1", 0),
+                                     const Endpoint& bound_endpoint = Endpoint("127.0.0.1", 8001),
+                                     int accept_count = 0) {
     auto socket = socket_manager_.create_socket();
     SocketBuilder(socket).as_server(
-        endpoint,
-        bound_endpoint,
-        [this]() { return this->socket_manager_.get_factory()(); },
-        accept_count);
+        endpoint, bound_endpoint, [this]() { return this->socket_manager_.get_factory()(); }, accept_count);
     return *this;
   }
 
   // Build and return the configured node
-  std::unique_ptr<Mediator> build() {
-    return std::make_unique<Mediator>(endpoint_, socket_manager_.get_factory());
-  }
+  std::unique_ptr<Mediator> build() { return std::make_unique<Mediator>(endpoint_, socket_manager_.get_factory()); }
 
 private:
   SocketManager socket_manager_;

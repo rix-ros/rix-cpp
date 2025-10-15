@@ -7,32 +7,38 @@ using namespace rix;
 TEST(SimplePublisherTest, Create) {
   msg::mediator::NodeInfo node_info;
   msg::mediator::PubInfo pub_info;
-  NodeTestFixture()
-      .register_node("simple_publisher", node_info)
-      .register_publisher<msg::standard::Header>("/chatter", pub_info)
-      .deregister_node(node_info)
-      .deregister_publisher(pub_info)
-      .build<SimplePublisher>(
-          [](NodeTestFixture& fixture, std::unique_ptr<SimplePublisher> node) { EXPECT_TRUE(node->ok()); }, 1.0, 0);
+  TestFixture()
+      .create_node("simple_publisher", node_info)
+      .create_publisher<msg::standard::Header>("/chatter", pub_info, node_info)
+      .destroy_node(node_info)
+      .destroy_publisher(pub_info)
+      .build<SimplePublisher>([](TestFixture& fixture) {
+        SimplePublisher node(1.0, 0);
+        EXPECT_TRUE(node.ok());
+      });
 }
 
 TEST(SimplePublisherTest, CreateNodeRegisterFailure) {
   msg::mediator::NodeInfo node_info;
-  NodeTestFixture()
-      .register_node("simple_publisher", node_info, true) // Simulate failure
-      .build<SimplePublisher>(
-          [](NodeTestFixture& fixture, std::unique_ptr<SimplePublisher> node) { EXPECT_FALSE(node->ok()); }, 1.0, 0);
+  TestFixture()
+      .create_node("simple_publisher", node_info, true) // Simulate failure
+      .build<SimplePublisher>([](TestFixture& fixture) {
+        SimplePublisher node(1.0, 0);
+        EXPECT_FALSE(node.ok());
+      });
 }
 
 TEST(SimplePublisherTest, CreatePublisherRegisterFailure) {
   msg::mediator::NodeInfo node_info;
   msg::mediator::PubInfo pub_info;
-  NodeTestFixture()
-      .register_node("simple_publisher", node_info)
-      .register_publisher<msg::standard::Header>("/chatter", pub_info, true) // Simulate failure
-      .deregister_node(node_info)
-      .build<SimplePublisher>(
-          [](NodeTestFixture& fixture, std::unique_ptr<SimplePublisher> node) { EXPECT_FALSE(node->ok()); }, 1.0, 0);
+  TestFixture()
+      .create_node("simple_publisher", node_info)
+      .create_publisher<msg::standard::Header>("/chatter", pub_info, node_info, true) // Simulate failure
+      .destroy_node(node_info)
+      .build<SimplePublisher>([](TestFixture& fixture) {
+        SimplePublisher node(1.0, 0);
+        EXPECT_FALSE(node.ok());
+      });
 }
 
 TEST(SimplePublisherTest, SpinWithOperationNotifications) {
@@ -49,28 +55,26 @@ TEST(SimplePublisherTest, SpinWithOperationNotifications) {
   std::shared_ptr<MockClock> clock;
   msg::mediator::NodeInfo node_info;
   msg::mediator::PubInfo pub_info;
-  NodeTestFixture()
-      .enable_debug_clock(clock)
-      .register_node("simple_publisher", node_info)
-      .register_publisher<msg::standard::Header>("/chatter", pub_info, false, 1)
+  TestFixture()
+      .enable_clock(clock)
+      .create_node("simple_publisher", node_info)
+      .create_publisher<msg::standard::Header>("/chatter", pub_info, node_info, false, 1)
       .enable_operation_notifications()
-      .create_pub_connection(messages)
+      .accept_subscriber(messages)
       .disable_operation_notifications()
-      .deregister_node(node_info)
-      .deregister_publisher(pub_info)
-      .build<SimplePublisher>(
-          [clock](NodeTestFixture& fixture, std::unique_ptr<SimplePublisher> node) {
-            auto conn = fixture.get_connection_socket(0);
+      .destroy_node(node_info)
+      .destroy_publisher(pub_info)
+      .build<SimplePublisher>([clock](TestFixture& fixture) {
+        SimplePublisher node(1.0, 0);
+        auto conn = fixture.get_connection_socket(0);
 
-            EXPECT_TRUE(node->ok());
-            for (int i = 0; i < 5; i++) {
-              clock->current_time += Duration(1.0);
-              node->spin_once();
-              EXPECT_TRUE(conn->wait_for_operations(1, std::chrono::milliseconds(1250)));
-            }
-          },
-          1,
-          0);
+        EXPECT_TRUE(node.ok());
+        for (int i = 0; i < 5; i++) {
+          clock->sleep_for(Duration(1.0));
+          node.spin_once();
+          EXPECT_TRUE(conn->wait_for_operations(1, std::chrono::milliseconds(1250)));
+        }
+      });
 }
 
 // Recommended way to run tests for multithreaded nodes that use poller
@@ -88,26 +92,24 @@ TEST(SimplePublisherTest, SpinWithPollerAndOperationNotifications) {
   std::shared_ptr<MockClock> clock;
   msg::mediator::NodeInfo node_info;
   msg::mediator::PubInfo pub_info;
-  NodeTestFixture()
-      .enable_debug_clock(clock)
+  TestFixture()
+      .enable_clock(clock)
       .enable_poller(5)
       .enable_operation_notifications()
-      .register_node("simple_publisher", node_info)
-      .register_publisher<msg::standard::Header>("/chatter", pub_info, false, 1)
-      .create_pub_connection(messages)
-      .deregister_node(node_info)
-      .deregister_publisher(pub_info)
-      .build<SimplePublisher>(
-          [clock](NodeTestFixture& fixture, std::unique_ptr<SimplePublisher> node) {
-            auto conn = fixture.get_connection_socket(0);
+      .create_node("simple_publisher", node_info)
+      .create_publisher<msg::standard::Header>("/chatter", pub_info, node_info, false, 1)
+      .accept_subscriber(messages)
+      .destroy_node(node_info)
+      .destroy_publisher(pub_info)
+      .build<SimplePublisher>([clock](TestFixture& fixture) {
+        SimplePublisher node(1.0, 0);
+        auto conn = fixture.get_connection_socket(0);
 
-            EXPECT_TRUE(node->ok());
-            for (int i = 0; i < 5; i++) {
-              clock->current_time += Duration(1.0);
-              node->spin_once();
-              EXPECT_TRUE(conn->wait_for_operations(1, std::chrono::milliseconds(1250)));
-            }
-          },
-          1,
-          0);
+        EXPECT_TRUE(node.ok());
+        for (int i = 0; i < 5; i++) {
+          clock->sleep_for(Duration(1.0));
+          node.spin_once();
+          EXPECT_TRUE(conn->wait_for_operations(1, std::chrono::milliseconds(1250)));
+        }
+      });
 }

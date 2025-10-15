@@ -7,32 +7,38 @@ using namespace rix;
 TEST(SimpleSubscriberTest, Create) {
   msg::mediator::NodeInfo node_info;
   msg::mediator::SubInfo sub_info;
-  NodeTestFixture()
-      .register_node("simple_subscriber", node_info)
-      .register_subscriber<msg::standard::Header>("/chatter", sub_info)
-      .deregister_node(node_info)
-      .deregister_subscriber(sub_info)
-      .build<SimpleSubscriber>(
-          [](NodeTestFixture& fixture, std::unique_ptr<SimpleSubscriber> node) { EXPECT_TRUE(node->ok()); }, 0);
+  TestFixture()
+      .create_node("simple_subscriber", node_info)
+      .create_subscriber<msg::standard::Header>("/chatter", sub_info, node_info)
+      .destroy_node(node_info)
+      .destroy_subscriber(sub_info)
+      .build<SimpleSubscriber>([](TestFixture& fixture) {
+        SimpleSubscriber node(0);
+        EXPECT_TRUE(node.ok());
+      });
 }
 
 TEST(SimpleSubscriberTest, CreateNodeRegisterFailure) {
   msg::mediator::NodeInfo node_info;
-  NodeTestFixture()
-      .register_node("simple_subscriber", node_info, true) // Simulate failure
-      .build<SimpleSubscriber>(
-          [](NodeTestFixture& fixture, std::unique_ptr<SimpleSubscriber> node) { EXPECT_FALSE(node->ok()); }, 0);
+  TestFixture()
+      .create_node("simple_subscriber", node_info, true) // Simulate failure
+      .build<SimpleSubscriber>([](TestFixture& fixture) {
+        SimpleSubscriber node(0);
+        EXPECT_FALSE(node.ok());
+      });
 }
 
 TEST(SimpleSubscriberTest, CreatePublisherRegisterFailure) {
   msg::mediator::NodeInfo node_info;
   msg::mediator::SubInfo sub_info;
-  NodeTestFixture()
-      .register_node("simple_subscriber", node_info)
-      .register_subscriber<msg::standard::Header>("/chatter", sub_info, true) // Simulate failure
-      .deregister_node(node_info)
-      .build<SimpleSubscriber>(
-          [](NodeTestFixture& fixture, std::unique_ptr<SimpleSubscriber> node) { EXPECT_FALSE(node->ok()); }, 0);
+  TestFixture()
+      .create_node("simple_subscriber", node_info)
+      .create_subscriber<msg::standard::Header>("/chatter", sub_info, node_info, true) // Simulate failure
+      .destroy_node(node_info)
+      .build<SimpleSubscriber>([](TestFixture& fixture) {
+        SimpleSubscriber node(0);
+        EXPECT_FALSE(node.ok());
+      });
 }
 
 // Recommended way to run tests for single-threaded nodes that do not use poller
@@ -47,25 +53,24 @@ TEST(SimpleSubscriberTest, SpinWithOperationNotifications) {
 
   msg::mediator::NodeInfo node_info;
   msg::mediator::SubInfo sub_info;
-  NodeTestFixture()
+  TestFixture()
       .enable_operation_notifications()
-      .register_node("simple_subscriber", node_info)
-      .register_subscriber<msg::standard::Header>("/chatter", sub_info, false, 1)
-      .create_sub_connection<msg::standard::Header>("/chatter", {Endpoint(DEFAULT_IP, 8001)})
-      .create_sub_client(Endpoint(DEFAULT_IP, 8001), messages)
-      .deregister_node(node_info)
-      .deregister_subscriber(sub_info)
-      .build<SimpleSubscriber>(
-          [](NodeTestFixture& fixture, std::unique_ptr<SimpleSubscriber> node) {
-            auto client = fixture.get_client_socket(0);
+      .create_node("simple_subscriber", node_info)
+      .create_subscriber<msg::standard::Header>("/chatter", sub_info, node_info, false, 1)
+      .accept_notification<msg::standard::Header>("/chatter", {Endpoint(DEFAULT_IP, 8001)})
+      .connect_to_publisher(Endpoint(DEFAULT_IP, 8001), messages)
+      .destroy_node(node_info)
+      .destroy_subscriber(sub_info)
+      .build<SimpleSubscriber>([](TestFixture& fixture) {
+        SimpleSubscriber node(0);
+        auto client = fixture.get_client_socket(0);
 
-            EXPECT_TRUE(node->ok());
-            for (int i = 0; i < 5; i++) {
-              node->spin_once();
-              EXPECT_TRUE(client->wait_for_operations(1, std::chrono::milliseconds(1250)));
-            }
-          },
-          0);
+        EXPECT_TRUE(node.ok());
+        for (int i = 0; i < 5; i++) {
+          node.spin_once();
+          EXPECT_TRUE(client->wait_for_operations(1, std::chrono::milliseconds(1250)));
+        }
+      });
 }
 
 // Recommended way to run tests for multithreaded nodes that use poller
@@ -80,24 +85,23 @@ TEST(SimpleSubscriberTest, SpinWithPollerAndOperationNotifications) {
 
   msg::mediator::NodeInfo node_info;
   msg::mediator::SubInfo sub_info;
-  NodeTestFixture()
+  TestFixture()
       .enable_poller(5)
       .enable_operation_notifications()
-      .register_node("simple_subscriber", node_info)
-      .register_subscriber<msg::standard::Header>("/chatter", sub_info, false, 1)
-      .create_sub_connection<msg::standard::Header>("/chatter", {Endpoint(DEFAULT_IP, 8001)})
-      .create_sub_client(Endpoint(DEFAULT_IP, 8001), messages)
-      .deregister_node(node_info)
-      .deregister_subscriber(sub_info)
-      .build<SimpleSubscriber>(
-          [](NodeTestFixture& fixture, std::unique_ptr<SimpleSubscriber> node) {
-            auto client = fixture.get_client_socket(0);
+      .create_node("simple_subscriber", node_info)
+      .create_subscriber<msg::standard::Header>("/chatter", sub_info, node_info, false, 1)
+      .accept_notification<msg::standard::Header>("/chatter", {Endpoint(DEFAULT_IP, 8001)})
+      .connect_to_publisher(Endpoint(DEFAULT_IP, 8001), messages)
+      .destroy_node(node_info)
+      .destroy_subscriber(sub_info)
+      .build<SimpleSubscriber>([](TestFixture& fixture) {
+        SimpleSubscriber node(0);
+        auto client = fixture.get_client_socket(0);
 
-            EXPECT_TRUE(node->ok());
-            for (int i = 0; i < 5; i++) {
-              node->spin_once();
-              EXPECT_TRUE(client->wait_for_operations(1, std::chrono::milliseconds(1250)));
-            }
-          },
-          0);
+        EXPECT_TRUE(node.ok());
+        for (int i = 0; i < 5; i++) {
+          node.spin_once();
+          EXPECT_TRUE(client->wait_for_operations(1, std::chrono::milliseconds(1250)));
+        }
+      });
 }

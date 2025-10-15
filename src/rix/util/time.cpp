@@ -7,6 +7,12 @@
 
 namespace rix {
 
+Time Clock::now() const noexcept { return Time(detail::clock_t::now()); }
+
+void Clock::sleep_for(const Duration& duration) { std::this_thread::sleep_for(duration.raw()); }
+
+void Clock::sleep_until(const Time& time) { std::this_thread::sleep_until(time.raw()); }
+
 std::string Time::to_string(bool local_time) const {
   auto time = Type::clock::to_time_t(std::chrono::time_point_cast<std::chrono::seconds>(tp));
   std::stringstream ss;
@@ -41,11 +47,11 @@ msg::standard::Time Time::to_msg() {
   return msg;
 }
 
-Time Time::now() {
-  Time time;
-  time.tp = clock_->now();
-  return time;
-}
+Time Time::now() { return clock_->now(); }
+
+void Time::sleep_for(const Duration& duration) { clock_->sleep_for(duration); }
+
+void Time::sleep_until(const Time& time) { clock_->sleep_until(time); }
 
 Time::Time() : tp{} {}
 
@@ -71,19 +77,19 @@ Time& Time::operator=(const Time& other) {
   return *this;
 }
 
-Time Time::operator+(const Duration& other) const { return Time(tp + other.get()); }
+Time Time::operator+(const Duration& other) const { return Time(tp + other.raw()); }
 
-Time Time::operator-(const Duration& other) const { return Time(tp - other.get()); }
+Time Time::operator-(const Duration& other) const { return Time(tp - other.raw()); }
 
-Duration Time::operator-(const Time& other) const { return Duration(tp - other.get()); }
+Duration Time::operator-(const Time& other) const { return Duration(tp - other.raw()); }
 
 Time& Time::operator+=(const Duration& other) {
-  tp += other.get();
+  tp += other.raw();
   return *this;
 }
 
 Time& Time::operator-=(const Duration& other) {
-  tp -= other.get();
+  tp -= other.raw();
   return *this;
 }
 
@@ -137,9 +143,9 @@ int64_t Time::to_microseconds(RoundType type) const {
 
 int64_t Time::to_nanoseconds() const { return (tp.time_since_epoch()).count(); }
 
-const Time::Type& Time::get() const { return tp; }
+const Time::Type& Time::raw() const { return tp; }
 
-Time::Type& Time::get() { return tp; }
+Time::Type& Time::raw() { return tp; }
 
 Duration::Duration() : d{} {}
 
@@ -163,11 +169,11 @@ Duration& Duration::operator=(const Duration& other) {
   return *this;
 }
 
-Time Duration::operator+(const Time& other) const { return Time(other.get() + d); }
+Time Duration::operator+(const Time& other) const { return Time(other.raw() + d); }
 
-Duration Duration::operator+(const Duration& other) const { return Duration(d + other.get()); }
+Duration Duration::operator+(const Duration& other) const { return Duration(d + other.raw()); }
 
-Duration Duration::operator-(const Duration& other) const { return Duration(d - other.get()); }
+Duration Duration::operator-(const Duration& other) const { return Duration(d - other.raw()); }
 
 Duration Duration::operator*(double factor) const {
   return Duration(std::chrono::duration_cast<Duration::Type>(d * factor));
@@ -184,12 +190,12 @@ Duration Duration::operator/(int factor) const { return Duration(d / factor); }
 Duration Duration::operator-() const { return Duration(-d); }
 
 Duration& Duration::operator+=(const Duration& other) {
-  d += other.get();
+  d += other.raw();
   return *this;
 }
 
 Duration& Duration::operator-=(const Duration& other) {
-  d -= other.get();
+  d -= other.raw();
   return *this;
 }
 
@@ -271,13 +277,9 @@ int64_t Duration::to_microseconds(Time::RoundType type) const {
 
 int64_t Duration::to_nanoseconds() const { return (d).count(); }
 
-const Duration::Type& Duration::get() const { return d; }
+const Duration::Type& Duration::raw() const { return d; }
 
-Duration::Type& Duration::get() { return d; }
-
-void sleep_for(const Duration& duration) { std::this_thread::sleep_for(duration.get()); }
-
-void sleep_until(const Time& time) { std::this_thread::sleep_until(time.get()); }
+Duration::Type& Duration::raw() { return d; }
 
 Timer::Timer() {}
 
@@ -321,7 +323,7 @@ Rate& Rate::operator=(const Rate& other) {
 bool Rate::sleep() {
   auto now = Time::now();
   if (start_ + period_ > now) {
-    sleep_until(start_ + period_);
+    Time::sleep_until(start_ + period_);
     start_ = Time::now();
     return true;
   } else {

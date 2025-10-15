@@ -25,14 +25,18 @@ class GenericClock {
 public:
   GenericClock() = default;
   virtual ~GenericClock() = default;
-  virtual detail::time_t now() const noexcept = 0;
+  virtual Time now() const noexcept = 0;
+  virtual void sleep_for(const Duration& duration) = 0;
+  virtual void sleep_until(const Time& time) = 0;
 };
 
 class Clock : public GenericClock {
 public:
   Clock() = default;
   ~Clock() = default;
-  virtual detail::time_t now() const noexcept { return detail::clock_t::now(); }
+  Time now() const noexcept override;
+  void sleep_for(const Duration& duration) override;
+  void sleep_until(const Time& time) override;
 };
 
 class Time {
@@ -43,6 +47,18 @@ public:
 
   static void set_clock(std::shared_ptr<GenericClock> clock) { clock_ = clock; }
   static Time now();
+
+  /**
+   * @brief Sleep for a given duration
+   * @param duration The duration to sleep for.
+   */
+  static void sleep_for(const Duration& duration);
+
+  /**
+   * @brief Sleep until a given time
+   * @param time The time to sleep until.
+   */
+  static void sleep_until(const Time& time);
 
   Time();
   Time(const Type& time_point);
@@ -76,8 +92,8 @@ public:
   int64_t to_microseconds(RoundType type = RoundType::FLOOR) const;
   int64_t to_nanoseconds() const;
 
-  const Type& get() const;
-  Type& get();
+  Type& raw();
+  const Type& raw() const;
 
 private:
   Type tp;
@@ -135,32 +151,12 @@ public:
   int64_t to_microseconds(Time::RoundType type = Time::RoundType::FLOOR) const;
   int64_t to_nanoseconds() const;
 
-  const Type& get() const;
-  Type& get();
+  Type& raw();
+  const Type& raw() const;
 
 private:
   Type d;
 };
-
-class MockClock : public GenericClock {
-public:
-  MockClock() = default;
-  ~MockClock() = default;
-  detail::time_t now() const noexcept override { return current_time.get(); }
-  Time current_time{0};
-};
-
-/**
- * @brief Sleep for a given duration
- * @param duration The duration to sleep for.
- */
-void sleep_for(const Duration& duration);
-
-/**
- * @brief Sleep until a given time
- * @param time The time to sleep until.
- */
-void sleep_until(const Time& time);
 
 /**
  * @brief A class for measuring time.

@@ -7,32 +7,39 @@ using namespace rix;
 TEST(SimpleServiceTest, Create) {
   msg::mediator::NodeInfo node_info;
   msg::mediator::SrvInfo srv_info;
-  NodeTestFixture()
-      .register_node("simple_service", node_info)
-      .register_service<msg::standard::UInt32, msg::standard::String>("/alphabet", srv_info)
-      .deregister_node(node_info)
-      .deregister_service(srv_info)
-      .build<SimpleService>(
-          [](NodeTestFixture& fixture, std::unique_ptr<SimpleService> node) { EXPECT_TRUE(node->ok()); }, 0);
+  TestFixture()
+      .create_node("simple_service", node_info)
+      .create_service<msg::standard::UInt32, msg::standard::String>("/alphabet", srv_info, node_info)
+      .destroy_node(node_info)
+      .destroy_service(srv_info)
+      .build<SimpleService>([](TestFixture& fixture) {
+        SimpleService node(0);
+        EXPECT_TRUE(node.ok());
+      });
 }
 
 TEST(SimpleServiceTest, CreateNodeRegisterFailure) {
   msg::mediator::NodeInfo node_info;
-  NodeTestFixture()
-      .register_node("simple_service", node_info, true) // Simulate failure
-      .build<SimpleService>(
-          [](NodeTestFixture& fixture, std::unique_ptr<SimpleService> node) { EXPECT_FALSE(node->ok()); }, 0);
+  TestFixture()
+      .create_node("simple_service", node_info, true) // Simulate failure
+      .build<SimpleService>([](TestFixture& fixture) {
+        SimpleService node(0);
+        EXPECT_FALSE(node.ok());
+      });
 }
 
 TEST(SimpleServiceTest, CreatePublisherRegisterFailure) {
   msg::mediator::NodeInfo node_info;
   msg::mediator::SrvInfo srv_info;
-  NodeTestFixture()
-      .register_node("simple_service", node_info)
-      .register_service<msg::standard::UInt32, msg::standard::String>("/alphabet", srv_info, true) // Simulate failure
-      .deregister_node(node_info)
-      .build<SimpleService>(
-          [](NodeTestFixture& fixture, std::unique_ptr<SimpleService> node) { EXPECT_FALSE(node->ok()); }, 0);
+  TestFixture()
+      .create_node("simple_service", node_info)
+      .create_service<msg::standard::UInt32, msg::standard::String>(
+          "/alphabet", srv_info, node_info, true) // Simulate failure
+      .destroy_node(node_info)
+      .build<SimpleService>([](TestFixture& fixture) {
+        SimpleService node(0);
+        EXPECT_FALSE(node.ok());
+      });
 }
 
 // Recommended way to run tests for single-threaded nodes that do not use poller
@@ -50,25 +57,24 @@ TEST(SimpleServiceTest, SpinWithOperationNotifications) {
 
   msg::mediator::NodeInfo node_info;
   msg::mediator::SrvInfo srv_info;
-  NodeTestFixture()
-      .register_node("simple_service", node_info)
+  TestFixture()
+      .create_node("simple_service", node_info)
       .enable_operation_notifications()
-      .register_service<msg::standard::UInt32, msg::standard::String>("/alphabet", srv_info, false, 5)
-      .create_srv_connection(requests[0], responses[0])
-      .create_srv_connection(requests[1], responses[1])
-      .create_srv_connection(requests[2], responses[2])
-      .create_srv_connection(requests[3], responses[3])
-      .create_srv_connection(requests[4], responses[4])
-      .deregister_node(node_info)
-      .deregister_service(srv_info)
-      .build<SimpleService>(
-          [](NodeTestFixture& fixture, std::unique_ptr<SimpleService> node) {
-            EXPECT_TRUE(node->ok());
-            for (int i = 0; i < 5; i++) {
-              node->spin_once();
-              auto conn = fixture.get_connection_socket(i);
-              EXPECT_TRUE(conn->wait_for_operations(1, std::chrono::milliseconds(1250)));
-            }
-          },
-          0);
+      .create_service<msg::standard::UInt32, msg::standard::String>("/alphabet", srv_info, node_info, false, 5)
+      .accept_service_client(requests[0], responses[0])
+      .accept_service_client(requests[1], responses[1])
+      .accept_service_client(requests[2], responses[2])
+      .accept_service_client(requests[3], responses[3])
+      .accept_service_client(requests[4], responses[4])
+      .destroy_node(node_info)
+      .destroy_service(srv_info)
+      .build<SimpleService>([](TestFixture& fixture) {
+        SimpleService node(0);
+        EXPECT_TRUE(node.ok());
+        for (int i = 0; i < 5; i++) {
+          node.spin_once();
+          auto conn = fixture.get_connection_socket(i);
+          EXPECT_TRUE(conn->wait_for_operations(1, std::chrono::milliseconds(1250)));
+        }
+      });
 }
