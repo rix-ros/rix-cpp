@@ -8,6 +8,7 @@
 - 🧩 **Modular:** Easily extendable with publishers, subscribers, services, timers, and more.
 - 🤖 **Robotics-Ready:** Designed to meet the demands of modern robotics applications.
 - 🔒 **Reliable:** TCP-based communication ensures message integrity; loosely-coupled nodes provide system stability across distributed environments.
+- 📝 **Testable:** Test fixture designed to enable users to write readable, straight-forward unit tests for their RIX nodes.
 
 ### Support for Robotics Applications
 - 🌳 **Transformation Trees:** Built-in support for 3D spatial transform trees (`rix::tf`), including frame graph management, transform broadcasting/listening, and time-based interpolation.
