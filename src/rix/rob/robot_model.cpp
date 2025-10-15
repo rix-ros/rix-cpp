@@ -11,27 +11,40 @@ namespace rix {
 
 namespace detail {
 
-bool convert_json_sphere(const Json &src, Sphere &dst);
-bool convert_json_box(const Json &src, Box &dst);
-bool convert_json_cylinder(const Json &src, Cylinder &dst);
-bool convert_json_mesh(const Json &src, Mesh &dst);
-bool convert_json_material(const Json &src, Material &dst);
-bool convert_json_origin(const Json &src, msg::geometry::Transform &dst);
-bool convert_json_inertial(const Json &src, Inertial &dst);
-bool convert_json_geometry(const Json &src, std::shared_ptr<Geometry> &dst);
-bool convert_json_visual(const Json &src, Visual &dst);
-bool convert_json_collision(const Json &src, Collision &dst);
-bool convert_json_joint_dynamics(const Json &src, JointDynamics &dst);
-bool convert_json_joint_limits(const Json &src, JointLimits &dst);
-std::shared_ptr<Joint> convert_json_joint(const Json &src);
-std::shared_ptr<Link> convert_json_link(const Json &src, const std::map<std::string, std::string> &parent_map,
-                                        const std::map<std::string, std::vector<std::string>> &children_map);
-void parse_jrdf(Json &json, std::map<std::string, std::shared_ptr<Joint>> &joints,
-                std::map<std::string, std::shared_ptr<Link>> &links, std::string &root);
+bool convert_json_sphere(const Json& src, Sphere& dst);
+bool convert_json_box(const Json& src, Box& dst);
+bool convert_json_cylinder(const Json& src, Cylinder& dst);
+bool convert_json_mesh(const Json& src, Mesh& dst);
+bool convert_json_material(const Json& src, Material& dst);
+bool convert_json_origin(const Json& src, msg::geometry::Transform& dst);
+bool convert_json_inertial(const Json& src, Inertial& dst);
+bool convert_json_geometry(const Json& src, std::shared_ptr<Geometry>& dst);
+bool convert_json_visual(const Json& src, Visual& dst);
+bool convert_json_collision(const Json& src, Collision& dst);
+bool convert_json_joint_dynamics(const Json& src, JointDynamics& dst);
+bool convert_json_joint_limits(const Json& src, JointLimits& dst);
+std::shared_ptr<Joint> convert_json_joint(const Json& src);
+std::shared_ptr<Link> convert_json_link(const Json& src,
+                                        const std::map<std::string, std::string>& parent_map,
+                                        const std::map<std::string, std::vector<std::string>>& children_map);
+void parse_jrdf(Json& json,
+                std::map<std::string, std::shared_ptr<Joint>>& joints,
+                std::map<std::string, std::shared_ptr<Link>>& links,
+                std::string& root);
 
 } // namespace detail
 
-RobotModel RobotModel::from_json(const std::string &json_str) {
+RobotModel RobotModel::from_model(const std::string& name) {
+  std::string jrdf_path = get_env("HOME", std::string());
+  if (jrdf_path.empty()) return RobotModel();
+  if (jrdf_path[jrdf_path.size() - 1] != '/') {
+    jrdf_path.push_back('/');
+  }
+  jrdf_path.append(".rix/jrdf/models/" + name + "/model.json");
+  return RobotModel(jrdf_path);
+}
+
+RobotModel RobotModel::from_json(const std::string& json_str) {
   RobotModel robot;
   Json json = Json::parse(json_str);
   detail::parse_jrdf(json, robot.joints, robot.links, robot.root);
@@ -40,7 +53,7 @@ RobotModel RobotModel::from_json(const std::string &json_str) {
 
 RobotModel::RobotModel() : root(""), world_to_root(transform_identity()) {}
 
-RobotModel::RobotModel(const std::string &file_path) : world_to_root(transform_identity()) {
+RobotModel::RobotModel(const std::string& file_path) : world_to_root(transform_identity()) {
   std::ifstream file(file_path);
   if (!file.is_open()) {
     return;
@@ -49,10 +62,10 @@ RobotModel::RobotModel(const std::string &file_path) : world_to_root(transform_i
   detail::parse_jrdf(json, joints, links, root);
 }
 
-RobotModel::RobotModel(const RobotModel &other)
+RobotModel::RobotModel(const RobotModel& other)
     : root(other.root), joints(other.joints), links(other.links), world_to_root(other.world_to_root) {}
 
-RobotModel &RobotModel::operator=(const RobotModel &other) {
+RobotModel& RobotModel::operator=(const RobotModel& other) {
   if (this != &other) {
     joints = other.joints;
     links = other.links;
@@ -84,10 +97,10 @@ std::vector<std::string> RobotModel::get_link_names() const {
   return names;
 }
 
-bool RobotModel::has_joint(const std::string &name) const { return joints.find(name) != joints.end(); }
-bool RobotModel::has_link(const std::string &name) const { return links.find(name) != links.end(); }
+bool RobotModel::has_joint(const std::string& name) const { return joints.find(name) != joints.end(); }
+bool RobotModel::has_link(const std::string& name) const { return links.find(name) != links.end(); }
 
-std::shared_ptr<Joint> RobotModel::get_joint(const std::string &name) const {
+std::shared_ptr<Joint> RobotModel::get_joint(const std::string& name) const {
   auto it = joints.find(name);
   if (it == joints.end()) {
     return nullptr;
@@ -95,7 +108,7 @@ std::shared_ptr<Joint> RobotModel::get_joint(const std::string &name) const {
   return it->second;
 }
 
-std::shared_ptr<Link> RobotModel::get_link(const std::string &name) const {
+std::shared_ptr<Link> RobotModel::get_link(const std::string& name) const {
   auto it = links.find(name);
   if (it == links.end()) {
     return nullptr;
@@ -107,7 +120,7 @@ std::shared_ptr<Link> RobotModel::get_root() const { return links.at(root); }
 
 std::vector<std::shared_ptr<Link>> RobotModel::get_end_effectors() const {
   std::vector<std::shared_ptr<Link>> end_effectors;
-  for (const auto &pair : links) {
+  for (const auto& pair : links) {
     if (pair.second->is_end_effector()) {
       end_effectors.push_back(pair.second);
     }
@@ -116,7 +129,7 @@ std::vector<std::shared_ptr<Link>> RobotModel::get_end_effectors() const {
 }
 
 /**< TODO: Implement the get_joints_in_chain method */
-std::vector<std::shared_ptr<Joint>> RobotModel::get_joints_in_chain(const std::string &link_name) const {
+std::vector<std::shared_ptr<Joint>> RobotModel::get_joints_in_chain(const std::string& link_name) const {
   auto it = links.find(link_name);
   if (it == links.end()) {
     return {};
@@ -154,17 +167,17 @@ msg::geometry::TF RobotModel::get_transforms() const {
     auto link = link_stack.top();
     link_stack.pop();
 
-    for (const std::string &child : link->children()) {
+    for (const std::string& child : link->children()) {
       std::shared_ptr<Joint> child_joint = joints.at(child);
-      const std::string &grandchild_name = child_joint->child();
+      const std::string& grandchild_name = child_joint->child();
 
       tf.transforms[index].header.stamp = stamp;
       tf.transforms[index].header.seq = index;
       tf.transforms[index].header.frame_id = link->name();
       tf.transforms[index].child_frame_id = grandchild_name;
 
-      const Eigen::Affine3d &O_J = msg_to_eigen(child_joint->origin());
-      const Eigen::Affine3d &X = msg_to_eigen(child_joint->transform());
+      const Eigen::Affine3d& O_J = msg_to_eigen(child_joint->origin());
+      const Eigen::Affine3d& X = msg_to_eigen(child_joint->transform());
       tf.transforms[index].transform = eigen_to_msg(O_J * X);
 
       index++;
@@ -194,8 +207,8 @@ msg::geometry::TF RobotModel::get_static_transforms() const {
   transform.header.stamp = Time::now().to_msg();
   transform.header.seq = 0;
 
-  for (const auto &pair : links) {
-    const std::string &link_name = pair.first;
+  for (const auto& pair : links) {
+    const std::string& link_name = pair.first;
     std::shared_ptr<Link> link = pair.second;
 
     transform.header.frame_id = link_name;
@@ -205,7 +218,7 @@ msg::geometry::TF RobotModel::get_static_transforms() const {
     transform.header.seq++;
 
     size_t visual_index = 0;
-    for (const auto &visual : link->visuals()) {
+    for (const auto& visual : link->visuals()) {
       transform.child_frame_id = link_name + "/visual/" + std::to_string(visual_index);
       transform.transform = visual.origin;
       tf.transforms.push_back(transform);
@@ -214,7 +227,7 @@ msg::geometry::TF RobotModel::get_static_transforms() const {
     }
 
     size_t collision_index = 0;
-    for (const auto &collision : link->collisions()) {
+    for (const auto& collision : link->collisions()) {
       transform.child_frame_id = link_name + "/collision/" + std::to_string(collision_index);
       transform.transform = collision.origin;
       tf.transforms.push_back(transform);
@@ -225,17 +238,17 @@ msg::geometry::TF RobotModel::get_static_transforms() const {
   return tf;
 }
 
-void RobotModel::set_state(const msg::sensor::JS &js) {
-  for (const auto &joint_state : js.joint_states) {
+void RobotModel::set_state(const msg::sensor::JS& js) {
+  for (const auto& joint_state : js.joint_states) {
     set_state(joint_state);
   }
 }
 
-void RobotModel::set_state(const msg::sensor::JointState &js) {
+void RobotModel::set_state(const msg::sensor::JointState& js) {
   set_state(js.name, js.position, js.velocity, js.effort);
 }
 
-void RobotModel::set_state(const std::string &joint_name, double position, double velocity, double effort) {
+void RobotModel::set_state(const std::string& joint_name, double position, double velocity, double effort) {
   auto it = joints.find(joint_name);
   if (it == joints.end()) {
     return;
@@ -243,13 +256,13 @@ void RobotModel::set_state(const std::string &joint_name, double position, doubl
   it->second->set_state(position, velocity, effort);
 }
 
-void RobotModel::set_world_to_root(const msg::geometry::Transform &transform) { world_to_root = transform; }
+void RobotModel::set_world_to_root(const msg::geometry::Transform& transform) { world_to_root = transform; }
 
-const msg::geometry::Transform &RobotModel::get_world_to_root() const { return world_to_root; }
+const msg::geometry::Transform& RobotModel::get_world_to_root() const { return world_to_root; }
 
 namespace detail {
 
-bool convert_json_sphere(const Json &src, Sphere &dst) {
+bool convert_json_sphere(const Json& src, Sphere& dst) {
   if (!src.is_object())
     return false;
   if (!src.contains("radius"))
@@ -261,7 +274,7 @@ bool convert_json_sphere(const Json &src, Sphere &dst) {
   return true;
 }
 
-bool convert_json_box(const Json &src, Box &dst) {
+bool convert_json_box(const Json& src, Box& dst) {
   if (!src.is_object())
     return false;
   if (!src.contains("size"))
@@ -283,7 +296,7 @@ bool convert_json_box(const Json &src, Box &dst) {
   return true;
 }
 
-bool convert_json_cylinder(const Json &src, Cylinder &dst) {
+bool convert_json_cylinder(const Json& src, Cylinder& dst) {
   if (!src.is_object())
     return false;
   if (!src.contains("radius"))
@@ -299,7 +312,7 @@ bool convert_json_cylinder(const Json &src, Cylinder &dst) {
   return true;
 }
 
-bool convert_json_mesh(const Json &src, Mesh &dst) {
+bool convert_json_mesh(const Json& src, Mesh& dst) {
   if (!src.is_object())
     return false;
   if (!src.contains("filename"))
@@ -327,7 +340,7 @@ bool convert_json_mesh(const Json &src, Mesh &dst) {
   return true;
 }
 
-bool convert_json_material(const Json &src, Material &dst) {
+bool convert_json_material(const Json& src, Material& dst) {
   if (!src.is_object())
     return false;
 
@@ -358,7 +371,7 @@ bool convert_json_material(const Json &src, Material &dst) {
   return true;
 }
 
-bool convert_json_origin(const Json &src, msg::geometry::Transform &dst) {
+bool convert_json_origin(const Json& src, msg::geometry::Transform& dst) {
   if (!src.is_array())
     return false;
   if (src.size() != 6)
@@ -387,7 +400,7 @@ bool convert_json_origin(const Json &src, msg::geometry::Transform &dst) {
   return true;
 }
 
-bool convert_json_inertial(const Json &src, Inertial &dst) {
+bool convert_json_inertial(const Json& src, Inertial& dst) {
   if (!src.is_object())
     return false;
   dst.origin = transform_identity();
@@ -436,7 +449,7 @@ bool convert_json_inertial(const Json &src, Inertial &dst) {
   return true;
 }
 
-bool convert_json_geometry(const Json &src, std::shared_ptr<Geometry> &dst) {
+bool convert_json_geometry(const Json& src, std::shared_ptr<Geometry>& dst) {
   if (!src.is_object())
     return false;
   if (!src.contains("type"))
@@ -470,7 +483,7 @@ bool convert_json_geometry(const Json &src, std::shared_ptr<Geometry> &dst) {
   return true;
 }
 
-bool convert_json_visual(const Json &src, Visual &dst) {
+bool convert_json_visual(const Json& src, Visual& dst) {
   if (!src.is_object())
     return false;
   dst.origin = transform_identity();
@@ -491,7 +504,7 @@ bool convert_json_visual(const Json &src, Visual &dst) {
   return true;
 }
 
-bool convert_json_collision(const Json &src, Collision &dst) {
+bool convert_json_collision(const Json& src, Collision& dst) {
   if (!src.is_object())
     return false;
   dst.origin = transform_identity();
@@ -507,8 +520,9 @@ bool convert_json_collision(const Json &src, Collision &dst) {
   return true;
 }
 
-std::shared_ptr<Link> convert_json_link(const Json &src, const std::map<std::string, std::string> &parent_map,
-                                        const std::map<std::string, std::vector<std::string>> &children_map) {
+std::shared_ptr<Link> convert_json_link(const Json& src,
+                                        const std::map<std::string, std::string>& parent_map,
+                                        const std::map<std::string, std::vector<std::string>>& children_map) {
   if (!src.is_object())
     return nullptr;
 
@@ -563,7 +577,7 @@ std::shared_ptr<Link> convert_json_link(const Json &src, const std::map<std::str
   return std::make_shared<Link>(visuals, collisions, inertial, name, parent, children);
 }
 
-bool convert_json_joint_dynamics(const Json &src, JointDynamics &dst) {
+bool convert_json_joint_dynamics(const Json& src, JointDynamics& dst) {
   if (!src.is_object())
     return false;
   dst.damping = 0;
@@ -581,7 +595,7 @@ bool convert_json_joint_dynamics(const Json &src, JointDynamics &dst) {
   return true;
 }
 
-bool convert_json_joint_mimic(const Json &src, JointMimic &dst) {
+bool convert_json_joint_mimic(const Json& src, JointMimic& dst) {
   if (!src.is_object())
     return false;
 
@@ -608,7 +622,7 @@ bool convert_json_joint_mimic(const Json &src, JointMimic &dst) {
   return true;
 }
 
-bool convert_json_joint_limits(const Json &src, JointLimits &dst) {
+bool convert_json_joint_limits(const Json& src, JointLimits& dst) {
   if (!src.is_object())
     return false;
 
@@ -639,7 +653,7 @@ bool convert_json_joint_limits(const Json &src, JointLimits &dst) {
   return true;
 }
 
-std::shared_ptr<Joint> convert_json_joint(const Json &src) {
+std::shared_ptr<Joint> convert_json_joint(const Json& src) {
   if (!src.is_object())
     return nullptr;
 
@@ -729,8 +743,10 @@ std::shared_ptr<Joint> convert_json_joint(const Json &src) {
   return std::make_shared<Joint>(axis, origin, type, limits, dynamics, mimic, name, parent, child);
 }
 
-void parse_jrdf(Json &json, std::map<std::string, std::shared_ptr<Joint>> &joints,
-                std::map<std::string, std::shared_ptr<Link>> &links, std::string &root) {
+void parse_jrdf(Json& json,
+                std::map<std::string, std::shared_ptr<Joint>>& joints,
+                std::map<std::string, std::shared_ptr<Link>>& links,
+                std::string& root) {
   // Parse joints first to get the link's parent/children
   if (!json.is_object())
     return;

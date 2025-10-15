@@ -53,25 +53,6 @@ target_include_directories(tf PUBLIC
     $<INSTALL_INTERFACE:$ENV{HOME}/.rix/include>
 )
 
-# Build examples
-# add_executable(parameter_server examples/parameter_server.cpp)
-# target_link_libraries(parameter_server rix)
-
-# add_executable(system_info examples/system_info.cpp)
-# target_link_libraries(system_info rix)
-
-# add_executable(simple_publisher examples/simple_publisher.cpp)
-# target_link_libraries(simple_publisher rix)
-
-# add_executable(simple_subscriber examples/simple_subscriber.cpp)
-# target_link_libraries(simple_subscriber rix)
-
-# add_executable(simple_service examples/simple_service.cpp)
-# target_link_libraries(simple_service rix)
-
-# add_executable(simple_service_client examples/simple_service_client.cpp)
-# target_link_libraries(simple_service_client rix)
-
 # Build unit tests
 if(BUILD_TESTS)
     find_package(GTest REQUIRED)
@@ -89,29 +70,15 @@ if(BUILD_TESTS)
         test/message_test.cpp
     )
     target_link_libraries(message_test GTest::gtest_main GTest::gmock rix)
-    #   add_executable(node_registration_tests
-    #     unit_tests/rix/node_registration_tests.cpp
-    #   )
-    #   target_link_libraries(node_registration_tests GTest::gtest_main GTest::gmock rix)
 
-    #   add_executable(mediator_registration_tests
-    #     unit_tests/rix/mediator_registration_tests.cpp
-    #   )
-    #   target_link_libraries(mediator_registration_tests GTest::gtest_main GTest::gmock rix)
-
-    #   add_executable(message_tests
-    #     unit_tests/rix/message_tests.cpp
-    #   )
-    #   target_link_libraries(message_tests GTest::gtest_main GTest::gmock rix)
-
-    #   add_executable(tf_tests
-    #       unit_tests/tf/frame_graph.cpp
-    #       unit_tests/tf/joint.cpp
-    #       unit_tests/tf/robot_model_rx200.cpp
-    #       unit_tests/tf/robot_model_simple_bot.cpp
-    #       unit_tests/tf/kinematics_solver.cpp
-    #       unit_tests/tf/transform_buffer.cpp)
-    #   target_link_libraries(tf_tests GTest::Main tf rix)
+    add_executable(tf_tests
+        test/tf/frame_graph.cpp
+        test/tf/joint.cpp
+        test/tf/robot_model_rx200.cpp
+        test/tf/robot_model_simple_bot.cpp
+        test/tf/kinematics_solver.cpp
+        test/tf/transform_buffer.cpp)
+    target_link_libraries(tf_tests GTest::Main tf rix)
 endif()
 
 # Configure rixConfig.cmake
