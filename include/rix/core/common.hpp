@@ -22,16 +22,17 @@
 namespace rix {
 
 // Default RIXHub IP will first check RIX_RIXHUB_IP, then RIX_DEFAULT_IP, then fallback to loopback address.
-static inline std::string RIXHUB_IP{get_env("RIX_RIXHUB_IP", get_env("RIX_DEFAULT_IP", "127.0.0.1"))};
+static inline const std::string RIXHUB_IP{get_env("RIX_RIXHUB_IP", get_env("RIX_DEFAULT_IP", "127.0.0.1"))};
 
 // Default RIXHub port is 48104, can be overridden by RIX_RIXHUB_PORT environment variable
-static inline uint16_t RIXHUB_PORT{static_cast<uint16_t>(std::stoi(get_env("RIX_RIXHUB_PORT", "48104")))};
+static inline const uint16_t RIXHUB_PORT{static_cast<uint16_t>(std::stoi(get_env("RIX_RIXHUB_PORT", "48104")))};
 
 // Default IP is loopback address, can be overridden by RIX_DEFAULT_IP environment variable
-static inline std::string DEFAULT_IP{get_env("RIX_DEFAULT_IP", "127.0.0.1")};
+static inline const std::string DEFAULT_IP{get_env("RIX_DEFAULT_IP", "127.0.0.1")};
 
 enum OPCODE : uint8_t {
   STATUS_RESPONSE = 0,
+  PING,
 
   NODE_REGISTER = 80,
   SUB_REGISTER,
@@ -68,15 +69,6 @@ enum OPCODE : uint8_t {
 
 using SocketFactory = std::function<std::shared_ptr<GenericSocket>(void)>;
 using IDFactory = std::function<uint64_t(void)>;
-
-static inline bool parse_endpoint(const std::string& str, std::any& value) {
-  Endpoint endpoint(str);
-  if (endpoint.port < 0) {
-    return false;
-  }
-  value = endpoint;
-  return true;
-}
 
 static inline uint64_t default_id_generator() {
   static std::mutex mutex;

@@ -2,7 +2,29 @@
 
 namespace rix {
 
-Node::Node(const std::string& name) : rixhub_endpoint_(Endpoint(RIXHUB_IP, RIXHUB_PORT)), registered_flag_(false) {
+Node::Node(const std::string& name, const Endpoint& endpoint)
+    : rixhub_endpoint_(Endpoint(RIXHUB_IP, RIXHUB_PORT)), registered_flag_(false) {
+  server_ = socket_factory_();
+  if (!server_) {
+    shutdown();
+    return;
+  }
+
+  server_->set_reuse_address(true);
+  server_->bind(Endpoint(endpoint.address, endpoint.port));
+  server_->listen(MAX_CONN);
+
+  // Ensure server was intitialized properly
+  if (server_->is_exception()) {
+    shutdown();
+    return;
+  }
+
+  auto server_endpoint = server_->local_endpoint();
+  // Update the endpoint in case the port was set to 0 (ephemeral)
+  info_.endpoint.address = server_endpoint.address;
+  info_.endpoint.port = server_endpoint.port;
+
   info_.id = id_factory_();
   info_.name = name;
 
@@ -30,6 +52,24 @@ Node::Node(const std::string& name) : rixhub_endpoint_(Endpoint(RIXHUB_IP, RIXHU
     shutdown();
     return;
   }
+
+  // Create timer to handle pings at 2Hz
+  create_timer(Duration(0.5), [this](const TimerCallback::Event&) {
+    // Check for ping
+    if (server_->is_readable()) {
+      auto conn = server_->accept();
+      if (conn) {
+        msg::mediator::Operation op;
+        conn->recv_message(op, op.size());
+        if (op.opcode == OPCODE::PING) {
+          msg::mediator::Status status;
+          status.id = info_.id;
+          status.error = 0;
+          conn->send_message(OPCODE::STATUS_RESPONSE, status);
+        }
+      }
+    }
+  });
 
   registered_flag_ = true;
 }

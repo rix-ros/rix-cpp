@@ -85,22 +85,23 @@ public:
     bool notify = enable_notifications_;
     EXPECT_CALL(*socket_, send_message)
         .Times(1)
-        .WillOnce(::testing::Invoke([opcode, msg, socket, notify, is_writable](uint8_t op, const msg::Message& message) {
-          *is_writable = false;
-          EXPECT_EQ(op, opcode);
-          auto _msg = dynamic_cast<const TMsg*>(&message);
-          EXPECT_NE(_msg, nullptr);
-          if (_msg) {
-            EXPECT_EQ(*_msg, msg);
-            if (notify) {
-              if (auto s = socket.lock()) {
-                s->notify_operation_complete();
+        .WillOnce(
+            ::testing::Invoke([opcode, msg, socket, notify, is_writable](uint8_t op, const msg::Message& message) {
+              *is_writable = false;
+              EXPECT_EQ(op, opcode);
+              auto _msg = dynamic_cast<const TMsg*>(&message);
+              EXPECT_NE(_msg, nullptr);
+              if (_msg) {
+                EXPECT_EQ(*_msg, msg);
+                if (notify) {
+                  if (auto s = socket.lock()) {
+                    s->notify_operation_complete();
+                  }
+                }
+                return true;
               }
-            }
-            return true;
-          }
-          return false;
-        }));
+              return false;
+            }));
     return *this;
   }
 
@@ -138,6 +139,35 @@ public:
               }
               return false;
             }));
+    return *this;
+  }
+
+  template <typename TMsg> SocketBuilder& recv_message(const TMsg& msg, size_t len) {
+    static_assert(std::is_base_of<msg::Message, TMsg>::value, "TMsg must be derived from msg::Message");
+    auto is_readable = std::make_shared<bool>(true);
+    EXPECT_CALL(*socket_, wait_readable(::testing::_))
+        .Times(::testing::AtLeast(0))
+        .WillRepeatedly(::testing::Invoke([is_readable]() { return *is_readable; }));
+
+    std::weak_ptr<MockSocket> socket = socket_;
+    auto notify = enable_notifications_;
+    EXPECT_CALL(*socket_, recv_message(::testing::_, ::testing::_))
+        .Times(1)
+        .WillOnce(::testing::Invoke([msg, len, socket, notify](msg::Message& message, size_t size) {
+          EXPECT_EQ(size, len);
+          auto _msg = dynamic_cast<TMsg*>(&message);
+          EXPECT_NE(_msg, nullptr);
+          if (_msg) {
+            *_msg = msg;
+            if (notify) {
+              if (auto s = socket.lock()) {
+                s->notify_operation_complete();
+              }
+            }
+            return true;
+          }
+          return false;
+        }));
     return *this;
   }
 

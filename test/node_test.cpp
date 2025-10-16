@@ -13,6 +13,17 @@ TEST(NodeTest, RegisterAndDeregisterNode) {
   });
 }
 
+TEST(NodeTest, PingNode) {
+  // Clear, self-documenting test
+  msg::mediator::NodeInfo node_info;
+  TestFixture().create_node("test_node", node_info, false, 1).accept_ping().destroy_node(node_info).build<Node>([](TestFixture& fixture) {
+    Node node("test_node");
+    EXPECT_TRUE(node.ok());
+
+    node.spin_once(); // Handle ping
+  });
+}
+
 TEST(NodeTest, RegisterNodeFailure) {
   msg::mediator::NodeInfo node_info;
   TestFixture().create_node("test_node", node_info, true).build<Node>([](TestFixture& fixture) {

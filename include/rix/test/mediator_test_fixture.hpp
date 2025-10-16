@@ -12,6 +12,19 @@ class MediatorTestFixture {
 public:
   MediatorTestFixture(const Endpoint& endpoint = Endpoint("127.0.0.1", 0)) : endpoint_(endpoint) {}
 
+  MediatorTestFixture& ping() {
+    msg::mediator::Operation op;
+    op.opcode = OPCODE::PING;
+    op.len = 0;
+
+    msg::mediator::Status status;
+    status.error = 0;
+
+    auto socket = socket_manager_.create_socket();
+    SocketBuilder(socket).recv_message(op, op.size()).send_message(OPCODE::STATUS_RESPONSE, status).close();
+    return *this;
+  }
+
   // Configure node registration to succeed
   MediatorTestFixture& register_node(const std::string& node_name, uint64_t node_id, bool should_fail = false) {
     msg::mediator::NodeInfo node_info;

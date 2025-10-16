@@ -148,13 +148,25 @@ public:
   }
 
   // Configure node registration to succeed
-  TestFixture& create_node(const std::string& name, msg::mediator::NodeInfo& node_info, bool should_fail = false) {
-    auto socket = socket_manager_.create_socket();
+  TestFixture& create_node(const std::string& name,
+                           msg::mediator::NodeInfo& node_info,
+                           bool should_fail = false,
+                           int ping_count = 0,
+                           const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
+                           const Endpoint& bound_endpoint = Endpoint(DEFAULT_IP, 8000)) {
+    // Create the server socket for publisher connections
+    create_server(endpoint, bound_endpoint, ping_count);
+
     node_info.id = expected_id_++;
     node_info.name = name;
+    node_info.endpoint.address = bound_endpoint.address;
+    node_info.endpoint.port = bound_endpoint.port;
+
     msg::mediator::Status status;
     status.error = should_fail ? -1 : 0;
     status.id = node_info.id;
+
+    auto socket = socket_manager_.create_socket();
     SocketBuilder(socket)
         .connect(rixhub_endpoint_)
         .send_message(OPCODE::NODE_REGISTER, node_info)
@@ -400,11 +412,30 @@ public:
     return *this;
   }
 
+  TestFixture& accept_ping() {
+    auto conn_socket = socket_manager_.create_socket();
+    if (enable_notifications_) {
+      connection_sockets_.push_back(conn_socket);
+    }
+    msg::mediator::Operation op;
+    op.opcode = OPCODE::PING;
+    op.len = 0;
+
+    auto builder = SocketBuilder(conn_socket);
+    if (enable_notifications_) {
+      builder.enable_operation_notifications();
+    }
+    builder.recv_message(op, op.size()).close();
+    return *this;
+  }
+
   // Configure publisher server with connection sockets
   template <typename TMsg> TestFixture& accept_subscriber(const std::vector<std::shared_ptr<TMsg>>& messages) {
     // Create connection sockets
     auto conn_socket = socket_manager_.create_socket();
-    connection_sockets_.push_back(conn_socket);
+    if (enable_notifications_) {
+      connection_sockets_.push_back(conn_socket);
+    }
     auto builder = SocketBuilder(conn_socket);
     if (enable_notifications_) {
       builder.enable_operation_notifications();
@@ -428,7 +459,9 @@ public:
 
     // Create notification connection socket
     auto notify_socket = socket_manager_.create_socket();
-    connection_sockets_.push_back(notify_socket);
+    if (enable_notifications_) {
+      connection_sockets_.push_back(notify_socket);
+    }
     auto builder = SocketBuilder(notify_socket);
     if (enable_notifications_) {
       builder.enable_operation_notifications();
@@ -442,7 +475,9 @@ public:
   TestFixture& connect_to_publisher(const Endpoint& publisher_endpoint,
                                     const std::vector<std::shared_ptr<TMsg>>& messages) {
     auto client_socket = socket_manager_.create_socket();
-    client_sockets_.push_back(client_socket);
+    if (enable_notifications_) {
+      client_sockets_.push_back(client_socket);
+    }
     auto builder = SocketBuilder(client_socket);
     if (enable_notifications_) {
       builder.enable_operation_notifications();
@@ -455,7 +490,9 @@ public:
   template <typename TRequest, typename TResponse>
   TestFixture& accept_service_client(std::shared_ptr<TRequest> request, std::shared_ptr<TResponse> response) {
     auto conn_socket = socket_manager_.create_socket();
-    connection_sockets_.push_back(conn_socket);
+    if (enable_notifications_) {
+      connection_sockets_.push_back(conn_socket);
+    }
     auto builder = SocketBuilder(conn_socket);
     if (enable_notifications_) {
       builder.enable_operation_notifications();
@@ -472,7 +509,9 @@ public:
                                    std::shared_ptr<TResponse> response,
                                    const Endpoint& service_endpoint = Endpoint(DEFAULT_IP, 8000)) {
     auto socket = socket_manager_.create_socket();
-    client_sockets_.push_back(socket);
+    if (enable_notifications_) {
+      client_sockets_.push_back(socket);
+    }
     auto builder = SocketBuilder(socket);
     if (enable_notifications_) {
       builder.enable_operation_notifications();
@@ -503,7 +542,9 @@ private:
                              const Endpoint& bound_endpoint = Endpoint(DEFAULT_IP, 8000),
                              int accept_count = 0) {
     auto socket = socket_manager_.create_socket();
-    server_sockets_.push_back(socket);
+    if (enable_notifications_) {
+      server_sockets_.push_back(socket);
+    }
     auto builder = SocketBuilder(socket);
     if (enable_notifications_) {
       builder.enable_operation_notifications();

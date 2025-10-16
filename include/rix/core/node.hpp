@@ -26,7 +26,7 @@ namespace rix {
 
 class Node : public Spinner {
 public:
-  Node(const std::string& name);
+  Node(const std::string& name, const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0));
 
   Node(const Node&) = delete;
   Node& operator=(const Node&) = delete;
@@ -125,6 +125,7 @@ private:
   Endpoint rixhub_endpoint_;
   msg::mediator::NodeInfo info_;
   std::vector<std::shared_ptr<Spinner>> components_;
+  std::shared_ptr<GenericSocket> server_;
   std::atomic<bool> registered_flag_;
   static inline SocketFactory socket_factory_{create_socket};
   static inline IDFactory id_factory_{default_id_generator};
