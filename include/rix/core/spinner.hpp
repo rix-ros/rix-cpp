@@ -8,10 +8,10 @@ namespace rix {
 class Spinner {
 public:
   Spinner() = default;
-  Spinner(const Spinner &other) = default;
-  Spinner &operator=(const Spinner &other) = default;
-  Spinner(Spinner &&other) = default;
-  Spinner &operator=(Spinner &&other) = default;
+  Spinner(const Spinner& other) = default;
+  Spinner& operator=(const Spinner& other) = default;
+  Spinner(Spinner&& other) = default;
+  Spinner& operator=(Spinner&& other) = default;
   virtual ~Spinner() = default;
 
   void spin() {
@@ -19,12 +19,12 @@ public:
       spin_once();
       if (signal_received_) {
         shutdown();
-      } else {
-        std::lock_guard<std::mutex> lock(mutex_);
+      } else if (mutex_.try_lock()) {
         if (shutdown_signal_ && shutdown_signal_->is_ready()) {
           signal_received_ = true;
           shutdown();
         }
+        mutex_.unlock();
       }
     }
   }
@@ -40,13 +40,13 @@ public:
    * created the object without error.
    *
    */
-  bool ok() const { return !shutdown_flag_; }
+  bool ok() const noexcept { return !shutdown_flag_; }
 
   /**
    * @brief Shuts down the object. ok() will return false after this call.
    *
    */
-  void shutdown() { shutdown_flag_ = true; }
+  void shutdown() noexcept { shutdown_flag_ = true; }
 
   static void set_shutdown_signal(std::shared_ptr<GenericSignal> signal) { shutdown_signal_ = signal; }
 
