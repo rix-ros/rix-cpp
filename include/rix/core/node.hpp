@@ -140,6 +140,10 @@ private:
 
   std::shared_ptr<Service>
   create_service(msg::mediator::SrvInfo& service_info, const Endpoint& rixhub_endpoint, const Endpoint& endpoint);
+
+  std::shared_ptr<ServiceClient> create_service_client(const msg::mediator::SrvRequest& service_request,
+                                                       const Endpoint& rixhub_endpoint,
+                                                       const Endpoint& endpoint);
 };
 
 template <typename TMsg>
@@ -232,9 +236,7 @@ std::shared_ptr<ServiceClient> Node::create_service_client(const std::string& se
   service_request.request_hash = TRequest().hash();
   service_request.response_hash = TResponse().hash();
 
-  auto srv_cli = std::shared_ptr<ServiceClient>(new ServiceClient(service_request, socket_factory_, rixhub_endpoint_));
-  components_.push_back(srv_cli);
-  return srv_cli;
+  return create_service_client(service_request, rixhub_endpoint_, Endpoint());
 }
 
 template <typename TParam> bool Node::set_parameter(const std::string& name, const TParam& parameter) {

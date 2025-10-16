@@ -45,7 +45,7 @@ private:
   std::shared_ptr<msg::Message>  response_instance_;
 
 #ifdef RIX_MULTITHREADED
-  std::thread spin_thread_;
+  std::thread spin_thread_{};
 #endif
 
   Service(const msg::mediator::SrvInfo& info,

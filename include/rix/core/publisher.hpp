@@ -40,7 +40,7 @@ private:
   std::atomic<bool> registered_flag_;
 
 #ifdef RIX_MULTITHREADED
-  std::thread spin_thread_;
+  std::thread spin_thread_{};
 #endif
 
   Publisher(const msg::mediator::PubInfo &info, SocketFactory factory, Endpoint rixhub_endpoint);

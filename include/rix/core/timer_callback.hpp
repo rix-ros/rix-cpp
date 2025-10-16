@@ -55,7 +55,7 @@ private:
   std::mutex callback_mutex_;
 
 #ifdef RIX_MULTITHREADED
-  std::thread spin_thread_;
+  std::thread spin_thread_{};
 #endif
 };
 

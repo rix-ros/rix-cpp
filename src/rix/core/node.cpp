@@ -172,4 +172,12 @@ bool Node::get_system_info(msg::mediator::SystemInfo& info) {
   return true;
 }
 
+std::shared_ptr<ServiceClient> Node::create_service_client(const msg::mediator::SrvRequest& service_request,
+                                                           const Endpoint& rixhub_endpoint,
+                                                           const Endpoint& endpoint) {
+  auto srv_cli = std::shared_ptr<ServiceClient>(new ServiceClient(service_request, socket_factory_, rixhub_endpoint));
+  components_.push_back(srv_cli);
+  return srv_cli;
+}
+
 } // namespace rix

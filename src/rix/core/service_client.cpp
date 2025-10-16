@@ -6,8 +6,6 @@ ServiceClient::ServiceClient(const msg::mediator::SrvRequest& request,
                              SocketFactory socket_factory,
                              const Endpoint& rixhub_endpoint)
     : request_(request), socket_factory_(socket_factory) {
-  msg::mediator::SrvResponse response;
-
   auto client = socket_factory_();
   if (!client) {
     shutdown();
@@ -24,6 +22,7 @@ ServiceClient::ServiceClient(const msg::mediator::SrvRequest& request,
     return;
   }
 
+  msg::mediator::SrvResponse response;
   msg::mediator::Operation op;
   if (!client->recv_message(op, response)) {
     shutdown();
@@ -50,8 +49,8 @@ ServiceClient::ServiceClient(const msg::mediator::SrvRequest& request,
 
 ServiceClient::~ServiceClient() {
 #ifdef RIX_MULTITHREADED
+  shutdown();
   if (spin_thread_.joinable()) {
-    shutdown();
     spin_thread_.join();
   }
 #endif

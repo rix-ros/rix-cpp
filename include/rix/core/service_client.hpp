@@ -36,7 +36,7 @@ private:
   Endpoint endpoint_;
 
 #ifdef RIX_MULTITHREADED
-  std::thread spin_thread_;
+  std::thread spin_thread_{};
 #endif
 
   using Spinner::spin;

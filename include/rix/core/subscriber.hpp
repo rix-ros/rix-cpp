@@ -70,7 +70,7 @@ private:
 
     Subscriber& parent;
 #ifdef RIX_MULTITHREADED
-    std::thread spin_thread;
+    std::thread spin_thread{};
 #endif
   };
 
