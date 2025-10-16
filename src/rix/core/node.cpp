@@ -53,9 +53,12 @@ Node::Node(const std::string& name, const Endpoint& endpoint)
     return;
   }
 
+  registered_flag_ = true;
+
   // Create timer to handle pings at 2Hz
   create_timer(Duration(0.5), [this](const TimerCallback::Event&) {
     // Check for ping
+    // std::cout << "Checking for ping..." << std::endl;
     if (server_->is_readable()) {
       auto conn = server_->accept();
       if (conn) {
@@ -70,8 +73,6 @@ Node::Node(const std::string& name, const Endpoint& endpoint)
       }
     }
   });
-
-  registered_flag_ = true;
 }
 
 Node::~Node() {

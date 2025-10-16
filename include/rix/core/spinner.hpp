@@ -17,8 +17,14 @@ public:
   void spin() {
     while (ok()) {
       spin_once();
-      if (shutdown_signal_ && shutdown_signal_->is_ready()) {
+      if (signal_received_) {
         shutdown();
+      } else {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (shutdown_signal_ && shutdown_signal_->is_ready()) {
+          signal_received_ = true;
+          shutdown();
+        }
       }
     }
   }
@@ -42,11 +48,13 @@ public:
    */
   void shutdown() { shutdown_flag_ = true; }
 
-  void set_shutdown_signal(std::shared_ptr<GenericSignal> signal) { shutdown_signal_ = signal; }
+  static void set_shutdown_signal(std::shared_ptr<GenericSignal> signal) { shutdown_signal_ = signal; }
 
 private:
   bool shutdown_flag_{false};
-  std::shared_ptr<GenericSignal> shutdown_signal_{create_signal(SIGINT)};
+  static inline std::shared_ptr<GenericSignal> shutdown_signal_{create_signal(SIGINT)};
+  static inline std::mutex mutex_{};
+  static inline bool signal_received_{false};
 };
 
 } // namespace rix
