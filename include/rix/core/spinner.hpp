@@ -17,15 +17,6 @@ public:
   void spin() {
     while (ok()) {
       spin_once();
-      if (signal_received_) {
-        shutdown();
-      } else if (mutex_.try_lock()) {
-        if (shutdown_signal_ && shutdown_signal_->is_ready()) {
-          signal_received_ = true;
-          shutdown();
-        }
-        mutex_.unlock();
-      }
     }
   }
 
@@ -33,7 +24,21 @@ public:
    * @brief Returns true if loop should continue, false if loop should stop.
    *
    */
-  virtual void spin_once() = 0;
+  void spin_once() {
+    spin_function();
+    if (signal_received_) {
+      shutdown();
+      return;
+    }
+    if (mutex_.try_lock()) {
+      if (shutdown_signal_ && shutdown_signal_->is_ready()) {
+        signal_received_ = true;
+        shutdown();
+      }
+      mutex_.unlock();
+      return;
+    }
+  }
 
   /**
    * @brief Returns true if shutdown has not been called and the constructor
@@ -49,12 +54,15 @@ public:
   void shutdown() noexcept { shutdown_flag_ = true; }
 
   static void set_shutdown_signal(std::shared_ptr<GenericSignal> signal) { shutdown_signal_ = signal; }
+  static std::shared_ptr<GenericSignal> get_shutdown_signal() { return shutdown_signal_; }
 
 private:
   bool shutdown_flag_{false};
   static inline std::shared_ptr<GenericSignal> shutdown_signal_{create_signal(SIGINT)};
   static inline std::mutex mutex_{};
   static inline bool signal_received_{false};
+
+  virtual void spin_function() = 0;
 };
 
 } // namespace rix

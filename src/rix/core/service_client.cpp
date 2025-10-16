@@ -42,11 +42,22 @@ ServiceClient::ServiceClient(const msg::mediator::SrvRequest& request,
 
   endpoint_.address = response.srv_info.endpoint.address;
   endpoint_.port = response.srv_info.endpoint.port;
+
+#ifdef RIX_MULTITHREADED
+  spin_thread_ = std::thread([this]() { this->spin(); });
+#endif
 }
 
-ServiceClient::~ServiceClient() {}
+ServiceClient::~ServiceClient() {
+#ifdef RIX_MULTITHREADED
+  if (spin_thread_.joinable()) {
+    shutdown();
+    spin_thread_.join();
+  }
+#endif
+}
 
-void ServiceClient::spin_once() {}
+void ServiceClient::spin_function() {}
 
 bool ServiceClient::call(const msg::Message& request, msg::Message& response) {
   if (!ok()) {

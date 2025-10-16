@@ -66,7 +66,7 @@ private:
     SubNotifyAcceptor(SubNotifyAcceptor&&) = delete;
     SubNotifyAcceptor& operator=(SubNotifyAcceptor&&) = delete;
 
-    void spin_once() override;
+    void spin_function() override;
 
     Subscriber& parent;
 #ifdef RIX_MULTITHREADED
@@ -77,7 +77,8 @@ private:
   SubNotifyAcceptor sub_notify_acceptor_{*this};
 
   using Spinner::spin;
-  virtual void spin_once() override;
+  using Spinner::spin_once;
+  virtual void spin_function() override;
 };
 
 template <typename TMsg> void Subscriber::set_callback(Callback<TMsg> callback) {

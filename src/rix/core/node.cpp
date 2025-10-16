@@ -85,9 +85,12 @@ Node::~Node() {
       client->send_message(OPCODE::NODE_DEREGISTER, info_);
     }
   }
+  while (!components_.empty()) {
+    components_.pop_back(); // Preserve order of destruction
+  }
 }
 
-void Node::spin_once() {
+void Node::spin_function() {
   // Spin all components, remove ones that are not 'ok'
   auto it = components_.begin();
   while (it != components_.end()) {

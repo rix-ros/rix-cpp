@@ -46,7 +46,8 @@ private:
   Publisher(const msg::mediator::PubInfo &info, SocketFactory factory, Endpoint rixhub_endpoint);
 
   using Spinner::spin;
-  void spin_once() override;
+  using Spinner::spin_once;
+  void spin_function() override;
 };
 
 } // namespace rix
