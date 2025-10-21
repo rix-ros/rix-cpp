@@ -140,7 +140,7 @@ size_t Publisher::get_subscriber_count() const {
   return connections_.size();
 }
 
-void Publisher::spin_function() {
+void Publisher::on_spin() {
   // Check to see if a subscriber has made a connection
   if (!server_->wait_readable(Duration(1.0))) {
     return;

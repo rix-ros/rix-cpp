@@ -47,7 +47,7 @@ public:
 private:
   using Spinner::spin;
   using Spinner::spin_once;
-  void spin_function() override;
+  void on_spin() override;
 
   Duration duration_;
   Event event_;

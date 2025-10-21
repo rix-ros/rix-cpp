@@ -18,7 +18,7 @@ Mediator::Mediator(const Endpoint& rixhub_endpoint, SocketFactory socket_factory
 
 Mediator::~Mediator() {}
 
-void Mediator::spin_function() {
+void Mediator::on_spin() {
   if (!server_->wait_readable(Duration(1.0))) {
     return;
   }

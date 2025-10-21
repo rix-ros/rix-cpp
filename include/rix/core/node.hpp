@@ -116,7 +116,7 @@ public:
 
   bool get_system_info(msg::mediator::SystemInfo& info);
 
-  void spin_function() override;
+  void on_spin() override;
 
   static inline void set_socket_factory(SocketFactory factory) { socket_factory_ = factory; }
   static inline void set_id_factory(IDFactory factory) { id_factory_ = factory; }

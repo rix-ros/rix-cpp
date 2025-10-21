@@ -41,7 +41,7 @@ private:
 
   using Spinner::spin;
   using Spinner::spin_once;
-  void spin_function() override;
+  void on_spin() override;
 
   ServiceClient(const msg::mediator::SrvRequest& request, SocketFactory factory, const Endpoint& rixhub_endpoint);
 };

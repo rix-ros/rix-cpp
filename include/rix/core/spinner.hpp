@@ -25,7 +25,7 @@ public:
    *
    */
   void spin_once() {
-    spin_function();
+    on_spin();
     if (signal_received_) {
       shutdown();
       return;
@@ -62,7 +62,7 @@ private:
   static inline std::mutex mutex_{};
   static inline bool signal_received_{false};
 
-  virtual void spin_function() = 0;
+  virtual void on_spin() = 0;
 };
 
 } // namespace rix

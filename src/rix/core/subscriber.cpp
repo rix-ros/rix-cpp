@@ -86,7 +86,7 @@ size_t Subscriber::get_publisher_count() const {
 }
 
 /**< TODO: Implement the spin_once method */
-void Subscriber::spin_function() {
+void Subscriber::on_spin() {
 
 #ifndef RIX_MULTITHREADED
   // In single-threaded mode, we need to also spin the acceptor
@@ -157,7 +157,7 @@ void Subscriber::spin_function() {
 
 Subscriber::SubNotifyAcceptor::SubNotifyAcceptor(Subscriber& parent) : parent(parent) {}
 
-void Subscriber::SubNotifyAcceptor::spin_function() {
+void Subscriber::SubNotifyAcceptor::on_spin() {
   // Check to see if rixhub has made a connection
   if (!parent.server_->wait_readable(Duration(1.0))) {
     return;

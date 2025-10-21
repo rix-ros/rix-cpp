@@ -56,7 +56,7 @@ ServiceClient::~ServiceClient() {
 #endif
 }
 
-void ServiceClient::spin_function() {}
+void ServiceClient::on_spin() {}
 
 bool ServiceClient::call(const msg::Message& request, msg::Message& response) {
   if (!ok()) {

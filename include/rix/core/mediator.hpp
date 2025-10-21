@@ -33,7 +33,7 @@ public:
   Mediator(Mediator&&) = delete;
   Mediator& operator=(Mediator&&) = delete;
 
-  void spin_function() override;
+  void on_spin() override;
 
   size_t get_node_count() const { return nodes_.size(); }
   size_t get_publisher_count() const { return publishers_.size(); }

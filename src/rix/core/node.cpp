@@ -90,7 +90,7 @@ Node::~Node() {
   }
 }
 
-void Node::spin_function() {
+void Node::on_spin() {
   // Spin all components, remove ones that are not 'ok'
   auto it = components_.begin();
   while (it != components_.end()) {
