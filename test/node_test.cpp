@@ -13,6 +13,21 @@ TEST(NodeTest, RegisterAndDeregisterNode) {
   });
 }
 
+TEST(NodeTest, PingNode) {
+  // Clear, self-documenting test
+  msg::mediator::NodeInfo node_info;
+  TestFixture()
+      .create_node("test_node", node_info, false, 1)
+      .accept_ping()
+      .destroy_node(node_info)
+      .build<Node>([](TestFixture& fixture) {
+        Node node("test_node");
+        EXPECT_TRUE(node.ok());
+
+        node.spin_once(); // Handle ping
+      });
+}
+
 TEST(NodeTest, RegisterNodeFailure) {
   msg::mediator::NodeInfo node_info;
   TestFixture().create_node("test_node", node_info, true).build<Node>([](TestFixture& fixture) {
@@ -412,6 +427,152 @@ TEST(NodeTest, RegisterAndDeregisterMultipleOfAll) {
         other_srv_cli = nullptr;
         node.spin_once();
         EXPECT_TRUE(node.ok());
+      });
+}
+
+TEST(NodeTest, PreserveComponentOrderOnDeregistration) {
+  msg::mediator::NodeInfo node_info;
+  msg::mediator::PubInfo pub_info, pub_info2;
+  msg::mediator::SubInfo sub_info, sub_info2;
+  msg::mediator::SrvInfo srv_info, srv_info2;
+  TestFixture()
+      .create_node("test_node", node_info)
+      .create_publisher<msg::standard::UInt32>("test_topic", pub_info, node_info)
+      .create_subscriber<msg::standard::UInt32>("test_topic", sub_info, node_info)
+      .create_service<msg::standard::UInt32, msg::standard::Time>("test_service", srv_info, node_info)
+      .create_service_client<msg::standard::UInt32, msg::standard::Time>("test_service", node_info)
+      .create_publisher<msg::standard::UInt32>("other_topic", pub_info2, node_info)
+      .create_subscriber<msg::standard::UInt32>("other_topic", sub_info2, node_info)
+      .create_service<msg::standard::UInt32, msg::standard::Time>("other_service", srv_info2, node_info)
+      .create_service_client<msg::standard::UInt32, msg::standard::Time>("other_service", node_info)
+      .destroy_node(node_info)
+      .destroy_service(srv_info2)
+      .destroy_subscriber(sub_info2)
+      .destroy_publisher(pub_info2)
+      .destroy_service(srv_info)
+      .destroy_subscriber(sub_info)
+      .destroy_publisher(pub_info)
+      .build<Node>([](TestFixture& fixture) {
+        Node node("test_node");
+        EXPECT_TRUE(node.ok());
+
+        auto pub = node.create_publisher<msg::standard::UInt32>("test_topic");
+        EXPECT_NE(pub, nullptr);
+        EXPECT_TRUE(pub->ok());
+        pub = nullptr;
+
+        auto sub = node.create_subscriber("test_topic", [](const msg::standard::UInt32&) {});
+        EXPECT_NE(sub, nullptr);
+        EXPECT_TRUE(sub->ok());
+        sub = nullptr;
+
+        auto srv = node.create_service("test_service", [](const msg::standard::UInt32&, msg::standard::Time&) {});
+        EXPECT_NE(srv, nullptr);
+        EXPECT_TRUE(srv->ok());
+        srv = nullptr;
+
+        auto srv_cli = node.create_service_client<msg::standard::UInt32, msg::standard::Time>("test_service");
+        EXPECT_NE(srv_cli, nullptr);
+        EXPECT_TRUE(srv_cli->ok());
+        srv_cli = nullptr;
+
+        auto other_pub = node.create_publisher<msg::standard::UInt32>("other_topic");
+        EXPECT_NE(other_pub, nullptr);
+        EXPECT_TRUE(other_pub->ok());
+        other_pub = nullptr;
+
+        auto other_sub = node.create_subscriber("other_topic", [](const msg::standard::UInt32&) {});
+        EXPECT_NE(other_sub, nullptr);
+        EXPECT_TRUE(other_sub->ok());
+        other_sub = nullptr;
+
+        auto other_srv =
+            node.create_service("other_service", [](const msg::standard::UInt32&, msg::standard::Time&) {});
+        EXPECT_NE(other_srv, nullptr);
+        EXPECT_TRUE(other_srv->ok());
+        other_srv = nullptr;
+
+        auto other_srv_cli = node.create_service_client<msg::standard::UInt32, msg::standard::Time>("other_service");
+        EXPECT_NE(other_srv_cli, nullptr);
+        EXPECT_TRUE(other_srv_cli->ok());
+        other_srv_cli = nullptr;
+      });
+}
+
+TEST(NodeTest, ShutdownFromSignal) {
+  msg::mediator::NodeInfo node_info;
+  msg::mediator::PubInfo pub_info, pub_info2;
+  msg::mediator::SubInfo sub_info, sub_info2;
+  msg::mediator::SrvInfo srv_info, srv_info2;
+  TestFixture()
+      .create_node("test_node", node_info)
+      .create_publisher<msg::standard::UInt32>("test_topic", pub_info, node_info)
+      .create_subscriber<msg::standard::UInt32>("test_topic", sub_info, node_info)
+      .create_service<msg::standard::UInt32, msg::standard::Time>("test_service", srv_info, node_info)
+      .create_service_client<msg::standard::UInt32, msg::standard::Time>("test_service", node_info)
+      .create_publisher<msg::standard::UInt32>("other_topic", pub_info2, node_info)
+      .create_subscriber<msg::standard::UInt32>("other_topic", sub_info2, node_info)
+      .create_service<msg::standard::UInt32, msg::standard::Time>("other_service", srv_info2, node_info)
+      .create_service_client<msg::standard::UInt32, msg::standard::Time>("other_service", node_info)
+      .destroy_publisher(pub_info)
+      .destroy_subscriber(sub_info)
+      .destroy_service(srv_info)
+      .destroy_publisher(pub_info2)
+      .destroy_subscriber(sub_info2)
+      .destroy_service(srv_info2)
+      .destroy_node(
+          node_info) // Node destroyed last because other components will be destroyed during spin_once after signal
+      .build<Node>([](TestFixture& fixture) {
+        Node node("test_node");
+        EXPECT_TRUE(node.ok());
+
+        auto pub = node.create_publisher<msg::standard::UInt32>("test_topic");
+        EXPECT_NE(pub, nullptr);
+        EXPECT_TRUE(pub->ok());
+        pub = nullptr;
+
+        auto sub = node.create_subscriber("test_topic", [](const msg::standard::UInt32&) {});
+        EXPECT_NE(sub, nullptr);
+        EXPECT_TRUE(sub->ok());
+        sub = nullptr;
+
+        auto srv = node.create_service("test_service", [](const msg::standard::UInt32&, msg::standard::Time&) {});
+        EXPECT_NE(srv, nullptr);
+        EXPECT_TRUE(srv->ok());
+        srv = nullptr;
+
+        auto srv_cli = node.create_service_client<msg::standard::UInt32, msg::standard::Time>("test_service");
+        EXPECT_NE(srv_cli, nullptr);
+        EXPECT_TRUE(srv_cli->ok());
+        srv_cli = nullptr;
+
+        auto other_pub = node.create_publisher<msg::standard::UInt32>("other_topic");
+        EXPECT_NE(other_pub, nullptr);
+        EXPECT_TRUE(other_pub->ok());
+        other_pub = nullptr;
+
+        auto other_sub = node.create_subscriber("other_topic", [](const msg::standard::UInt32&) {});
+        EXPECT_NE(other_sub, nullptr);
+        EXPECT_TRUE(other_sub->ok());
+        other_sub = nullptr;
+
+        auto other_srv =
+            node.create_service("other_service", [](const msg::standard::UInt32&, msg::standard::Time&) {});
+        EXPECT_NE(other_srv, nullptr);
+        EXPECT_TRUE(other_srv->ok());
+        other_srv = nullptr;
+
+        auto other_srv_cli = node.create_service_client<msg::standard::UInt32, msg::standard::Time>("other_service");
+        EXPECT_NE(other_srv_cli, nullptr);
+        EXPECT_TRUE(other_srv_cli->ok());
+        other_srv_cli = nullptr;
+
+        auto sig = Spinner::get_shutdown_signal();
+        sig->raise();
+        // (TODO: Enable some synchronization mechanism to avoid this sleep)
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        node.spin_once();
+        EXPECT_FALSE(node.ok());
       });
 }
 

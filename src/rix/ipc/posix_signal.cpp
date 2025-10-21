@@ -4,8 +4,6 @@
 
 namespace rix {
 
-std::array<POSIXSignal::Notifier, 32> POSIXSignal::notifier = {};
-
 POSIXSignal::POSIXSignal(int signum) : signum_(signum) {
   if (signum < 1 || signum > 32) {
     signum_ = -1;
@@ -60,14 +58,12 @@ bool POSIXSignal::wait(const Duration& d) const {
   struct timeval timeout;
   timeout.tv_sec = d.to_nanoseconds() / 1'000'000'000;
   timeout.tv_usec = (d.to_nanoseconds() % 1'000'000'000) / 1'000;
-  is_readable =
-      select(notifier[signum_ - 1].pipe[0] + 1, &read_fds, nullptr, nullptr, &timeout) >
-      0;
+  select(notifier[signum_ - 1].pipe[0] + 1, &read_fds, nullptr, nullptr, &timeout);
+  is_readable = FD_ISSET(notifier[signum_ - 1].pipe[0], &read_fds);
 
   if (is_readable) {
-    int     signum_read = -1;
-    ssize_t bytes_read =
-        read(notifier[signum_ - 1].pipe[0], (uint8_t*)&signum_read, sizeof(int));
+    int signum_read = -1;
+    ssize_t bytes_read = read(notifier[signum_ - 1].pipe[0], (uint8_t*)&signum_read, sizeof(int));
     if (bytes_read != sizeof(int))
       return false;
     return signum_read == signum_;

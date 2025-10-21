@@ -22,12 +22,13 @@ TEST(MessageTest, PublisherAcceptConnectionsAndPublish) {
   msg::mediator::PubInfo pub_info;
   TestFixture()
       .enable_poller(3)
-      .enable_operation_notifications()
       .create_node("test_node", node_info)
+      .enable_operation_notifications()
       .create_publisher<msg::standard::UInt32>("test_topic", pub_info, node_info, false, 3)
       .accept_subscriber(messages)
       .accept_subscriber(messages)
       .accept_subscriber(messages)
+      .disable_operation_notifications()
       .destroy_publisher(pub_info)
       .destroy_node(node_info)
       .build<Node>([](TestFixture& fixture) {
@@ -104,7 +105,7 @@ TEST(MessageTest, SubscriberConnectAndReceive) {
       .create_node("test_node", node_info)
       .create_subscriber<msg::standard::UInt32>("test_topic", sub_info, node_info, false, 1)
       .accept_notification<msg::standard::UInt32>(
-        "test_topic", {Endpoint("127.0.0.1", 8002), Endpoint("127.0.0.1", 8003), Endpoint("127.0.0.1", 8004)})
+          "test_topic", {Endpoint("127.0.0.1", 8002), Endpoint("127.0.0.1", 8003), Endpoint("127.0.0.1", 8004)})
       .enable_operation_notifications()
       .connect_to_publisher(Endpoint("127.0.0.1", 8002), messages)
       .connect_to_publisher(Endpoint("127.0.0.1", 8003), messages)
@@ -200,12 +201,13 @@ TEST(MessageTest, ServiceAcceptRequestAndRespond) {
   msg::mediator::NodeInfo node_info;
   msg::mediator::SrvInfo srv_info;
   TestFixture()
-      .enable_operation_notifications()
       .create_node("test_node", node_info)
+      .enable_operation_notifications()
       .create_service<msg::standard::UInt32, msg::standard::Time>("test_topic", srv_info, node_info, false, 3)
       .accept_service_client(requests[0], responses[0])
       .accept_service_client(requests[1], responses[1])
       .accept_service_client(requests[2], responses[2])
+      .disable_operation_notifications()
       .destroy_service(srv_info)
       .destroy_node(node_info)
       .build<Node>([](TestFixture& fixture) {

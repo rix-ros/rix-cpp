@@ -2,7 +2,29 @@
 
 namespace rix {
 
-Node::Node(const std::string& name) : rixhub_endpoint_(Endpoint(RIXHUB_IP, RIXHUB_PORT)), registered_flag_(false) {
+Node::Node(const std::string& name, const Endpoint& endpoint)
+    : rixhub_endpoint_(Endpoint(RIXHUB_IP, RIXHUB_PORT)), registered_flag_(false) {
+  server_ = socket_factory_();
+  if (!server_) {
+    shutdown();
+    return;
+  }
+
+  server_->set_reuse_address(true);
+  server_->bind(Endpoint(endpoint.address, endpoint.port));
+  server_->listen(MAX_CONN);
+
+  // Ensure server was intitialized properly
+  if (server_->is_exception()) {
+    shutdown();
+    return;
+  }
+
+  auto server_endpoint = server_->local_endpoint();
+  // Update the endpoint in case the port was set to 0 (ephemeral)
+  info_.endpoint.address = server_endpoint.address;
+  info_.endpoint.port = server_endpoint.port;
+
   info_.id = id_factory_();
   info_.name = name;
 
@@ -32,6 +54,25 @@ Node::Node(const std::string& name) : rixhub_endpoint_(Endpoint(RIXHUB_IP, RIXHU
   }
 
   registered_flag_ = true;
+
+  // Create timer to handle pings at 2Hz
+  create_timer(Duration(0.5), [this](const TimerCallback::Event&) {
+    // Check for ping
+    // std::cout << "Checking for ping..." << std::endl;
+    if (server_->is_readable()) {
+      auto conn = server_->accept();
+      if (conn) {
+        msg::mediator::Operation op;
+        conn->recv_message(op, op.size());
+        if (op.opcode == OPCODE::PING) {
+          msg::mediator::Status status;
+          status.id = info_.id;
+          status.error = 0;
+          conn->send_message(OPCODE::STATUS_RESPONSE, status);
+        }
+      }
+    }
+  });
 }
 
 Node::~Node() {
@@ -44,9 +85,12 @@ Node::~Node() {
       client->send_message(OPCODE::NODE_DEREGISTER, info_);
     }
   }
+  while (!components_.empty()) {
+    components_.pop_back(); // Preserve order of destruction
+  }
 }
 
-void Node::spin_once() {
+void Node::on_spin() {
   // Spin all components, remove ones that are not 'ok'
   auto it = components_.begin();
   while (it != components_.end()) {
@@ -126,6 +170,14 @@ bool Node::get_system_info(msg::mediator::SystemInfo& info) {
   }
   Log::debug << "Retrieved system info from RIXHub." << std::endl;
   return true;
+}
+
+std::shared_ptr<ServiceClient> Node::create_service_client(const msg::mediator::SrvRequest& service_request,
+                                                           const Endpoint& rixhub_endpoint,
+                                                           const Endpoint& endpoint) {
+  auto srv_cli = std::shared_ptr<ServiceClient>(new ServiceClient(service_request, socket_factory_, rixhub_endpoint));
+  components_.push_back(srv_cli);
+  return srv_cli;
 }
 
 } // namespace rix

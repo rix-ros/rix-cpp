@@ -4,6 +4,20 @@
 
 using namespace rix;
 
+TEST(MediatorTest, Ping) {
+  // Clear, self-documenting test
+  auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
+                     .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 1)
+                     .ping();
+
+  {
+    auto med = fixture.build();
+    EXPECT_TRUE(med->ok());
+
+    med->spin_once(); // Process ping
+  }
+}
+
 TEST(MediatorTest, RegisterAndDeregisterNode) {
   // Clear, self-documenting test
   auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))

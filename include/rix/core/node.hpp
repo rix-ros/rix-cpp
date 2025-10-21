@@ -26,7 +26,7 @@ namespace rix {
 
 class Node : public Spinner {
 public:
-  Node(const std::string& name);
+  Node(const std::string& name, const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0));
 
   Node(const Node&) = delete;
   Node& operator=(const Node&) = delete;
@@ -116,7 +116,7 @@ public:
 
   bool get_system_info(msg::mediator::SystemInfo& info);
 
-  void spin_once() override;
+  void on_spin() override;
 
   static inline void set_socket_factory(SocketFactory factory) { socket_factory_ = factory; }
   static inline void set_id_factory(IDFactory factory) { id_factory_ = factory; }
@@ -125,6 +125,7 @@ private:
   Endpoint rixhub_endpoint_;
   msg::mediator::NodeInfo info_;
   std::vector<std::shared_ptr<Spinner>> components_;
+  std::shared_ptr<GenericSocket> server_;
   std::atomic<bool> registered_flag_;
   static inline SocketFactory socket_factory_{create_socket};
   static inline IDFactory id_factory_{default_id_generator};
@@ -139,6 +140,10 @@ private:
 
   std::shared_ptr<Service>
   create_service(msg::mediator::SrvInfo& service_info, const Endpoint& rixhub_endpoint, const Endpoint& endpoint);
+
+  std::shared_ptr<ServiceClient> create_service_client(const msg::mediator::SrvRequest& service_request,
+                                                       const Endpoint& rixhub_endpoint,
+                                                       const Endpoint& endpoint);
 };
 
 template <typename TMsg>
@@ -231,9 +236,7 @@ std::shared_ptr<ServiceClient> Node::create_service_client(const std::string& se
   service_request.request_hash = TRequest().hash();
   service_request.response_hash = TResponse().hash();
 
-  auto srv_cli = std::shared_ptr<ServiceClient>(new ServiceClient(service_request, socket_factory_, rixhub_endpoint_));
-  components_.push_back(srv_cli);
-  return srv_cli;
+  return create_service_client(service_request, rixhub_endpoint_, Endpoint());
 }
 
 template <typename TParam> bool Node::set_parameter(const std::string& name, const TParam& parameter) {

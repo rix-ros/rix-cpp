@@ -77,7 +77,7 @@ Service::~Service() {
   Log::debug << "Service for \"" << info_.name << "\" destroyed." << std::endl;
 }
 
-void Service::spin_once() {
+void Service::on_spin() {
   if (!callback_) {
     return;
   }

@@ -21,7 +21,7 @@ TimerCallback::~TimerCallback() {
 #endif
 }
 
-void TimerCallback::spin_once() {
+void TimerCallback::on_spin() {
   event_.current_real = Time::now();
   if (event_.current_real - event_.last_real >= duration_) {
     event_.last_duration = event_.current_real - event_.last_real;
