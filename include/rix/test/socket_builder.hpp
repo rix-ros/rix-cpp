@@ -142,6 +142,65 @@ public:
     return *this;
   }
 
+  // TODO: Restructure send/recv so that repeated calls will append expectations
+
+  template <typename TMsgA, typename TMsgB>
+  SocketBuilder& send_message(uint8_t opcode_a,
+                              const std::vector<std::shared_ptr<TMsgA>>& messages,
+                              uint8_t opcode_b,
+                              const std::shared_ptr<TMsgB>& final_msg) {
+    static_assert(std::is_base_of<msg::Message, TMsgA>::value, "TMsgA must be derived from msg::Message");
+    static_assert(std::is_base_of<msg::Message, TMsgB>::value, "TMsgB must be derived from msg::Message");
+
+    int send_count = static_cast<int>(messages.size()) + 1; // Include final message
+    auto send_index = std::make_shared<int>(0);
+    EXPECT_CALL(*socket_, wait_writable(::testing::_))
+        .Times(::testing::AtLeast(0))
+        .WillRepeatedly(::testing::Invoke([send_index, send_count]() { return *send_index < send_count; }));
+    std::weak_ptr<MockSocket> socket = socket_;
+    bool notify = enable_notifications_;
+    EXPECT_CALL(*socket_, send_message)
+        .Times(::testing::AtLeast(send_count))
+        .WillRepeatedly(
+            ::testing::Invoke([send_index, messages, final_msg, opcode_a, opcode_b, send_count, socket, notify](
+                                  uint8_t op, const msg::Message& message) {
+              int idx = *send_index;
+              if (idx == send_count - 1) {
+                // Final message
+                EXPECT_EQ(op, opcode_b);
+                auto _msg = dynamic_cast<const TMsgB*>(&message);
+                EXPECT_NE(_msg, nullptr);
+                if (_msg) {
+                  EXPECT_EQ(*_msg, *final_msg);
+                  (*send_index)++;
+                  if (notify) {
+                    if (auto s = socket.lock()) {
+                      s->notify_operation_complete();
+                    }
+                  }
+                  return true;
+                }
+              } else if (idx < send_count) {
+                EXPECT_EQ(op, opcode_a);
+                auto _msg = dynamic_cast<const TMsgA*>(&message);
+                EXPECT_NE(_msg, nullptr);
+                if (_msg) {
+                  auto msg = *(messages[idx]);
+                  EXPECT_EQ(*_msg, msg);
+                  (*send_index)++;
+                  if (notify) {
+                    if (auto s = socket.lock()) {
+                      s->notify_operation_complete();
+                    }
+                  }
+                  return true;
+                }
+              }
+              return false;
+            }));
+    return *this;
+  }
+
   template <typename TMsg> SocketBuilder& recv_message(const TMsg& msg, size_t len) {
     static_assert(std::is_base_of<msg::Message, TMsg>::value, "TMsg must be derived from msg::Message");
     auto is_readable = std::make_shared<bool>(true);

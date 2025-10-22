@@ -150,6 +150,17 @@ Node::create_service(msg::mediator::SrvInfo& service_info, const Endpoint& rixhu
   return srv;
 }
 
+std::shared_ptr<Action>
+Node::create_action(msg::mediator::ActInfo& action_info, const Endpoint& rixhub_endpoint, const Endpoint& endpoint) {
+  action_info.id = id_factory_();
+  action_info.node_id = info_.id;
+  action_info.endpoint.address = endpoint.address;
+  action_info.endpoint.port = endpoint.port;
+  auto act = std::shared_ptr<Action>(new Action(action_info, socket_factory_, rixhub_endpoint_));
+  components_.push_back(act);
+  return act;
+}
+
 bool Node::get_system_info(msg::mediator::SystemInfo& info) {
   auto client = socket_factory_();
   if (!client->connect(rixhub_endpoint_))
@@ -173,11 +184,17 @@ bool Node::get_system_info(msg::mediator::SystemInfo& info) {
 }
 
 std::shared_ptr<ServiceClient> Node::create_service_client(const msg::mediator::SrvRequest& service_request,
-                                                           const Endpoint& rixhub_endpoint,
-                                                           const Endpoint& endpoint) {
+                                                           const Endpoint& rixhub_endpoint) {
   auto srv_cli = std::shared_ptr<ServiceClient>(new ServiceClient(service_request, socket_factory_, rixhub_endpoint));
   components_.push_back(srv_cli);
   return srv_cli;
+}
+
+std::shared_ptr<ActionClient> Node::create_action_client(const msg::mediator::ActRequest& action_request,
+                                                         const Endpoint& rixhub_endpoint) {
+  auto act_cli = std::shared_ptr<ActionClient>(new ActionClient(action_request, socket_factory_, rixhub_endpoint));
+  components_.push_back(act_cli);
+  return act_cli;
 }
 
 } // namespace rix

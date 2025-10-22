@@ -37,23 +37,21 @@ public:
 
 private:
   using CallbackUntyped = std::function<void(const msg::Message&)>;
-  msg::mediator::SubInfo                   info_;
-  std::shared_ptr<GenericSocket>           server_;
-  SocketFactory                            socket_factory_;
-  CallbackUntyped                          callback_;
-  mutable std::mutex                       callback_mutex_;
+  msg::mediator::SubInfo info_;
+  std::shared_ptr<GenericSocket> server_;
+  SocketFactory socket_factory_;
+  CallbackUntyped callback_;
+  mutable std::mutex callback_mutex_;
   std::set<std::shared_ptr<GenericSocket>> clients_;
-  Endpoint                                 rixhub_endpoint_;
-  std::atomic<bool>                        registered_flag_;
-  std::shared_ptr<msg::Message>            msg_instance_;
+  Endpoint rixhub_endpoint_;
+  std::atomic<bool> registered_flag_;
+  std::shared_ptr<msg::Message> msg_instance_;
 
 #ifdef RIX_MULTITHREADED
   std::thread spin_thread_;
 #endif
 
-  Subscriber(const msg::mediator::SubInfo& info,
-             SocketFactory                 factory,
-             const Endpoint&               rixhub_endpoint);
+  Subscriber(const msg::mediator::SubInfo& info, SocketFactory factory, const Endpoint& rixhub_endpoint);
 
   // Internal class to handle accepting new connections from rixhub
   class SubNotifyAcceptor : public Spinner {
@@ -82,8 +80,7 @@ private:
 };
 
 template <typename TMsg> void Subscriber::set_callback(Callback<TMsg> callback) {
-  static_assert(std::is_base_of<msg::Message, TMsg>::value,
-                "TMsg must be a subclass of msg::Message.");
+  static_assert(std::is_base_of<msg::Message, TMsg>::value, "TMsg must be a subclass of msg::Message.");
 
   if (TMsg().hash() != info_.topic_info.message_hash) {
     Log::warn << "Message type mismatch in set_callback." << std::endl;

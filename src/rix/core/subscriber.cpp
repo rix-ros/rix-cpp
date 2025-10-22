@@ -158,8 +158,13 @@ void Subscriber::on_spin() {
 Subscriber::SubNotifyAcceptor::SubNotifyAcceptor(Subscriber& parent) : parent(parent) {}
 
 void Subscriber::SubNotifyAcceptor::on_spin() {
+#ifdef RIX_MULTITHREADED
+  Duration timeout(1.0);
+#else
+  Duration timeout(0.0);
+#endif
   // Check to see if rixhub has made a connection
-  if (!parent.server_->wait_readable(Duration(1.0))) {
+  if (!parent.server_->wait_readable(timeout)) {
     return;
   }
 

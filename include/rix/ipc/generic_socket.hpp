@@ -110,6 +110,19 @@ public:
     return true;
   }
 
+  void ignore_message(size_t len) const {
+    // Read and discard 'len' bytes
+    std::vector<uint8_t> buffer(len);
+    size_t bytes = 0;
+    while (bytes < buffer.size()) {
+      ssize_t result = recv(buffer.data() + bytes, buffer.size() - bytes, 0);
+      if (result <= 0) {
+        return;
+      }
+      bytes += result;
+    }
+  }
+
   static std::shared_ptr<GenericPoller> get_poller() { return poller_; }
   static void set_poller(std::shared_ptr<GenericPoller> poller) { poller_ = poller; }
   static bool poll(const std::vector<std::shared_ptr<GenericSocket>>& all_sockets,

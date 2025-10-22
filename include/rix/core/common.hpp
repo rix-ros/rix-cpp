@@ -51,9 +51,12 @@ enum OPCODE : uint8_t {
   PUB_MESSAGE = 120,
   SRV_REQUEST_MESSAGE,
   SRV_RESPONSE_MESSAGE,
-  ACT_COMMAND_MESSAGE,
-  ACT_FEEDBACK_MESSAGE,
-  ACT_RESULT_MESSAGE,
+  ACT_GOAL_MESSAGE,     ///< Sent to Action server to request action
+  ACT_PREEMPT_MESSAGE,  ///< Sent to Action server to preempt current action
+  ACT_CANCEL_MESSAGE,   ///< Sent to Action server to cancel current action
+  ACT_RESPONSE_MESSAGE, ///< Sent from Action server to Action client as response to goal/preempt/cancel
+  ACT_FEEDBACK_MESSAGE, ///< Sent from Action server to Action client as feedback during action execution
+  ACT_RESULT_MESSAGE,   ///< Sent from Action server to Action client as result of action execution
 
   SRV_REQUEST = 140,
   ACT_REQUEST,
