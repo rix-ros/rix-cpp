@@ -14,7 +14,9 @@ namespace rix {
 class SocketBuilder {
 public:
   SocketBuilder(std::shared_ptr<MockSocket> socket)
-      : socket_(socket), enable_notifications_(false), send_count_(0), recv_count_(0) {}
+      : socket_(socket), enable_notifications_(false), send_count_(std::make_shared<int>(0)),
+        recv_count_(std::make_shared<int>(0)), expected_send_count_(std::make_shared<int>(0)),
+        expected_recv_count_(std::make_shared<int>(0)) {}
 
   // Enable automatic notifications on operation completion
   // Call this before setting up expectations if you want to use wait_for_operations
@@ -27,7 +29,8 @@ public:
   SocketBuilder& as_server(const Endpoint& endpoint,
                            const Endpoint& bound_endpoint,
                            SocketFactory create_socket,
-                           int accept_count = 0) {
+                           int accept_count = 0,
+                           int iters_between_accept = 0) {
     EXPECT_CALL(*socket_, set_reuse_address(true)).Times(1);
     EXPECT_CALL(*socket_, bind(endpoint)).Times(1);
     EXPECT_CALL(*socket_, listen(::testing::_)).Times(1);
@@ -39,9 +42,17 @@ public:
     auto accepted = std::make_shared<int>(0);
     std::weak_ptr<MockSocket> socket = socket_;
     auto notify = enable_notifications_;
+    auto iters = std::make_shared<int>(0);
     EXPECT_CALL(*socket_, wait_readable(::testing::_))
         .Times(::testing::AtLeast(0))
-        .WillRepeatedly(::testing::Invoke([accepted, accept_count](auto) { return *accepted < accept_count; }));
+        .WillRepeatedly(::testing::Invoke([accepted, accept_count, iters, iters_between_accept](auto) {
+          if (*iters < iters_between_accept) {
+            (*iters)++;
+            return false;
+          }
+          *iters = 0;
+          return *accepted < accept_count;
+        }));
     if (accept_count > 0) {
       EXPECT_CALL(*socket_, accept(::testing::_))
           .Times(accept_count)
@@ -80,34 +91,29 @@ public:
     static_assert(std::is_base_of<msg::Message, TMsg>::value, "TMsg must be derived from msg::Message");
 
     // Setup wait_writable on first call
-    int current_index = send_count_;
-    if (current_index == 0) {
-      auto send_index = send_index_;
+    if (*expected_send_count_ == 0) {
       EXPECT_CALL(*socket_, wait_writable(::testing::_))
           .Times(::testing::AtLeast(0))
-          .WillRepeatedly(::testing::Invoke([send_index, current_index]() {
-            return (*send_index)[current_index] < static_cast<int>(send_index->capacity());
+          .WillRepeatedly(::testing::Invoke([send_count = send_count_, expected_send_count = expected_send_count_]() {
+            return (*send_count) < *expected_send_count;
           }));
     }
-    send_count_++;
-
-    send_index_->push_back(0);
+    (*expected_send_count_)++;
 
     std::weak_ptr<MockSocket> socket = socket_;
     bool notify = enable_notifications_;
-    auto send_index = send_index_;
 
     EXPECT_CALL(*socket_, send_message)
         .Times(1)
         .InSequence(seq_)
         .WillOnce(::testing::Invoke(
-            [opcode, msg, socket, notify, send_index, current_index](uint8_t op, const msg::Message& message) {
+            [opcode, msg, socket, notify, send_count = send_count_](uint8_t op, const msg::Message& message) {
               EXPECT_EQ(op, opcode);
               auto _msg = dynamic_cast<const TMsg*>(&message);
               EXPECT_NE(_msg, nullptr);
+              (*send_count)++;
               if (_msg) {
                 EXPECT_EQ(*_msg, msg);
-                (*send_index)[current_index]++;
                 if (notify) {
                   if (auto s = socket.lock()) {
                     s->notify_operation_complete();
@@ -124,33 +130,29 @@ public:
     static_assert(std::is_base_of<msg::Message, TMsg>::value, "TMsg must be derived from msg::Message");
 
     // Setup wait_readable on first call
-    int current_index = recv_count_;
-    if (current_index == 0) {
-      auto recv_index = recv_index_;
+    if (*expected_recv_count_ == 0) {
       EXPECT_CALL(*socket_, wait_readable(::testing::_))
           .Times(::testing::AtLeast(0))
-          .WillRepeatedly(::testing::Invoke([recv_index, current_index]() {
-            return (*recv_index)[current_index] < static_cast<int>(recv_index->capacity());
+          .WillRepeatedly(::testing::Invoke([recv_count = recv_count_, expected_recv_count = expected_recv_count_]() {
+            return (*recv_count) < *expected_recv_count;
           }));
     }
-    recv_count_++;
-    recv_index_->push_back(0);
+    (*expected_recv_count_)++;
 
     std::weak_ptr<MockSocket> socket = socket_;
     auto notify = enable_notifications_;
-    auto recv_index = recv_index_;
 
     EXPECT_CALL(*socket_, recv_message(::testing::_, ::testing::_))
         .Times(1)
         .InSequence(seq_)
-        .WillOnce(::testing::Invoke(
-            [msg, len, socket, notify, recv_index, current_index](msg::Message& message, size_t size) {
+        .WillOnce(
+            ::testing::Invoke([msg, len, socket, notify, recv_count = recv_count_](msg::Message& message, size_t size) {
               EXPECT_EQ(size, len);
               auto _msg = dynamic_cast<TMsg*>(&message);
               EXPECT_NE(_msg, nullptr);
+              (*recv_count)++;
               if (_msg) {
                 *_msg = msg;
-                (*recv_index)[current_index]++;
                 if (notify) {
                   if (auto s = socket.lock()) {
                     s->notify_operation_complete();
@@ -167,36 +169,30 @@ public:
     static_assert(std::is_base_of<msg::Message, TMsg>::value, "TMsg must be derived from msg::Message");
 
     // Setup wait_readable on first call (each recv_message with opcode needs 2 recv calls)
-    int current_index = recv_count_;
-    if (current_index == 0) {
-      auto recv_index = recv_index_;
+    if (*expected_recv_count_ == 0) {
       EXPECT_CALL(*socket_, wait_readable(::testing::_))
           .Times(::testing::AtLeast(0))
-          .WillRepeatedly(::testing::Invoke([recv_index, current_index]() {
-            return (*recv_index)[current_index] < static_cast<int>(recv_index->capacity());
+          .WillRepeatedly(::testing::Invoke([recv_count = recv_count_, expected_recv_count = expected_recv_count_]() {
+            return (*recv_count) < *expected_recv_count;
           }));
     }
-    recv_count_ += 2;
-
-    recv_index_->push_back(0);
-    recv_index_->push_back(0);
+    (*expected_recv_count_) += 2;
 
     std::weak_ptr<MockSocket> socket = socket_;
     auto notify = enable_notifications_;
-    auto recv_index = recv_index_;
 
     // First recv: Operation
     EXPECT_CALL(*socket_, recv_message(::testing::_, ::testing::_))
         .Times(1)
         .InSequence(seq_)
-        .WillOnce(::testing::Invoke([opcode, msg, recv_index, current_index](msg::Message& message, size_t size) {
+        .WillOnce(::testing::Invoke([opcode, msg, recv_count = recv_count_](msg::Message& message, size_t size) {
           EXPECT_EQ(size, msg::mediator::Operation().size());
           auto op = dynamic_cast<msg::mediator::Operation*>(&message);
           EXPECT_NE(op, nullptr);
+          (*recv_count)++;
           if (op) {
             op->opcode = opcode;
             op->len = msg.size();
-            (*recv_index)[current_index]++;
             return true;
           }
           return false;
@@ -206,23 +202,22 @@ public:
     EXPECT_CALL(*socket_, recv_message(::testing::_, ::testing::_))
         .Times(1)
         .InSequence(seq_)
-        .WillOnce(
-            ::testing::Invoke([msg, socket, notify, recv_index, current_index](msg::Message& message, size_t size) {
-              EXPECT_EQ(size, msg.size());
-              auto _msg = dynamic_cast<TMsg*>(&message);
-              EXPECT_NE(_msg, nullptr);
-              if (_msg) {
-                *_msg = msg;
-                (*recv_index)[current_index + 1]++;
-                if (notify) {
-                  if (auto s = socket.lock()) {
-                    s->notify_operation_complete();
-                  }
-                }
-                return true;
+        .WillOnce(::testing::Invoke([msg, socket, notify, recv_count = recv_count_](msg::Message& message, size_t size) {
+          EXPECT_EQ(size, msg.size());
+          auto _msg = dynamic_cast<TMsg*>(&message);
+          EXPECT_NE(_msg, nullptr);
+          (*recv_count)++;
+          if (_msg) {
+            *_msg = msg;
+            if (notify) {
+              if (auto s = socket.lock()) {
+                s->notify_operation_complete();
               }
-              return false;
-            }));
+            }
+            return true;
+          }
+          return false;
+        }));
     return *this;
   }
 
@@ -234,10 +229,10 @@ public:
 private:
   std::shared_ptr<MockSocket> socket_;
   bool enable_notifications_;
-  int send_count_;
-  int recv_count_;
-  std::shared_ptr<std::vector<int>> send_index_ = std::make_shared<std::vector<int>>();
-  std::shared_ptr<std::vector<int>> recv_index_ = std::make_shared<std::vector<int>>();
+  std::shared_ptr<int> send_count_;
+  std::shared_ptr<int> recv_count_;
+  std::shared_ptr<int> expected_send_count_;
+  std::shared_ptr<int> expected_recv_count_;
   ::testing::Sequence seq_;
 };
 

@@ -52,6 +52,7 @@ echo "Installing rix-cpp ..."
 mkdir -p build
 cd build
 cmake -DCMAKE_PREFIX_PATH=$HOME/.rix/ -DCMAKE_INSTALL_PREFIX=$HOME/.rix/ $MULTITHREADED_FLAG ..
+make -j4 $MULTITHREADED_FLAG ..
 make -j4
 make install
 cd ..

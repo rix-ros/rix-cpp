@@ -8,10 +8,10 @@ namespace rix {
 class Spinner {
 public:
   Spinner() = default;
-  Spinner(const Spinner& other) = default;
-  Spinner& operator=(const Spinner& other) = default;
-  Spinner(Spinner&& other) = default;
-  Spinner& operator=(Spinner&& other) = default;
+  Spinner(const Spinner& other) = delete;
+  Spinner& operator=(const Spinner& other) = delete;
+  Spinner(Spinner&& other) = delete;
+  Spinner& operator=(Spinner&& other) = delete;
   virtual ~Spinner() = default;
 
   void spin() {
@@ -57,7 +57,7 @@ public:
   static std::shared_ptr<GenericSignal> get_shutdown_signal() { return shutdown_signal_; }
 
 private:
-  bool shutdown_flag_{false};
+  std::atomic<bool> shutdown_flag_{false};
   static inline std::shared_ptr<GenericSignal> shutdown_signal_{create_signal(SIGINT)};
   static inline std::mutex mutex_{};
   static inline bool signal_received_{false};

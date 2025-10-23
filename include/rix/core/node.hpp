@@ -21,7 +21,6 @@
 #include "rix/msg/mediator/SystemInfo.hpp"
 #include "rix/msg/standard/UInt64.hpp"
 #include "rix/msg/standard/Void.hpp"
-#include "rix/util/id.hpp"
 #include "rix/util/log.hpp"
 
 namespace rix {
@@ -265,7 +264,7 @@ std::shared_ptr<Service> Node::create_service(const std::string& service,
 }
 
 template <typename TGoal, typename TFeedback, typename TResult>
-std::shared_ptr<Action> Node::create_action(const std::string& service,
+std::shared_ptr<Action> Node::create_action(const std::string& action,
                                             Action::Callback<TGoal, TFeedback, TResult> callback,
                                             const Endpoint& endpoint) {
   static_assert(std::is_base_of<msg::Message, TGoal>::value, "TGoal must be a subclass of msg::Message.");
@@ -273,12 +272,12 @@ std::shared_ptr<Action> Node::create_action(const std::string& service,
   static_assert(std::is_base_of<msg::Message, TResult>::value, "TResult must be a subclass of msg::Message.");
 
   if (!ok()) {
-    Log::error << "Node is shutdown, cannot create service." << std::endl;
+    Log::error << "Node is shutdown, cannot create action." << std::endl;
     return nullptr;
   }
 
   msg::mediator::ActInfo action_info;
-  action_info.name = service;
+  action_info.name = action;
   action_info.goal_hash = TGoal().hash();
   action_info.feedback_hash = TFeedback().hash();
   action_info.result_hash = TResult().hash();

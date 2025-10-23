@@ -317,6 +317,7 @@ public:
   TestFixture& create_action(const std::string& action,
                              msg::mediator::ActInfo& act_info,
                              const msg::mediator::NodeInfo& node_info,
+                             int iters_between_accept = 0,
                              bool should_fail = false,
                              int client_count = 0,
                              const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
@@ -325,7 +326,7 @@ public:
     static_assert(std::is_base_of<msg::Message, TFeedback>::value, "TFeedback must be derived from msg::Message");
     static_assert(std::is_base_of<msg::Message, TResult>::value, "TResult must be derived from msg::Message");
     // Create the server socket for action connections
-    create_server(endpoint, bound_endpoint, client_count);
+    create_server(endpoint, bound_endpoint, client_count, iters_between_accept);
 
     act_info.node_id = node_info.id;
     act_info.id = expected_id_++;
@@ -592,7 +593,8 @@ public:
   template <typename TGoal, typename TFeedback, typename TResult>
   TestFixture& accept_action_client(std::shared_ptr<TGoal> goal,
                                     std::vector<std::shared_ptr<TFeedback>> feedback,
-                                    std::shared_ptr<TResult> result) {
+                                    std::shared_ptr<TResult> result,
+                                    bool should_fail = false) {
     auto conn_socket = socket_manager_.create_socket();
     if (enable_notifications_) {
       connection_sockets_.push_back(conn_socket);
@@ -601,9 +603,109 @@ public:
     if (enable_notifications_) {
       builder.enable_operation_notifications();
     }
-    builder.recv_message(OPCODE::ACT_GOAL_MESSAGE, *goal);
+    msg::mediator::Operation op;
+    op.opcode = OPCODE::ACT_GOAL_MESSAGE;
+    op.len = goal->size();
+    builder.recv_message(op, op.size());
+    msg::mediator::Status status;
+    if (should_fail) {
+      // Immediately send result with error
+      status.error = -1;
+      builder.send_message(OPCODE::ACT_RESPONSE_MESSAGE, status).close();
+      return *this;
+    } else {
+      status.error = 0;
+      builder.recv_message(*goal, goal->size()).send_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
+    }
     for (auto& fb : feedback) {
       builder.send_message(OPCODE::ACT_FEEDBACK_MESSAGE, *fb);
+    }
+    builder.send_message(OPCODE::ACT_RESULT_MESSAGE, *result).close();
+    return *this;
+  }
+
+  template <typename TGoal, typename TFeedback>
+  TestFixture& accept_action_client_with_cancel(std::shared_ptr<TGoal> goal,
+                                                std::vector<std::shared_ptr<TFeedback>> feedback,
+                                                bool should_fail = false) {
+    auto conn_socket = socket_manager_.create_socket();
+    if (enable_notifications_) {
+      connection_sockets_.push_back(conn_socket);
+    }
+    auto builder = SocketBuilder(conn_socket);
+    if (enable_notifications_) {
+      builder.enable_operation_notifications();
+    }
+    msg::mediator::Operation op;
+    op.opcode = OPCODE::ACT_GOAL_MESSAGE;
+    op.len = goal->size();
+    builder.recv_message(op, op.size());
+    msg::mediator::Status status;
+    if (should_fail) {
+      // Immediately send result with error
+      status.error = -1;
+      builder.send_message(OPCODE::ACT_RESPONSE_MESSAGE, status).close();
+      return *this;
+    } else {
+      status.error = 0;
+      builder.recv_message(*goal, goal->size()).send_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
+    }
+    for (auto& fb : feedback) {
+      builder.send_message(OPCODE::ACT_FEEDBACK_MESSAGE, *fb);
+    }
+    op.opcode = OPCODE::ACT_CANCEL_MESSAGE;
+    op.len = 0;
+    builder.recv_message(op, op.size()).close();
+    return *this;
+  }
+
+  template <typename TGoal, typename TFeedback, typename TResult>
+  TestFixture& accept_action_client_with_preempt(std::vector<std::shared_ptr<TGoal>> goals,
+                                                 std::vector<std::vector<std::shared_ptr<TFeedback>>> feedbacks,
+                                                 std::shared_ptr<TResult> result,
+                                                 bool should_fail = false) {
+    if (goals.size() != feedbacks.size()) {
+      throw std::runtime_error("Goals and feedbacks size mismatch");
+    }
+    if (goals.size() < 2) {
+      throw std::runtime_error("At least two goals required for preempt test");
+    }
+    auto conn_socket = socket_manager_.create_socket();
+    if (enable_notifications_) {
+      connection_sockets_.push_back(conn_socket);
+    }
+    auto builder = SocketBuilder(conn_socket);
+    if (enable_notifications_) {
+      builder.enable_operation_notifications();
+    }
+    msg::mediator::Operation op;
+    op.opcode = OPCODE::ACT_GOAL_MESSAGE;
+    op.len = goals[0]->size();
+    builder.recv_message(op, op.size());
+    msg::mediator::Status status;
+    if (should_fail) {
+      // Immediately send result with error
+      status.error = -1;
+      builder.send_message(OPCODE::ACT_RESPONSE_MESSAGE, status).close();
+      return *this;
+    } else {
+      status.error = 0;
+      // First set of goal/feedbacks
+      builder.recv_message(*goals[0], goals[0]->size()).send_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
+      for (size_t i = 0; i < feedbacks[0].size(); i++) {
+        builder.send_message(OPCODE::ACT_FEEDBACK_MESSAGE, *feedbacks[0][i]);
+      }
+    }
+    // Preempt with other goals
+    for (size_t g = 1; g < goals.size(); g++) {
+      // Preempt message
+      op.opcode = OPCODE::ACT_PREEMPT_MESSAGE;
+      op.len = goals[g]->size();
+      builder.recv_message(op, op.size());
+      builder.recv_message(*goals[g], goals[g]->size()).send_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
+      for (size_t i = 0; i < feedbacks[g].size(); i++) {
+        builder.send_message(OPCODE::ACT_FEEDBACK_MESSAGE, *feedbacks[g][i]);
+      }
     }
     builder.send_message(OPCODE::ACT_RESULT_MESSAGE, *result).close();
     return *this;
@@ -674,7 +776,8 @@ private:
   // Configure server
   TestFixture& create_server(const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
                              const Endpoint& bound_endpoint = Endpoint(DEFAULT_IP, 8000),
-                             int accept_count = 0) {
+                             int accept_count = 0,
+                             int iters_between_accept = 0) {
     auto socket = socket_manager_.create_socket();
     if (enable_notifications_) {
       server_sockets_.push_back(socket);
@@ -684,7 +787,11 @@ private:
       builder.enable_operation_notifications();
     }
     builder.as_server(
-        endpoint, bound_endpoint, [this]() { return this->socket_manager_.get_factory()(); }, accept_count);
+        endpoint,
+        bound_endpoint,
+        [this]() { return this->socket_manager_.get_factory()(); },
+        accept_count,
+        iters_between_accept);
     return *this;
   }
 };

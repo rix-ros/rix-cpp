@@ -36,7 +36,6 @@ void Action::set_preempt_callback(std::function<void()> callback) {
 
 Action::Action(const msg::mediator::ActInfo& info, SocketFactory socket_factory, const Endpoint& rixhub_endpoint)
     : info_(info), socket_factory_(socket_factory), rixhub_endpoint_(rixhub_endpoint) {
-
   server_ = socket_factory_();
   if (!server_) {
     shutdown();
@@ -94,7 +93,7 @@ Action::ActAcceptor::ActAcceptor(Action& parent) : parent(parent) {}
 
 void Action::ActAcceptor::on_spin() {
   std::lock_guard<std::mutex> guard(parent.mutex_);
-  if (!parent.ok()) {
+  if (!parent.ok() || !parent.callback_) {
     return;
   }
 
@@ -155,10 +154,10 @@ void Action::ActAcceptor::on_spin() {
 }
 
 void Action::on_spin() {
-  std::lock_guard<std::mutex> guard(mutex_);
 #ifndef RIX_MULTITHREADED
   acceptor_.spin_once();
 #endif
+  std::lock_guard<std::mutex> guard(mutex_);
 
   if (!ok() || !connection_ || !callback_) {
     return;
@@ -175,8 +174,6 @@ void Action::on_spin() {
     msg::mediator::Status status;
     switch (op.opcode) {
     case OPCODE::ACT_CANCEL_MESSAGE: {
-      status.error = -1;
-      connection_->send_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
       // Handle cancel message
       connection_ = nullptr;
       Log::debug << "Received cancel for action \"" << info_.name << "\"." << std::endl;

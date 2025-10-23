@@ -89,12 +89,12 @@ void Action::set_callback(Callback<TGoal, TFeedback, TResult> callback) {
   static_assert(std::is_base_of<msg::Message, TFeedback>::value, "TFeedback must be a subclass of msg::Message.");
   static_assert(std::is_base_of<msg::Message, TResult>::value, "TResult must be a subclass of msg::Message.");
 
+  std::lock_guard<std::mutex> guard(mutex_);
   if (TGoal().hash() != info_.goal_hash || TFeedback().hash() != info_.feedback_hash ||
       TResult().hash() != info_.result_hash) {
     Log::warn << "Message type mismatch in Action::set_callback." << std::endl;
     return;
   }
-  std::lock_guard<std::mutex> guard(mutex_);
   goal_instance_ = std::make_shared<TGoal>();
   feedback_instance_ = std::make_shared<TFeedback>();
   result_instance_ = std::make_shared<TResult>();

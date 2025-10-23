@@ -345,7 +345,7 @@ TEST(NodeTest, RegisterActionFailure) {
   TestFixture()
       .create_node("test_node", node_info)
       .create_action<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>(
-          "test_action", act_info, node_info, true)
+          "test_action", act_info, node_info, 0, true)
       .destroy_node(node_info)
       .build<Node>([](TestFixture& fixture) {
         Node node("test_node");
@@ -849,7 +849,8 @@ TEST(NodeTest, ShutdownFromSignal) {
         sig->raise();
         // (TODO: Enable some synchronization mechanism to avoid this sleep)
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        node.spin_once();
+        node.spin_once(); // Register the signal
+        node.spin_once(); // Shutdown all components
         EXPECT_FALSE(node.ok());
       });
 }
