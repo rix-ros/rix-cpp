@@ -870,6 +870,288 @@ TEST(MediatorTest, RequestServiceClientFailure) {
   }
 }
 
+TEST(MediatorTest, RegisterAndDeregisterAction) {
+  auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
+                     .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 4)
+                     .register_node("test_node", 1234)
+                     .register_action(5678,
+                                      1234,
+                                      "test_action",
+                                      msg::standard::UInt32().hash(),
+                                      msg::standard::String().hash(),
+                                      msg::standard::Time().hash())
+                     .deregister_action(5678, 1234, "test_action")
+                     .deregister_node("test_node", 1234);
+
+  {
+    auto med = fixture.build();
+    EXPECT_TRUE(med->ok());
+
+    med->spin_once(); // Process node registration
+    EXPECT_EQ(med->get_node_count(), 1);
+    EXPECT_EQ(med->get_action_count(), 0);
+
+    med->spin_once(); // Process action registration
+    EXPECT_EQ(med->get_node_count(), 1);
+    EXPECT_EQ(med->get_action_count(), 1);
+
+    med->spin_once(); // Process action deregistration
+    EXPECT_EQ(med->get_node_count(), 1);
+    EXPECT_EQ(med->get_action_count(), 0);
+
+    med->spin_once(); // Process node deregistration
+    EXPECT_EQ(med->get_node_count(), 0);
+    EXPECT_EQ(med->get_action_count(), 0);
+  }
+}
+
+TEST(MediatorTest, RegisterActionFailureDuplicateID) {
+  auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
+                     .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 5)
+                     .register_node("test_node", 1234)
+                     .register_action(5678,
+                                      1234,
+                                      "test_action",
+                                      msg::standard::UInt32().hash(),
+                                      msg::standard::String().hash(),
+                                      msg::standard::Time().hash())
+                     .register_action(5678,
+                                      1234,
+                                      "test_action",
+                                      msg::standard::UInt32().hash(),
+                                      msg::standard::String().hash(),
+                                      msg::standard::Time().hash(),
+                                      true)
+                     .deregister_action(5678, 1234, "test_action")
+                     .deregister_node("test_node", 1234);
+
+  {
+    auto med = fixture.build();
+    EXPECT_TRUE(med->ok());
+
+    med->spin_once(); // Process node registration
+    EXPECT_EQ(med->get_node_count(), 1);
+    EXPECT_EQ(med->get_action_count(), 0);
+
+    med->spin_once(); // Process action registration
+    EXPECT_EQ(med->get_node_count(), 1);
+    EXPECT_EQ(med->get_action_count(), 1);
+
+    med->spin_once();                      // Process duplicate action registration
+    EXPECT_EQ(med->get_node_count(), 1);   // Still one node
+    EXPECT_EQ(med->get_action_count(), 1); // Still one action
+
+    med->spin_once(); // Process action deregistration
+    EXPECT_EQ(med->get_node_count(), 1);
+    EXPECT_EQ(med->get_action_count(), 0);
+
+    med->spin_once(); // Process node deregistration
+    EXPECT_EQ(med->get_node_count(), 0);
+    EXPECT_EQ(med->get_action_count(), 0);
+  }
+}
+
+TEST(MediatorTest, RegisterActionFailureDuplicateName) {
+  auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
+                     .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 5)
+                     .register_node("test_node", 1234)
+                     .register_action(5678,
+                                      1234,
+                                      "test_action",
+                                      msg::standard::UInt32().hash(),
+                                      msg::standard::String().hash(),
+                                      msg::standard::Time().hash())
+                     .register_action(8765,
+                                      1234,
+                                      "test_action",
+                                      msg::standard::UInt32().hash(),
+                                      msg::standard::String().hash(),
+                                      msg::standard::Time().hash(),
+                                      true)
+                     .deregister_action(5678, 1234, "test_action")
+                     .deregister_node("test_node", 1234);
+
+  {
+    auto med = fixture.build();
+    EXPECT_TRUE(med->ok());
+
+    med->spin_once(); // Process node registration
+    EXPECT_EQ(med->get_node_count(), 1);
+    EXPECT_EQ(med->get_action_count(), 0);
+
+    med->spin_once(); // Process action registration
+    EXPECT_EQ(med->get_node_count(), 1);
+    EXPECT_EQ(med->get_action_count(), 1);
+
+    med->spin_once();                      // Process duplicate name action registration
+    EXPECT_EQ(med->get_node_count(), 1);   // Still one node
+    EXPECT_EQ(med->get_action_count(), 1); // Still one action
+
+    med->spin_once(); // Process action deregistration
+    EXPECT_EQ(med->get_node_count(), 1);
+    EXPECT_EQ(med->get_action_count(), 0);
+
+    med->spin_once(); // Process node deregistration
+    EXPECT_EQ(med->get_node_count(), 0);
+    EXPECT_EQ(med->get_action_count(), 0);
+  }
+}
+
+TEST(MediatorTest, RegisterActionFailureInvalidNodeID) {
+  auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
+                     .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 5)
+                     .register_node("test_node", 1234)
+                     .register_action(5678,
+                                      1234,
+                                      "test_action",
+                                      msg::standard::UInt32().hash(),
+                                      msg::standard::String().hash(),
+                                      msg::standard::Time().hash())
+                     .register_action(8765,
+                                      4321,
+                                      "other_action",
+                                      msg::standard::UInt32().hash(),
+                                      msg::standard::String().hash(),
+                                      msg::standard::Time().hash(),
+                                      true)
+                     .deregister_action(5678, 1234, "test_action")
+                     .deregister_node("test_node", 1234);
+
+  {
+    auto med = fixture.build();
+    EXPECT_TRUE(med->ok());
+
+    med->spin_once(); // Process node registration
+    EXPECT_EQ(med->get_node_count(), 1);
+    EXPECT_EQ(med->get_action_count(), 0);
+
+    med->spin_once(); // Process action registration
+    EXPECT_EQ(med->get_node_count(), 1);
+    EXPECT_EQ(med->get_action_count(), 1);
+
+    med->spin_once();                      // Process invalid node ID action registration
+    EXPECT_EQ(med->get_node_count(), 1);   // Still one node
+    EXPECT_EQ(med->get_action_count(), 1); // Still one action
+
+    med->spin_once(); // Process action deregistration
+    EXPECT_EQ(med->get_node_count(), 1);
+    EXPECT_EQ(med->get_action_count(), 0);
+
+    med->spin_once(); // Process node deregistration
+    EXPECT_EQ(med->get_node_count(), 0);
+    EXPECT_EQ(med->get_action_count(), 0);
+  }
+}
+
+TEST(MediatorTest, DeregisterUnregisteredAction) {
+  auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
+                     .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 5)
+                     .register_node("test_node", 1234)
+                     .register_action(5678,
+                                      1234,
+                                      "test_action",
+                                      msg::standard::UInt32().hash(),
+                                      msg::standard::String().hash(),
+                                      msg::standard::Time().hash())
+                     .deregister_action(9999, 1234, "other_action")
+                     .deregister_action(5678, 1234, "test_action")
+                     .deregister_node("test_node", 1234);
+
+  {
+    auto med = fixture.build();
+    EXPECT_TRUE(med->ok());
+
+    med->spin_once(); // Process node registration
+    EXPECT_EQ(med->get_node_count(), 1);
+    EXPECT_EQ(med->get_action_count(), 0);
+
+    med->spin_once(); // Process action registration
+    EXPECT_EQ(med->get_node_count(), 1);
+    EXPECT_EQ(med->get_action_count(), 1);
+
+    med->spin_once();                      // Process deregistration of unknown action
+    EXPECT_EQ(med->get_node_count(), 1);   // Still one node
+    EXPECT_EQ(med->get_action_count(), 1); // Still one action
+
+    med->spin_once(); // Process action deregistration
+    EXPECT_EQ(med->get_node_count(), 1);
+    EXPECT_EQ(med->get_action_count(), 0);
+
+    med->spin_once(); // Process node deregistration
+    EXPECT_EQ(med->get_node_count(), 0);
+    EXPECT_EQ(med->get_action_count(), 0);
+  }
+}
+
+TEST(MediatorTest, RequestActionClient) {
+  auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
+                     .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 5)
+                     .register_node("test_node", 1234)
+                     .register_action(5678,
+                                      1234,
+                                      "test_action",
+                                      msg::standard::UInt32().hash(),
+                                      msg::standard::String().hash(),
+                                      msg::standard::Time().hash())
+                     .request_action_client(1234,
+                                            "test_action",
+                                            msg::standard::UInt32().hash(),
+                                            msg::standard::String().hash(),
+                                            msg::standard::Time().hash(),
+                                            5678)
+                     .deregister_action(5678, 1234, "test_action")
+                     .deregister_node("test_node", 1234);
+
+  {
+    auto med = fixture.build();
+    EXPECT_TRUE(med->ok());
+
+    med->spin_once(); // Process node registration
+    EXPECT_EQ(med->get_node_count(), 1);
+
+    med->spin_once(); // Process action registration
+    EXPECT_EQ(med->get_action_count(), 1);
+
+    med->spin_once(); // Process action client request
+    EXPECT_TRUE(med->ok());
+
+    med->spin_once(); // Process action deregistration
+    EXPECT_EQ(med->get_action_count(), 0);
+
+    med->spin_once(); // Process node deregistration
+    EXPECT_EQ(med->get_node_count(), 0);
+  }
+}
+
+TEST(MediatorTest, RequestActionClientFailure) {
+  auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
+                     .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 3)
+                     .register_node("test_node", 1234)
+                     .request_action_client(1234,
+                                            "nonexistent_action",
+                                            msg::standard::UInt32().hash(),
+                                            msg::standard::String().hash(),
+                                            msg::standard::Time().hash(),
+                                            0,
+                                            true)
+                     .deregister_node("test_node", 1234);
+
+  {
+    auto med = fixture.build();
+    EXPECT_TRUE(med->ok());
+
+    med->spin_once(); // Process node registration
+    EXPECT_EQ(med->get_node_count(), 1);
+
+    med->spin_once(); // Process action client request for nonexistent action
+    EXPECT_TRUE(med->ok());
+    EXPECT_EQ(med->get_action_count(), 0); // No action should be registered
+
+    med->spin_once(); // Process node deregistration
+    EXPECT_EQ(med->get_node_count(), 0);
+  }
+}
+
 TEST(MediatorTest, ParameterSetRequest) {
   auto param = std::make_shared<msg::standard::String>();
   param->data = "test_value";

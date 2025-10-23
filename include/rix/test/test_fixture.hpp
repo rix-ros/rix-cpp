@@ -518,7 +518,10 @@ public:
     if (enable_notifications_) {
       builder.enable_operation_notifications();
     }
-    builder.send_message(OPCODE::PUB_MESSAGE, messages).close();
+    for (auto& msg : messages) {
+      builder.send_message(OPCODE::PUB_MESSAGE, *msg);
+    }
+    builder.close();
     return *this;
   }
 
@@ -560,7 +563,11 @@ public:
     if (enable_notifications_) {
       builder.enable_operation_notifications();
     }
-    builder.set_blocking(false).connect(publisher_endpoint).recv_message(OPCODE::PUB_MESSAGE, messages).close();
+    builder.set_blocking(false).connect(publisher_endpoint);
+    for (auto& msg : messages) {
+      builder.recv_message(OPCODE::PUB_MESSAGE, *msg);
+    }
+    builder.close();
     return *this;
   }
 
@@ -594,9 +601,11 @@ public:
     if (enable_notifications_) {
       builder.enable_operation_notifications();
     }
-    builder.recv_message(OPCODE::ACT_GOAL_MESSAGE, *goal)
-        .send_message(OPCODE::ACT_FEEDBACK_MESSAGE, feedback, OPCODE::ACT_RESULT_MESSAGE, *result)
-        .close();
+    builder.recv_message(OPCODE::ACT_GOAL_MESSAGE, *goal);
+    for (auto& fb : feedback) {
+      builder.send_message(OPCODE::ACT_FEEDBACK_MESSAGE, *fb);
+    }
+    builder.send_message(OPCODE::ACT_RESULT_MESSAGE, *result).close();
     return *this;
   }
 
@@ -631,6 +640,21 @@ public:
     if (enable_notifications_) {
       client_sockets_.push_back(socket);
     }
+    auto builder = SocketBuilder(socket);
+    if (enable_notifications_) {
+      builder.enable_operation_notifications();
+    }
+    builder.connect(action_endpoint);
+    if (preempt) {
+      builder.send_message(OPCODE::ACT_PREEMPT_MESSAGE, *goal);
+    } else {
+      builder.send_message(OPCODE::ACT_GOAL_MESSAGE, *goal);
+    }
+    for (auto& fb : feedback) {
+      builder.recv_message(OPCODE::ACT_FEEDBACK_MESSAGE, *fb);
+    }
+    builder.recv_message(OPCODE::ACT_RESULT_MESSAGE, *result).close();
+    return *this;
   }
 
 private:
