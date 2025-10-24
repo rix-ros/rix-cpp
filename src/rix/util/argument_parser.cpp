@@ -10,7 +10,7 @@ namespace detail {
 
 bool isalnum(const std::string& str) {
   return std::all_of(
-      str.begin(), str.end(), [](const auto& c) { return !std::isalnum(static_cast<unsigned char>(c)) && c != '_'; });
+      str.begin(), str.end(), [](const auto& c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '_'; });
 }
 
 bool parse_int8(const std::string& str, std::any& value) {
