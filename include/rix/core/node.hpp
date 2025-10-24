@@ -24,10 +24,6 @@
 
 namespace rix {
 
-// TODO: There is a race condition that occurs between component creation and the setting of their callbacks. The
-// callbacks must be set with the component's mutex held to avoid missing messages during the time between creation and
-// callback setting.
-
 class Node : public Spinner {
 public:
   explicit Node(const std::string& name, const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0));
