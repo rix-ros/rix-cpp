@@ -1,4 +1,5 @@
 #include "rix/core/action.hpp"
+#include "rix/msg/mediator/Status.hpp"
 
 namespace rix {
 
@@ -68,9 +69,9 @@ Action::Action(const msg::mediator::ActInfo& info, SocketFactory socket_factory,
     return;
   }
 
-  msg::mediator::Operation op;
+  msg::mediator::Operation operation;
   msg::mediator::Status status;
-  if (!client->recv_message(op, status)) {
+  if (!client->recv_message(operation, status)) {
     shutdown();
     return;
   }
@@ -107,8 +108,8 @@ void Action::ActAcceptor::on_spin() {
     return;
   }
 
-  msg::mediator::Operation op;
-  if (!conn->recv_message(op, op.size())) {
+  msg::mediator::Operation operation;
+  if (!conn->recv_message(operation, operation.size())) {
     return;
   }
 
@@ -123,7 +124,7 @@ void Action::ActAcceptor::on_spin() {
   }
 
   // Reject if not a goal message
-  if (op.opcode != OPCODE::ACT_GOAL_MESSAGE) {
+  if (operation.opcode != OPCODE::ACT_GOAL_MESSAGE) {
     status.error = -1;
     conn->send_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
     Log::debug << "Rejected ActionClient connection for \"" << parent.info_.name << "\" (invalid opcode)." << std::endl;
@@ -131,7 +132,7 @@ void Action::ActAcceptor::on_spin() {
   }
 
   // Read the goal message
-  if (!conn->recv_message(*parent.goal_instance_, op.len)) {
+  if (!conn->recv_message(*parent.goal_instance_, operation.len)) {
     status.error = -1;
     conn->send_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
     Log::debug << "Rejected ActionClient connection for \"" << parent.info_.name << "\" (invalid goal message)."
@@ -165,14 +166,14 @@ void Action::on_spin() {
 
   // Check for incoming messages from ActionClient
   if (connection_->wait_readable(Duration(0.0))) {
-    msg::mediator::Operation op;
-    if (!connection_->recv_message(op, op.size())) {
+    msg::mediator::Operation operation;
+    if (!connection_->recv_message(operation, operation.size())) {
       connection_ = nullptr;
       return;
     }
 
     msg::mediator::Status status;
-    switch (op.opcode) {
+    switch (operation.opcode) {
     case OPCODE::ACT_CANCEL_MESSAGE: {
       // Handle cancel message
       connection_ = nullptr;
@@ -181,7 +182,7 @@ void Action::on_spin() {
     }
     case OPCODE::ACT_PREEMPT_MESSAGE: {
       // Handle preempt message
-      if (!connection_->recv_message(*goal_instance_, op.len)) {
+      if (!connection_->recv_message(*goal_instance_, operation.len)) {
         connection_ = nullptr;
         return;
       }

@@ -9,19 +9,15 @@
 
 #include "rix/core/common.hpp"
 #include "rix/core/spinner.hpp"
-#include "rix/msg/mediator/Operation.hpp"
 #include "rix/msg/mediator/PubInfo.hpp"
-#include "rix/msg/mediator/Status.hpp"
 #include "rix/msg/mediator/SubInfo.hpp"
-#include "rix/msg/mediator/SubNotify.hpp"
-#include "rix/msg/standard/UInt32.hpp"
 #include "rix/util/log.hpp"
 
 namespace rix {
 
 class Node; // Forward declaration
 
-class Subscriber : public Spinner {
+class Subscriber final : public Spinner {
   friend class Node;
 
 public:
@@ -29,7 +25,7 @@ public:
 
   Subscriber(const Subscriber&) = delete;
   Subscriber& operator=(const Subscriber&) = delete;
-  ~Subscriber();
+  ~Subscriber() override;
 
   template <typename TMsg> void set_callback(Callback<TMsg> callback);
 
@@ -56,7 +52,7 @@ private:
   // Internal class to handle accepting new connections from rixhub
   class SubNotifyAcceptor : public Spinner {
   public:
-    SubNotifyAcceptor(Subscriber& parent);
+    explicit SubNotifyAcceptor(Subscriber& parent);
     ~SubNotifyAcceptor() override = default;
 
     SubNotifyAcceptor(const SubNotifyAcceptor&) = delete;
@@ -76,21 +72,21 @@ private:
 
   using Spinner::spin;
   using Spinner::spin_once;
-  virtual void on_spin() override;
+  void on_spin() override;
 };
 
 template <typename TMsg> void Subscriber::set_callback(Callback<TMsg> callback) {
-  static_assert(std::is_base_of<msg::Message, TMsg>::value, "TMsg must be a subclass of msg::Message.");
+  static_assert(std::is_base_of_v<msg::Message, TMsg>, "TMsg must be a subclass of msg::Message.");
 
   if (TMsg().hash() != info_.topic_info.message_hash) {
     Log::warn << "Message type mismatch in set_callback." << std::endl;
     return;
   }
-  std::lock_guard<std::mutex> guard(callback_mutex_);
+  std::lock_guard guard(callback_mutex_);
   msg_instance_ = std::make_shared<TMsg>();
   callback_ = [callback](const msg::Message& msg) {
     // Safe to static cast because we checked the hash above
-    const TMsg& typed_msg = static_cast<const TMsg&>(msg);
+    const auto& typed_msg = static_cast<const TMsg&>(msg);
     callback(typed_msg);
   };
 }

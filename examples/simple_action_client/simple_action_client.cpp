@@ -19,7 +19,7 @@ SimpleActionClient::SimpleActionClient(double rate) : Node(NAME) {
   act_cli_->set_result_callback<msg::standard::Double>(
       [](const msg::standard::Double& result) { Log::info << "Received result: " << result.data << std::endl; });
 
-  uint32_t i = 0;
+  std::shared_ptr<double> i_ptr = std::make_shared<double>(0.0);
   auto timer = create_timer(Duration(1.0 / rate), &SimpleActionClient::timer_callback, this);
   if (!timer->ok()) {
     shutdown();
@@ -27,8 +27,6 @@ SimpleActionClient::SimpleActionClient(double rate) : Node(NAME) {
     return;
   }
 }
-
-SimpleActionClient::~SimpleActionClient() {}
 
 void SimpleActionClient::timer_callback(const TimerCallback::Event& event) {
   msg::standard::Double goal;

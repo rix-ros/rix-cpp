@@ -46,6 +46,6 @@ bool SimpleAction::callback(const rix::msg::standard::Double& goal,
   feedback.data = (static_cast<float>(i_) / static_cast<float>(max_iters_)) * 100.0f;
   Log::info << "Goal progress: " << feedback.data << "\% after " << i_ << " iterations." << std::endl;
   i_++;
-  Time::sleep_for(Duration(0.001));  // Simulate work being done
+  Time::sleep_for(Duration(0.001)); // Simulate work being done
   return false;
 }

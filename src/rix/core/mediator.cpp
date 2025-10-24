@@ -1,4 +1,11 @@
 #include "rix/core/mediator.hpp"
+#include "rix/msg/mediator/ActRequest.hpp"
+#include "rix/msg/mediator/ActResponse.hpp"
+#include "rix/msg/mediator/SrvRequest.hpp"
+#include "rix/msg/mediator/SrvResponse.hpp"
+#include "rix/msg/mediator/Status.hpp"
+#include "rix/msg/mediator/SubNotify.hpp"
+#include "rix/msg/standard/UInt64.hpp"
 
 namespace rix {
 

@@ -1,9 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "print_helper.hpp"
 #include "rix/rob/eigen_util.hpp"
 #include "rix/rob/robot_model.hpp"
-#include "robots.hpp"
 
 using namespace rix;
 using namespace rix;

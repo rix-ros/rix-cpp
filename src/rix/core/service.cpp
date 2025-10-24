@@ -1,12 +1,11 @@
 #include "rix/core/service.hpp"
+#include "rix/msg/mediator/Status.hpp"
 
 namespace rix {
 
-Service::Service(const msg::mediator::SrvInfo& info,
-                 SocketFactory socket_factory,
-                 const Endpoint& rixhub_endpoint)
-    : info_(info), socket_factory_(socket_factory), rixhub_endpoint_(rixhub_endpoint),
-      registered_flag_(false), request_instance_(nullptr), response_instance_(nullptr) {
+Service::Service(const msg::mediator::SrvInfo& info, SocketFactory socket_factory, const Endpoint& rixhub_endpoint)
+    : info_(info), socket_factory_(socket_factory), rixhub_endpoint_(rixhub_endpoint), registered_flag_(false),
+      request_instance_(nullptr), response_instance_(nullptr) {
 
   server_ = socket_factory_();
   server_->set_reuse_address(true);
@@ -36,9 +35,9 @@ Service::Service(const msg::mediator::SrvInfo& info,
     return;
   }
 
-  msg::mediator::Operation op;
+  msg::mediator::Operation operation;
   msg::mediator::Status status;
-  if (!client->recv_message(op, status)) {
+  if (!client->recv_message(operation, status)) {
     shutdown();
     return;
   }
@@ -94,11 +93,11 @@ void Service::on_spin() {
   }
 
   // Read the request message
-  msg::mediator::Operation op;
-  if (!conn->recv_message(op, *request_instance_))
+  msg::mediator::Operation operation;
+  if (!conn->recv_message(operation, *request_instance_))
     return;
 
-  if (op.opcode != OPCODE::SRV_REQUEST_MESSAGE) {
+  if (operation.opcode != OPCODE::SRV_REQUEST_MESSAGE) {
     return;
   }
 

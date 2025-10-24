@@ -5,7 +5,7 @@ using namespace rix;
 
 const std::string NAME = "param_server_example";
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   Log::init(NAME);
   Log::set_log_level(Log::Level::DEBUG);
 

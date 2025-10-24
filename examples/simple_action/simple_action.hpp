@@ -8,7 +8,7 @@ using namespace rix;
 
 const std::string NAME = "simple_action";
 
-class SimpleAction : public rix::Node {
+class SimpleAction final : public rix::Node {
 public:
   SimpleAction(int max_iters, int port);
 

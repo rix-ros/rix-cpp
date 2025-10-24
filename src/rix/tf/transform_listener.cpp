@@ -7,15 +7,19 @@
 
 namespace rix {
 
-TransformListener::TransformListener(std::shared_ptr<Node> node, const Duration &duration,
-                                     const std::string &topic, const Endpoint &endpoint)
+TransformListener::TransformListener(const std::shared_ptr<Node>& node,
+                                     const Duration& duration,
+                                     const std::string& topic,
+                                     const Endpoint& endpoint)
     : TransformListener(*node, duration, topic, endpoint) {}
 
-TransformListener::TransformListener(Node &node, const Duration &duration,
-                                     const std::string &topic, const Endpoint &endpoint)
+TransformListener::TransformListener(Node& node,
+                                     const Duration& duration,
+                                     const std::string& topic,
+                                     const Endpoint& endpoint)
     : subscriber_(node.create_subscriber<msg::geometry::TF>(
           topic,
-          [this](const msg::geometry::TF &msg) {
+          [this](const msg::geometry::TF& msg) {
             if (!graph_.update(msg)) {
               Log::warn << "Failed to update transform from TF message." << std::endl;
             }
@@ -23,10 +27,10 @@ TransformListener::TransformListener(Node &node, const Duration &duration,
           endpoint)),
       graph_("world", duration), duration_(duration) {}
 
-TransformListener::TransformListener(const TransformListener &other)
+TransformListener::TransformListener(const TransformListener& other)
     : subscriber_(other.subscriber_), graph_(other.graph_), duration_(other.duration_) {}
 
-TransformListener &TransformListener::operator=(const TransformListener &other) {
+TransformListener& TransformListener::operator=(const TransformListener& other) {
   if (this != &other) {
     subscriber_ = other.subscriber_;
     graph_ = other.graph_;
@@ -35,14 +39,18 @@ TransformListener &TransformListener::operator=(const TransformListener &other) 
   return *this;
 }
 
-bool TransformListener::get_transform(const std::string &target_frame, const std::string &source_frame,
-                                      Time time, msg::geometry::TransformStamped &transform) const {
+bool TransformListener::get_transform(const std::string& target_frame,
+                                      const std::string& source_frame,
+                                      const Time& time,
+                                      msg::geometry::TransformStamped& transform) const {
   return graph_.get_transform(target_frame, source_frame, time, transform);
 }
 
-bool TransformListener::transform_point(const std::string &target_frame, const std::string &source_frame,
-                                        Time time, const msg::geometry::Point &point,
-                                        msg::geometry::Point &transformed_point) const {
+bool TransformListener::transform_point(const std::string& target_frame,
+                                        const std::string& source_frame,
+                                        const Time& time,
+                                        const msg::geometry::Point& point,
+                                        msg::geometry::Point& transformed_point) const {
   msg::geometry::TransformStamped transform;
   if (!graph_.get_transform(target_frame, source_frame, time, transform)) {
     return false;
@@ -57,9 +65,11 @@ bool TransformListener::transform_point(const std::string &target_frame, const s
   return true;
 }
 
-bool TransformListener::transform_point_cloud(const std::string &target_frame, const std::string &source_frame,
-                                              Time time, const msg::sensor::PointCloud &point_cloud,
-                                              msg::sensor::PointCloud &transformed_point_cloud) const {
+bool TransformListener::transform_point_cloud(const std::string& target_frame,
+                                              const std::string& source_frame,
+                                              const Time& time,
+                                              const msg::sensor::PointCloud& point_cloud,
+                                              msg::sensor::PointCloud& transformed_point_cloud) const {
   transformed_point_cloud.header = point_cloud.header;
   transformed_point_cloud.header.frame_id = target_frame;
   transformed_point_cloud.points.resize(point_cloud.points.size());
@@ -72,8 +82,8 @@ bool TransformListener::transform_point_cloud(const std::string &target_frame, c
   Eigen::Affine3d eigen_transform = msg_to_eigen(transform.transform);
 
   for (size_t i = 0; i < point_cloud.points.size(); ++i) {
-    const auto &point = point_cloud.points[i];
-    auto &t_point = transformed_point_cloud.points[i];
+    const auto& point = point_cloud.points[i];
+    auto& t_point = transformed_point_cloud.points[i];
 
     Eigen::Vector3d eigen_point = msg_to_eigen(point);
     Eigen::Vector3d transformed_eigen_point = eigen_transform * eigen_point;
@@ -84,20 +94,21 @@ bool TransformListener::transform_point_cloud(const std::string &target_frame, c
   return true;
 }
 
-bool TransformListener::transform_pose(const std::string &target_frame, const std::string &source_frame,
-                                       Time time, const msg::geometry::Pose &pose,
-                                       msg::geometry::Pose &transformed_pose) const {
+bool TransformListener::transform_pose(const std::string& target_frame,
+                                       const std::string& source_frame,
+                                       const Time& time,
+                                       const msg::geometry::Pose& pose,
+                                       msg::geometry::Pose& transformed_pose) const {
   msg::geometry::TransformStamped transform;
   if (!graph_.get_transform(target_frame, source_frame, time, transform)) {
     return false;
   }
   Eigen::Affine3d eigen_transform = msg_to_eigen(transform.transform);
 
-  Eigen::Affine3d pose_transform =
-      Eigen::Translation3d(msg_to_eigen(pose.position)) * msg_to_eigen(pose.orientation);
+  Eigen::Affine3d pose_transform = Eigen::Translation3d(msg_to_eigen(pose.position)) * msg_to_eigen(pose.orientation);
   Eigen::Affine3d transformed_pose_affine = eigen_transform * pose_transform;
 
-  const Eigen::Vector3d &transformed_position = transformed_pose_affine.translation();
+  const Eigen::Vector3d& transformed_position = transformed_pose_affine.translation();
   Eigen::Quaterniond transformed_orientation(transformed_pose_affine.rotation());
 
   transformed_pose.position.x = transformed_position.x();
@@ -108,9 +119,11 @@ bool TransformListener::transform_pose(const std::string &target_frame, const st
   return true;
 }
 
-bool TransformListener::transform_quaternion(const std::string &target_frame, const std::string &source_frame,
-                                             Time time, const msg::geometry::Quaternion &quaternion,
-                                             msg::geometry::Quaternion &transformed_quaternion) const {
+bool TransformListener::transform_quaternion(const std::string& target_frame,
+                                             const std::string& source_frame,
+                                             const Time& time,
+                                             const msg::geometry::Quaternion& quaternion,
+                                             msg::geometry::Quaternion& transformed_quaternion) const {
   msg::geometry::TransformStamped transform;
   if (!graph_.get_transform(target_frame, source_frame, time, transform)) {
     return false;
@@ -123,9 +136,11 @@ bool TransformListener::transform_quaternion(const std::string &target_frame, co
   return true;
 }
 
-bool TransformListener::transform_vector(const std::string &target_frame, const std::string &source_frame,
-                                         Time time, const msg::geometry::Vector3 &vector,
-                                         msg::geometry::Vector3 &transformed_vector) const {
+bool TransformListener::transform_vector(const std::string& target_frame,
+                                         const std::string& source_frame,
+                                         const Time& time,
+                                         const msg::geometry::Vector3& vector,
+                                         msg::geometry::Vector3& transformed_vector) const {
   msg::geometry::TransformStamped transform;
   if (!graph_.get_transform(target_frame, source_frame, time, transform)) {
     return false;
@@ -140,10 +155,10 @@ bool TransformListener::transform_vector(const std::string &target_frame, const 
 
 bool TransformListener::ok() const { return subscriber_->ok(); }
 
-const FrameGraph &TransformListener::graph() const { return graph_; }
+const FrameGraph& TransformListener::graph() const { return graph_; }
 
 Duration TransformListener::duration() const { return duration_; }
 
-void TransformListener::set_duration(const Duration &duration) { duration_ = duration; }
+void TransformListener::set_duration(const Duration& duration) { duration_ = duration; }
 
 } // namespace rix

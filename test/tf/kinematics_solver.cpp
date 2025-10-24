@@ -3,7 +3,6 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
-#include <iomanip>
 #include <random>
 
 #include "rix/rob/robot_model.hpp"
@@ -82,8 +81,8 @@ JS generate_random_joint_states(std::shared_ptr<RobotModel> robot, const std::ve
 /**
  * Compute numerical Jacobian using finite differences
  */
-Eigen::MatrixXd compute_numerical_jacobian(KinematicsSolver& solver,
-                                           std::shared_ptr<RobotModel> robot,
+Eigen::MatrixXd compute_numerical_jacobian(const KinematicsSolver& solver,
+                                           const std::shared_ptr<RobotModel>& robot,
                                            const std::string& link_name,
                                            const JS& current_state,
                                            double epsilon = 1e-3) {
@@ -147,7 +146,7 @@ Eigen::MatrixXd compute_numerical_jacobian(KinematicsSolver& solver,
 /**
  * Test that FK produces valid transformations for various joint configurations
  */
-void test_fk_validity(std::shared_ptr<RobotModel> robot, const std::string& end_effector, int num_tests = 10) {
+void test_fk_validity(const std::shared_ptr<RobotModel>& robot, const std::string& end_effector, int num_tests = 10) {
   KinematicsSolver solver(robot);
   auto chain = robot->get_joints_in_chain(end_effector);
 
@@ -165,7 +164,7 @@ void test_fk_validity(std::shared_ptr<RobotModel> robot, const std::string& end_
 /**
  * Test that FK is consistent: same joint values should produce same results
  */
-void test_fk_consistency(std::shared_ptr<RobotModel> robot, const std::string& end_effector) {
+void test_fk_consistency(const std::shared_ptr<RobotModel>& robot, const std::string& end_effector) {
   KinematicsSolver solver(robot);
   auto chain = robot->get_joints_in_chain(end_effector);
 
@@ -188,7 +187,9 @@ void test_fk_consistency(std::shared_ptr<RobotModel> robot, const std::string& e
 /**
  * Test Jacobian accuracy using numerical differentiation
  */
-void test_jacobian_accuracy(std::shared_ptr<RobotModel> robot, const std::string& end_effector, int num_tests = 3) {
+void test_jacobian_accuracy(const std::shared_ptr<RobotModel>& robot,
+                            const std::string& end_effector,
+                            int num_tests = 3) {
   KinematicsSolver solver(robot);
   auto chain = robot->get_joints_in_chain(end_effector);
 
@@ -690,9 +691,8 @@ TEST(KinematicsSolver, IK_FK_Consistency_SimpleBot) {
 
     // Solve IK to reach that target
     JS ik_solution;
-    bool converged = solver.solve_ik("tool", target_pose, JS(), ik_solution);
 
-    if (converged) {
+    if (solver.solve_ik("tool", target_pose, JS(), ik_solution)) {
       // Verify the IK solution produces the target pose
       robot->set_state(ik_solution);
       Transform actual_pose = solver.solve_fk("tool");
@@ -727,9 +727,8 @@ TEST(KinematicsSolver, IK_FK_Consistency_RX200) {
 
     // Solve IK to reach that target
     JS ik_solution;
-    bool converged = solver.solve_ik("/gripper_link", target_pose, JS(), ik_solution);
 
-    if (converged) {
+    if (solver.solve_ik("/gripper_link", target_pose, JS(), ik_solution)) {
       // Verify the IK solution produces the target pose
       robot->set_state(ik_solution);
       Transform actual_pose = solver.solve_fk("/gripper_link");
@@ -804,7 +803,7 @@ TEST(KinematicsSolver, Jacobian_Rank_SimpleBot) {
  * Manually compute FK by composing transformations through the kinematic chain
  * This provides ground truth for validating the solver's FK implementation
  */
-Eigen::Affine3d compute_expected_fk(std::shared_ptr<RobotModel> robot, const std::string& link_name) {
+Eigen::Affine3d compute_expected_fk(const std::shared_ptr<RobotModel>& robot, const std::string& link_name) {
   auto chain = robot->get_joints_in_chain(link_name);
   Eigen::Affine3d transform = Eigen::Affine3d::Identity();
 

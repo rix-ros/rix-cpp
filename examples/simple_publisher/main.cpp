@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
     Log::error << "Failed to parse arguments." << std::endl;
     return 1;
   }
-  
+
   double rate;
   int port;
   parser.get<double>("rate", rate);

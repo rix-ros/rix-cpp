@@ -25,7 +25,7 @@ void TimerCallback::on_spin() {
   event_.current_real = Time::now();
   if (event_.current_real - event_.last_real >= duration_) {
     event_.last_duration = event_.current_real - event_.last_real;
-    if (event_.current_expected == 0.0) {
+    if (event_.current_expected == Time(0.0)) {
       event_.current_expected = event_.current_real;
     } else {
       event_.current_expected += duration_;

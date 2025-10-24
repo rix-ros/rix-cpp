@@ -22,8 +22,6 @@ SimpleServiceClient::SimpleServiceClient(int rate) : rix::Node(NAME) {
   }
 }
 
-SimpleServiceClient::~SimpleServiceClient() {}
-
 void SimpleServiceClient::timer_callback(const rix::TimerCallback::Event& event) {
   rix::msg::standard::UInt32 req;
   req.data = i_++;

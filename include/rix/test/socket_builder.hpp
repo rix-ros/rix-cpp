@@ -3,9 +3,6 @@
 #include <gmock/gmock.h>
 
 #include "rix/core/common.hpp"
-#include "rix/msg/mediator/NodeInfo.hpp"
-#include "rix/msg/mediator/PubInfo.hpp"
-#include "rix/msg/mediator/Status.hpp"
 #include "rix/test/mock_socket.hpp"
 
 namespace rix {
@@ -13,7 +10,7 @@ namespace rix {
 // Builder for configuring mock sockets with a fluent API
 class SocketBuilder {
 public:
-  SocketBuilder(std::shared_ptr<MockSocket> socket)
+  SocketBuilder(const std::shared_ptr<MockSocket>& socket)
       : socket_(socket), enable_notifications_(false), send_count_(std::make_shared<int>(0)),
         recv_count_(std::make_shared<int>(0)), expected_send_count_(std::make_shared<int>(0)),
         expected_recv_count_(std::make_shared<int>(0)) {}
@@ -31,17 +28,21 @@ public:
                            SocketFactory create_socket,
                            int accept_count = 0,
                            int iters_between_accept = 0) {
-    EXPECT_CALL(*socket_, set_reuse_address(true)).Times(1);
-    EXPECT_CALL(*socket_, bind(endpoint)).Times(1);
-    EXPECT_CALL(*socket_, listen(::testing::_)).Times(1);
+    EXPECT_CALL(*socket_, set_reuse_address(true)).Times(1).WillOnce(::testing::Return(true));
+    EXPECT_CALL(*socket_, bind(endpoint))
+        .Times(1)
+        .WillOnce(::testing::Invoke([_endpoint = endpoint](const Endpoint& ep) {
+          EXPECT_EQ(ep, _endpoint);
+          return true;
+        }));
+    EXPECT_CALL(*socket_, listen(::testing::_)).Times(1).WillOnce(::testing::Return(true));
     EXPECT_CALL(*socket_, local_endpoint()).Times(1).WillOnce(::testing::Return(bound_endpoint));
-    EXPECT_CALL(*socket_, wait_exception(::testing::_)).Times(1);
+    EXPECT_CALL(*socket_, wait_exception(::testing::_)).Times(1).WillOnce(::testing::Return(false));
 
     // Wait readable will return true until we have accepted the expected number of
     // connections
     auto accepted = std::make_shared<int>(0);
     std::weak_ptr<MockSocket> socket = socket_;
-    auto notify = enable_notifications_;
     auto iters = std::make_shared<int>(0);
     EXPECT_CALL(*socket_, wait_readable(::testing::_))
         .Times(::testing::AtLeast(0))
@@ -56,16 +57,17 @@ public:
     if (accept_count > 0) {
       EXPECT_CALL(*socket_, accept(::testing::_))
           .Times(accept_count)
-          .WillRepeatedly(::testing::Invoke([create_socket, accepted, socket, notify](Endpoint&) {
-            auto sock = create_socket();
-            (*accepted)++;
-            if (notify) {
-              if (auto s = socket.lock()) {
-                s->notify_operation_complete();
-              }
-            }
-            return sock;
-          }));
+          .WillRepeatedly(
+              ::testing::Invoke([create_socket, accepted, socket, notify = enable_notifications_](Endpoint&) {
+                auto sock = create_socket();
+                (*accepted)++;
+                if (notify) {
+                  if (const auto s = socket.lock()) {
+                    s->notify_operation_complete();
+                  }
+                }
+                return sock;
+              }));
     }
     close();
     return *this;
@@ -88,7 +90,7 @@ public:
   }
 
   template <typename TMsg> SocketBuilder& send_message(uint8_t opcode, const TMsg& msg) {
-    static_assert(std::is_base_of<msg::Message, TMsg>::value, "TMsg must be derived from msg::Message");
+    static_assert(std::is_base_of_v<msg::Message, TMsg>, "TMsg must be derived from msg::Message");
 
     // Setup wait_writable on first call
     if (*expected_send_count_ == 0) {
@@ -107,8 +109,8 @@ public:
         .Times(1)
         .InSequence(seq_)
         .WillOnce(::testing::Invoke(
-            [opcode, msg, socket, notify, send_count = send_count_](uint8_t op, const msg::Message& message) {
-              EXPECT_EQ(op, opcode);
+            [opcode, msg, socket, notify, send_count = send_count_](uint8_t operation, const msg::Message& message) {
+              EXPECT_EQ(operation, opcode);
               auto _msg = dynamic_cast<const TMsg*>(&message);
               EXPECT_NE(_msg, nullptr);
               (*send_count)++;
@@ -127,7 +129,7 @@ public:
   }
 
   template <typename TMsg> SocketBuilder& recv_message(const TMsg& msg, size_t len) {
-    static_assert(std::is_base_of<msg::Message, TMsg>::value, "TMsg must be derived from msg::Message");
+    static_assert(std::is_base_of_v<msg::Message, TMsg>, "TMsg must be derived from msg::Message");
 
     // Setup wait_readable on first call
     if (*expected_recv_count_ == 0) {
@@ -166,7 +168,7 @@ public:
   }
 
   template <typename TMsg> SocketBuilder& recv_message(uint8_t opcode, const TMsg& msg) {
-    static_assert(std::is_base_of<msg::Message, TMsg>::value, "TMsg must be derived from msg::Message");
+    static_assert(std::is_base_of_v<msg::Message, TMsg>, "TMsg must be derived from msg::Message");
 
     // Setup wait_readable on first call (each recv_message with opcode needs 2 recv calls)
     if (*expected_recv_count_ == 0) {
@@ -187,12 +189,12 @@ public:
         .InSequence(seq_)
         .WillOnce(::testing::Invoke([opcode, msg, recv_count = recv_count_](msg::Message& message, size_t size) {
           EXPECT_EQ(size, msg::mediator::Operation().size());
-          auto op = dynamic_cast<msg::mediator::Operation*>(&message);
-          EXPECT_NE(op, nullptr);
+          auto operation = dynamic_cast<msg::mediator::Operation*>(&message);
+          EXPECT_NE(operation, nullptr);
           (*recv_count)++;
-          if (op) {
-            op->opcode = opcode;
-            op->len = msg.size();
+          if (operation) {
+            operation->opcode = opcode;
+            operation->len = msg.size();
             return true;
           }
           return false;
@@ -202,22 +204,23 @@ public:
     EXPECT_CALL(*socket_, recv_message(::testing::_, ::testing::_))
         .Times(1)
         .InSequence(seq_)
-        .WillOnce(::testing::Invoke([msg, socket, notify, recv_count = recv_count_](msg::Message& message, size_t size) {
-          EXPECT_EQ(size, msg.size());
-          auto _msg = dynamic_cast<TMsg*>(&message);
-          EXPECT_NE(_msg, nullptr);
-          (*recv_count)++;
-          if (_msg) {
-            *_msg = msg;
-            if (notify) {
-              if (auto s = socket.lock()) {
-                s->notify_operation_complete();
+        .WillOnce(
+            ::testing::Invoke([msg, socket, notify, recv_count = recv_count_](msg::Message& message, size_t size) {
+              EXPECT_EQ(size, msg.size());
+              auto _msg = dynamic_cast<TMsg*>(&message);
+              EXPECT_NE(_msg, nullptr);
+              (*recv_count)++;
+              if (_msg) {
+                *_msg = msg;
+                if (notify) {
+                  if (auto s = socket.lock()) {
+                    s->notify_operation_complete();
+                  }
+                }
+                return true;
               }
-            }
-            return true;
-          }
-          return false;
-        }));
+              return false;
+            }));
     return *this;
   }
 

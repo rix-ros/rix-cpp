@@ -4,6 +4,7 @@
 #include <mutex>
 #include <set>
 #include <string>
+#include <utility>
 
 #include "rix/core/action.hpp"
 #include "rix/core/action_client.hpp"
@@ -14,27 +15,29 @@
 #include "rix/core/service_client.hpp"
 #include "rix/core/subscriber.hpp"
 #include "rix/core/timer_callback.hpp"
-#include "rix/ipc/signal.hpp"
 #include "rix/ipc/socket.hpp"
 #include "rix/msg/mediator/NodeInfo.hpp"
 #include "rix/msg/mediator/ParamInfo.hpp"
+#include "rix/msg/mediator/Status.hpp"
 #include "rix/msg/mediator/SystemInfo.hpp"
-#include "rix/msg/standard/UInt64.hpp"
-#include "rix/msg/standard/Void.hpp"
 #include "rix/util/log.hpp"
 
 namespace rix {
 
+// TODO: There is a race condition that occurs between component creation and the setting of their callbacks. The
+// callbacks must be set with the component's mutex held to avoid missing messages during the time between creation and
+// callback setting.
+
 class Node : public Spinner {
 public:
-  Node(const std::string& name, const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0));
+  explicit Node(const std::string& name, const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0));
 
   Node(const Node&) = delete;
   Node& operator=(const Node&) = delete;
   Node(Node&&) = delete;
   Node& operator=(Node&&) = delete;
 
-  virtual ~Node();
+  ~Node() override;
 
   template <typename TMsg>
   std::shared_ptr<Publisher> create_publisher(const std::string& topic,
@@ -69,7 +72,7 @@ public:
         topic, [instance, callback](const TMsg& msg) { (instance->*callback)(msg); }, endpoint);
   }
 
-  std::shared_ptr<TimerCallback> create_timer(const Duration& d, TimerCallback::Callback callback);
+  std::shared_ptr<TimerCallback> create_timer(const Duration& d, const TimerCallback::Callback& callback);
 
   template <typename Class>
   std::shared_ptr<TimerCallback>
@@ -156,8 +159,8 @@ public:
 
   void on_spin() override;
 
-  static inline void set_socket_factory(SocketFactory factory) { socket_factory_ = factory; }
-  static inline void set_id_factory(IDFactory factory) { id_factory_ = factory; }
+  static inline void set_socket_factory(SocketFactory factory) { socket_factory_ = std::move(factory); }
+  static inline void set_id_factory(IDFactory factory) { id_factory_ = std::move(factory); }
 
 private:
   Endpoint rixhub_endpoint_;
@@ -229,7 +232,7 @@ Node::create_subscriber(const std::string& topic, Subscriber::Callback<TMsg> cal
   return sub;
 }
 
-inline std::shared_ptr<TimerCallback> Node::create_timer(const Duration& d, TimerCallback::Callback callback) {
+inline std::shared_ptr<TimerCallback> Node::create_timer(const Duration& d, const TimerCallback::Callback& callback) {
   if (!ok()) {
     Log::error << "Node is shutdown, cannot create timer." << std::endl;
     return nullptr;
@@ -349,13 +352,13 @@ template <typename TParam> bool Node::set_parameter(const std::string& name, con
     return false;
   }
 
-  msg::mediator::Operation op;
+  msg::mediator::Operation operation;
   msg::mediator::Status status;
-  if (!client->recv_message(op, status)) {
+  if (!client->recv_message(operation, status)) {
     return false;
   }
 
-  if (op.opcode != OPCODE::STATUS_RESPONSE) {
+  if (operation.opcode != OPCODE::STATUS_RESPONSE) {
     return false;
   }
 
@@ -382,11 +385,11 @@ template <typename TParam> bool Node::get_parameter(const std::string& name, TPa
   if (!client->send_message(OPCODE::PARAM_GET_REQUEST, info)) {
     return false;
   }
-  msg::mediator::Operation op;
-  if (!client->recv_message(op, info_received)) {
+  msg::mediator::Operation operation;
+  if (!client->recv_message(operation, info_received)) {
     return false;
   }
-  if (op.opcode != OPCODE::PARAM_GET_RESPONSE) {
+  if (operation.opcode != OPCODE::PARAM_GET_RESPONSE) {
     return false;
   }
   size_t offset = 0;

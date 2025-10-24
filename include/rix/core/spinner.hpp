@@ -2,6 +2,7 @@
 
 #include "rix/ipc/signal.hpp"
 #include <memory>
+#include <utility>
 
 namespace rix {
 
@@ -36,7 +37,6 @@ public:
         shutdown();
       }
       mutex_.unlock();
-      return;
     }
   }
 
@@ -53,7 +53,7 @@ public:
    */
   void shutdown() noexcept { shutdown_flag_ = true; }
 
-  static void set_shutdown_signal(std::shared_ptr<GenericSignal> signal) { shutdown_signal_ = signal; }
+  static void set_shutdown_signal(std::shared_ptr<GenericSignal> signal) { shutdown_signal_ = std::move(signal); }
   static std::shared_ptr<GenericSignal> get_shutdown_signal() { return shutdown_signal_; }
 
 private:

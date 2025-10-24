@@ -1,27 +1,34 @@
 #pragma once
 
 #include "rix/core/mediator.hpp"
-#include "socket_builder.hpp"
-#include "socket_manager.hpp"
+#include "rix/msg/mediator/ActRequest.hpp"
+#include "rix/msg/mediator/ActResponse.hpp"
+#include "rix/msg/mediator/SrvRequest.hpp"
+#include "rix/msg/mediator/SrvResponse.hpp"
+#include "rix/msg/mediator/Status.hpp"
+#include "rix/msg/mediator/SubNotify.hpp"
+#include "rix/test/socket_builder.hpp"
+#include "rix/test/socket_manager.hpp"
 #include <gtest/gtest.h>
+#include <rix/msg/standard/UInt64.hpp>
 
 namespace rix {
 
 // High-level test fixture for Node tests
 class MediatorTestFixture {
 public:
-  MediatorTestFixture(const Endpoint& endpoint = Endpoint("127.0.0.1", 0)) : endpoint_(endpoint) {}
+  explicit MediatorTestFixture(const Endpoint& endpoint = Endpoint("127.0.0.1", 0)) : endpoint_(endpoint) {}
 
   MediatorTestFixture& ping() {
-    msg::mediator::Operation op;
-    op.opcode = OPCODE::PING;
-    op.len = 0;
+    msg::mediator::Operation operation;
+    operation.opcode = OPCODE::PING;
+    operation.len = 0;
 
     msg::mediator::Status status;
     status.error = 0;
 
     auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket).recv_message(op, op.size()).send_message(OPCODE::STATUS_RESPONSE, status).close();
+    SocketBuilder(socket).recv_message(operation, operation.size()).send_message(OPCODE::STATUS_RESPONSE, status).close();
     return *this;
   }
 

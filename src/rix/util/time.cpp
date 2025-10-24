@@ -39,8 +39,8 @@ std::string Time::to_string(bool local_time) const {
   return ss.str();
 }
 
-msg::standard::Time Time::to_msg() {
-  int64_t ns_ = std::chrono::duration_cast<std::chrono::nanoseconds>(tp.time_since_epoch()).count();
+msg::standard::Time Time::to_msg() const {
+  const int64_t ns_ = std::chrono::duration_cast<std::chrono::nanoseconds>(tp.time_since_epoch()).count();
   msg::standard::Time msg;
   msg.sec = ns_ / 1'000'000'000;
   msg.nsec = ns_ % 1'000'000'000;
@@ -57,12 +57,12 @@ Time::Time() : tp{} {}
 
 Time::Time(const Type& time_point) : tp(time_point) {}
 
-Time::Time(double seconds)
+Time::Time(const double seconds)
     : tp(Time::Type() + Duration::Type(static_cast<int64_t>(std::llround(seconds * 1'000'000'000)))) {}
 
-Time::Time(int32_t second, int32_t nanosecond)
+Time::Time(const uint32_t seconds, const uint32_t nanoseconds)
     : tp(Time::Type() +
-         Duration::Type(static_cast<int64_t>(second) * 1'000'000'000 + static_cast<int64_t>(nanosecond))) {}
+         Duration::Type(static_cast<int64_t>(seconds) * 1'000'000'000 + static_cast<int64_t>(nanoseconds))) {}
 
 Time::Time(const msg::standard::Time& msg) : Time(msg.sec, msg.nsec) {}
 
@@ -153,9 +153,9 @@ Duration::Duration(const msg::standard::Duration& msg) : Duration(msg.sec, msg.n
 
 Duration::Duration(const Type& duration) : d(duration) {}
 
-Duration::Duration(double seconds) : d(static_cast<int64_t>(std::llround(seconds * 1'000'000'000))) {}
+Duration::Duration(const double seconds) : d(static_cast<int64_t>(std::llround(seconds * 1'000'000'000))) {}
 
-Duration::Duration(int32_t seconds, int32_t nanoseconds)
+Duration::Duration(const int32_t seconds, const int32_t nanoseconds)
     : d(static_cast<int64_t>(seconds) * 1'000'000'000 + static_cast<int64_t>(nanoseconds)) {}
 
 Duration::Duration(const Duration& other) : d(other.d) {}
@@ -231,11 +231,11 @@ bool Duration::operator>(const Duration& other) const { return d > other.d; }
 
 bool Duration::operator>=(const Duration& other) const { return d >= other.d; }
 
-msg::standard::Duration Duration::to_msg() {
-  int64_t ns_ = d.count();
+msg::standard::Duration Duration::to_msg() const {
+  const int64_t ns_ = d.count();
   msg::standard::Duration msg;
-  msg.sec = ns_ / 1'000'000'000;
-  msg.nsec = ns_ % 1'000'000'000;
+  msg.sec = static_cast<int32_t>(ns_ / 1'000'000'000);
+  msg.nsec = static_cast<int32_t>(ns_ % 1'000'000'000);
   return msg;
 }
 
@@ -306,7 +306,7 @@ Rate::Rate() : period_(0), start_(Time::now()) {}
 Rate::Rate(double frequency)
     : period_((frequency <= min_frequency()) ? max_period() : Duration(1.0 / frequency)), start_(Time::now()) {}
 
-Rate::Rate(Duration period) : period_((period <= min_period()) ? min_period() : period), start_(Time::now()) {}
+Rate::Rate(const Duration& period) : period_((period <= min_period()) ? min_period() : period), start_(Time::now()) {}
 
 Rate::Rate(const Rate& other) : period_(other.period_), start_(other.start_) {}
 
@@ -336,11 +336,11 @@ Duration Rate::period() const { return period_; }
 void Rate::set_period(const Duration& period) { period_ = period; }
 
 double Rate::frequency() const {
-  auto ns = period_.to_nanoseconds();
+  const int64_t ns = period_.to_nanoseconds();
   if (ns == std::chrono::nanoseconds::max().count()) {
     return 0.0;
   }
-  return 1.0 / (ns * 1e-9);
+  return 1e9 / static_cast<double>(ns);
 }
 
 void Rate::set_frequency(double frequency) {

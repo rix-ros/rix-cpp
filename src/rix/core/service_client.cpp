@@ -1,4 +1,5 @@
 #include "rix/core/service_client.hpp"
+#include "rix/msg/mediator/SrvResponse.hpp"
 
 namespace rix {
 
@@ -23,13 +24,13 @@ ServiceClient::ServiceClient(const msg::mediator::SrvRequest& request,
   }
 
   msg::mediator::SrvResponse response;
-  msg::mediator::Operation op;
-  if (!client->recv_message(op, response)) {
+  msg::mediator::Operation operation;
+  if (!client->recv_message(operation, response)) {
     shutdown();
     return;
   }
 
-  if (op.opcode != OPCODE::SRV_RESPONSE) {
+  if (operation.opcode != OPCODE::SRV_RESPONSE) {
     shutdown();
     return;
   }
@@ -76,12 +77,12 @@ bool ServiceClient::call(const msg::Message& request, msg::Message& response) {
     return false;
   }
 
-  msg::mediator::Operation op;
-  if (!client->recv_message(op, response)) {
+  msg::mediator::Operation operation;
+  if (!client->recv_message(operation, response)) {
     return false;
   }
 
-  if (op.opcode != OPCODE::SRV_RESPONSE_MESSAGE) {
+  if (operation.opcode != OPCODE::SRV_RESPONSE_MESSAGE) {
     return false;
   }
 

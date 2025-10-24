@@ -6,10 +6,9 @@ using namespace rix;
 
 const std::string NAME = "simple_service_client";
 
-class SimpleServiceClient : public rix::Node {
+class SimpleServiceClient final : public rix::Node {
 public:
   SimpleServiceClient(int rate);
-  ~SimpleServiceClient();
 
 private:
   void timer_callback(const rix::TimerCallback::Event& event);

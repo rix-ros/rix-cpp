@@ -1,4 +1,5 @@
 #include "rix/msg/standard/String.hpp"
+#include "rix/msg/standard/UInt32.hpp"
 #include "rix/test/test_fixture.hpp"
 #include <gtest/gtest.h>
 
@@ -846,7 +847,7 @@ TEST(NodeTest, ShutdownFromSignal) {
         other_act_cli = nullptr;
 
         auto sig = Spinner::get_shutdown_signal();
-        sig->raise();
+        EXPECT_TRUE(sig->raise());
         // (TODO: Enable some synchronization mechanism to avoid this sleep)
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         node.spin_once(); // Register the signal

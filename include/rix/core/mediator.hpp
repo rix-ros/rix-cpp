@@ -2,33 +2,25 @@
 
 #include <memory>
 #include <mutex>
-#include <set>
 
 #include "rix/core/common.hpp"
 #include "rix/core/spinner.hpp"
 #include "rix/ipc/socket.hpp"
-#include "rix/msg/mediator/ActRequest.hpp"
-#include "rix/msg/mediator/ActResponse.hpp"
 #include "rix/msg/mediator/NodeInfo.hpp"
 #include "rix/msg/mediator/Operation.hpp"
 #include "rix/msg/mediator/ParamInfo.hpp"
 #include "rix/msg/mediator/PubInfo.hpp"
 #include "rix/msg/mediator/SrvInfo.hpp"
-#include "rix/msg/mediator/SrvRequest.hpp"
-#include "rix/msg/mediator/SrvResponse.hpp"
-#include "rix/msg/mediator/Status.hpp"
 #include "rix/msg/mediator/SubInfo.hpp"
-#include "rix/msg/mediator/SubNotify.hpp"
 #include "rix/msg/mediator/SystemInfo.hpp"
-#include "rix/msg/standard/UInt32.hpp"
-#include "rix/msg/standard/UInt64.hpp"
 
 namespace rix {
 
-class Mediator : public Spinner {
+class Mediator final : public Spinner {
 public:
-  Mediator(const Endpoint& endpoint = Endpoint(DEFAULT_IP, RIXHUB_PORT), SocketFactory socket_factory = create_socket);
-  ~Mediator();
+  explicit Mediator(const Endpoint& endpoint = Endpoint(DEFAULT_IP, RIXHUB_PORT),
+                    SocketFactory socket_factory = create_socket);
+  ~Mediator() override;
 
   Mediator(const Mediator&) = delete;
   Mediator& operator=(const Mediator&) = delete;

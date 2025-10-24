@@ -5,7 +5,7 @@ SimpleService::SimpleService(int port) : Node(NAME) {
     Log::error << "Failed to create node." << std::endl;
     return;
   }
-  
+
   // Pass member function pointer and 'this' - no lambda or std::bind needed!
   auto srv = create_service("/alphabet", &SimpleService::callback, this, Endpoint(DEFAULT_IP, port));
   if (!srv->ok()) {

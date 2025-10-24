@@ -4,19 +4,14 @@
 #include <iostream>
 #include <map>
 #include <memory>
-#include <stack>
 #include <string>
 #include <vector>
 
 #include "rix/msg/geometry/TF.hpp"
-#include "rix/msg/geometry/TransformStamped.hpp"
-#include "rix/msg/geometry/Twist.hpp"
 #include "rix/msg/sensor/JS.hpp"
 #include "rix/rob/joint.hpp"
 #include "rix/rob/link.hpp"
 #include "rix/util/log.hpp"
-#include "rix/util/time.hpp"
-#include "rix/util/environment.hpp"
 
 namespace rix {
 

@@ -1,4 +1,7 @@
 #include "rix/core/node.hpp"
+#include "rix/msg/mediator/Operation.hpp"
+#include "rix/msg/mediator/Status.hpp"
+#include "rix/msg/standard/UInt64.hpp"
 
 namespace rix {
 
@@ -10,17 +13,23 @@ Node::Node(const std::string& name, const Endpoint& endpoint)
     return;
   }
 
-  server_->set_reuse_address(true);
-  server_->bind(Endpoint(endpoint.address, endpoint.port));
-  server_->listen(MAX_CONN);
+  if (!server_->set_reuse_address(true)) {
+    return;
+  }
+  if (!server_->bind(Endpoint(endpoint.address, endpoint.port))) {
+    return;
+  }
+  if (!server_->listen(MAX_CONN)) {
+    return;
+  }
 
-  // Ensure server was intitialized properly
+  // Ensure server was initialized properly
   if (server_->is_exception()) {
     shutdown();
     return;
   }
 
-  auto server_endpoint = server_->local_endpoint();
+  const auto server_endpoint = server_->local_endpoint();
   // Update the endpoint in case the port was set to 0 (ephemeral)
   info_.endpoint.address = server_endpoint.address;
   info_.endpoint.port = server_endpoint.port;
@@ -28,7 +37,7 @@ Node::Node(const std::string& name, const Endpoint& endpoint)
   info_.id = id_factory_();
   info_.name = name;
 
-  auto client = socket_factory_();
+  const auto client = socket_factory_();
   if (!client) {
     shutdown();
     return;
@@ -42,9 +51,9 @@ Node::Node(const std::string& name, const Endpoint& endpoint)
     return;
   }
 
-  msg::mediator::Operation op;
+  msg::mediator::Operation operation;
   msg::mediator::Status status;
-  if (!client->recv_message(op, status)) {
+  if (!client->recv_message(operation, status)) {
     shutdown();
     return;
   }
@@ -60,11 +69,11 @@ Node::Node(const std::string& name, const Endpoint& endpoint)
     // Check for ping
     // std::cout << "Checking for ping..." << std::endl;
     if (server_->is_readable()) {
-      auto conn = server_->accept();
+      const auto conn = server_->accept();
       if (conn) {
-        msg::mediator::Operation op;
-        conn->recv_message(op, op.size());
-        if (op.opcode == OPCODE::PING) {
+        msg::mediator::Operation operation;
+        conn->recv_message(operation, operation.size());
+        if (operation.opcode == OPCODE::PING) {
           msg::mediator::Status status;
           status.id = info_.id;
           status.error = 0;
@@ -77,7 +86,7 @@ Node::Node(const std::string& name, const Endpoint& endpoint)
 
 Node::~Node() {
   if (registered_flag_) {
-    auto client = socket_factory_();
+    const auto client = socket_factory_();
     if (!client) {
       return;
     }
@@ -94,7 +103,7 @@ void Node::on_spin() {
   // Spin all components, remove ones that are not 'ok'
   auto it = components_.begin();
   while (it != components_.end()) {
-    auto component = *it;
+    const auto component = *it;
     if (!component->ok()) {
       it = components_.erase(it);
       continue;
@@ -102,7 +111,7 @@ void Node::on_spin() {
 #ifndef RIX_MULTITHREADED
     component->spin_once();
 #endif
-    it++;
+    ++it;
   }
 
 #ifdef RIX_MULTITHREADED
@@ -172,11 +181,11 @@ bool Node::get_system_info(msg::mediator::SystemInfo& info) {
     return false;
   }
 
-  msg::mediator::Operation op;
-  if (!client->recv_message(op, info)) {
+  msg::mediator::Operation operation;
+  if (!client->recv_message(operation, info)) {
     return false;
   }
-  if (op.opcode != OPCODE::SYSTEM_GET_RESPONSE) {
+  if (operation.opcode != OPCODE::SYSTEM_GET_RESPONSE) {
     return false;
   }
   Log::debug << "Retrieved system info from RIXHub." << std::endl;

@@ -1,4 +1,7 @@
 #include "rix/core/action_client.hpp"
+#include "rix/msg/mediator/ActResponse.hpp"
+#include "rix/msg/mediator/Status.hpp"
+#include "rix/msg/standard/Void.hpp"
 
 namespace rix {
 
@@ -21,6 +24,9 @@ bool ActionClient::dispatch(const msg::Message& goal) {
     // Otherwise, create a new client and send a goal message
     opcode = OPCODE::ACT_GOAL_MESSAGE;
     client_ = socket_factory_();
+    if (!client_) {
+      return false;
+    }
 
     if (!client_->connect(endpoint_)) {
       client_ = nullptr;
@@ -34,29 +40,29 @@ bool ActionClient::dispatch(const msg::Message& goal) {
   }
 
   // Clear the recv buffer to avoid stale messages (look for response)
-  msg::mediator::Operation op;
+  msg::mediator::Operation operation;
   while (true) {
-    client_->recv_message(op, op.size());
-    if (op.opcode == OPCODE::ACT_RESPONSE_MESSAGE) {
+    client_->recv_message(operation, operation.size());
+    if (operation.opcode == OPCODE::ACT_RESPONSE_MESSAGE) {
       // Stop if we reach a response message
       break;
     }
-    client_->ignore_message(op.len);
+    client_->ignore_message(operation.len);
   }
 
   // Read the response message
   msg::mediator::Status status;
-  if (!client_->recv_message(status, op.len)) {
+  if (!client_->recv_message(status, operation.len)) {
     client_ = nullptr;
     return false;
   }
 
-  if (op.opcode != OPCODE::ACT_RESPONSE_MESSAGE) {
+  if (operation.opcode != OPCODE::ACT_RESPONSE_MESSAGE) {
     client_ = nullptr;
     return false;
   }
 
-  if (status.error) {
+  if (status.error != 0) {
     client_ = nullptr;
     return false;
   }
@@ -81,9 +87,9 @@ bool ActionClient::cancel() {
   return true;
 }
 
-bool ActionClient::wait_for_result(const Duration& d) {
+bool ActionClient::wait_for_result(const Duration& timeout) {
   std::unique_lock<std::mutex> lock(mutex_);
-  return result_condition_.wait_for(lock, d.raw(), [this]() { return result_received_; });
+  return result_condition_.wait_for(lock, timeout.raw(), [this]() { return result_received_; });
 }
 
 ActionClient::ActionClient(const msg::mediator::ActRequest& request,
@@ -107,18 +113,18 @@ ActionClient::ActionClient(const msg::mediator::ActRequest& request,
   }
 
   msg::mediator::ActResponse response;
-  msg::mediator::Operation op;
-  if (!client->recv_message(op, response)) {
+  msg::mediator::Operation operation;
+  if (!client->recv_message(operation, response)) {
     shutdown();
     return;
   }
 
-  if (op.opcode != OPCODE::ACT_RESPONSE) {
+  if (operation.opcode != OPCODE::ACT_RESPONSE) {
     shutdown();
     return;
   }
 
-  if (response.error) {
+  if (response.error != 0) {
     shutdown();
     return;
   }
@@ -132,37 +138,39 @@ ActionClient::ActionClient(const msg::mediator::ActRequest& request,
 }
 
 void ActionClient::on_spin() {
-  std::lock_guard<std::mutex> guard(mutex_);
+  std::unique_lock<std::mutex> guard(mutex_);
   // If not ok, no active client, or no callbacks, do nothing
   if (!ok() || !client_ || !feedback_instance_ || !result_instance_) {
     return;
   }
   if (client_->is_readable()) {
-    msg::mediator::Operation op;
-    if (!client_->recv_message(op, op.size())) {
+    msg::mediator::Operation operation;
+    if (!client_->recv_message(operation, operation.size())) {
       client_ = nullptr;
       return;
     }
-    switch (op.opcode) {
+    switch (operation.opcode) {
     case OPCODE::ACT_FEEDBACK_MESSAGE: {
-      if (!client_->recv_message(*feedback_instance_, op.len)) {
+      if (!client_->recv_message(*feedback_instance_, operation.len)) {
         client_ = nullptr;
         return;
       }
+      guard.unlock();
       feedback_callback_(*feedback_instance_);
-      break;
+      return;
     }
     case OPCODE::ACT_RESULT_MESSAGE: {
-      if (!client_->recv_message(*result_instance_, op.len)) {
+      if (!client_->recv_message(*result_instance_, operation.len)) {
         client_ = nullptr;
         return;
       }
-      result_callback_(*result_instance_);
       // Action is complete, close the client
       client_ = nullptr;
       result_received_ = true;
       result_condition_.notify_all();
-      break;
+      guard.unlock();
+      result_callback_(*result_instance_);
+      return;
     }
     default:
       // Unknown opcode, close the client

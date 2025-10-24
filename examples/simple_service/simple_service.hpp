@@ -6,7 +6,7 @@ using namespace rix;
 
 const std::string NAME = "simple_service";
 
-class SimpleService : public rix::Node {
+class SimpleService final : public rix::Node {
 public:
   SimpleService(int port);
 

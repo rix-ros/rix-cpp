@@ -2,21 +2,17 @@
 
 #include <memory>
 #include <mutex>
-#include <set>
 
 #include "rix/core/common.hpp"
 #include "rix/core/spinner.hpp"
 #include "rix/msg/mediator/ActInfo.hpp"
-#include "rix/msg/mediator/Operation.hpp"
-#include "rix/msg/mediator/Status.hpp"
-#include "rix/msg/standard/UInt32.hpp"
 #include "rix/util/log.hpp"
 
 namespace rix {
 
 class Node; // Forward declaration
 
-class Action : public Spinner {
+class Action final : public Spinner {
   friend class Node;
 
 public:
@@ -27,7 +23,7 @@ public:
   Action& operator=(const Action&) = delete;
   Action(Action&&) = delete;
   Action& operator=(Action&&) = delete;
-  ~Action();
+  ~Action() override;
 
   void set_goal_callback(std::function<void()> callback);
   void set_preempt_callback(std::function<void()> callback);
@@ -58,7 +54,7 @@ private:
   // Internal class to handle accepting new connections from rixhub
   class ActAcceptor : public Spinner {
   public:
-    ActAcceptor(Action& parent);
+    explicit ActAcceptor(Action& parent);
     ~ActAcceptor() override = default;
 
     ActAcceptor(const ActAcceptor&) = delete;
@@ -85,9 +81,9 @@ private:
 
 template <typename TGoal, typename TFeedback, typename TResult>
 void Action::set_callback(Callback<TGoal, TFeedback, TResult> callback) {
-  static_assert(std::is_base_of<msg::Message, TGoal>::value, "TGoal must be a subclass of msg::Message.");
-  static_assert(std::is_base_of<msg::Message, TFeedback>::value, "TFeedback must be a subclass of msg::Message.");
-  static_assert(std::is_base_of<msg::Message, TResult>::value, "TResult must be a subclass of msg::Message.");
+  static_assert(std::is_base_of_v<msg::Message, TGoal>, "TGoal must be a subclass of msg::Message.");
+  static_assert(std::is_base_of_v<msg::Message, TFeedback>, "TFeedback must be a subclass of msg::Message.");
+  static_assert(std::is_base_of_v<msg::Message, TResult>, "TResult must be a subclass of msg::Message.");
 
   std::lock_guard<std::mutex> guard(mutex_);
   if (TGoal().hash() != info_.goal_hash || TFeedback().hash() != info_.feedback_hash ||
@@ -100,9 +96,9 @@ void Action::set_callback(Callback<TGoal, TFeedback, TResult> callback) {
   result_instance_ = std::make_shared<TResult>();
   callback_ = [callback](const msg::Message& goal, msg::Message& feedback, msg::Message& result) -> bool {
     // Safe to static cast because we checked the hash above
-    const TGoal& typed_goal = static_cast<const TGoal&>(goal);
-    TFeedback& typed_feedback = static_cast<TFeedback&>(feedback);
-    TResult& typed_result = static_cast<TResult&>(result);
+    const auto& typed_goal = static_cast<const TGoal&>(goal);
+    auto& typed_feedback = static_cast<TFeedback&>(feedback);
+    auto& typed_result = static_cast<TResult&>(result);
     return callback(typed_goal, typed_feedback, typed_result);
   };
 }

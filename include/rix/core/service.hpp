@@ -6,17 +6,14 @@
 
 #include "rix/core/common.hpp"
 #include "rix/core/spinner.hpp"
-#include "rix/msg/mediator/Operation.hpp"
 #include "rix/msg/mediator/SrvInfo.hpp"
-#include "rix/msg/mediator/Status.hpp"
-#include "rix/msg/standard/UInt32.hpp"
 #include "rix/util/log.hpp"
 
 namespace rix {
 
 class Node; // Forward declaration
 
-class Service : public Spinner {
+class Service final : public Spinner {
   friend class Node;
 
 public:
@@ -26,7 +23,7 @@ public:
   Service& operator=(const Service&) = delete;
   Service(Service&&) = delete;
   Service& operator=(Service&&) = delete;
-  ~Service();
+  ~Service() override;
 
   template <typename TRequest, typename TResponse> void set_callback(Callback<TRequest, TResponse> callback);
 
@@ -65,8 +62,8 @@ template <typename TRequest, typename TResponse> void Service::set_callback(Call
   std::lock_guard<std::mutex> guard(callback_mutex_);
   callback_ = [callback](const msg::Message& request, msg::Message& response) {
     // Safe to static cast because we checked the hash above
-    const TRequest& typed_request = static_cast<const TRequest&>(request);
-    TResponse& typed_response = static_cast<TResponse&>(response);
+    const auto& typed_request = static_cast<const TRequest&>(request);
+    auto& typed_response = static_cast<TResponse&>(response);
     callback(typed_request, typed_response);
   };
   request_instance_ = std::make_shared<TRequest>();

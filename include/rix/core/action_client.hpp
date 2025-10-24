@@ -7,19 +7,13 @@
 #include "rix/core/common.hpp"
 #include "rix/core/spinner.hpp"
 #include "rix/msg/mediator/ActRequest.hpp"
-#include "rix/msg/mediator/ActResponse.hpp"
-#include "rix/msg/mediator/Operation.hpp"
-#include "rix/msg/mediator/Status.hpp"
-#include "rix/msg/standard/UInt32.hpp"
-#include "rix/msg/standard/Void.hpp"
-#include "rix/msg/standard/UInt8Array.hpp"
 #include "rix/util/log.hpp"
 
 namespace rix {
 
 class Node; // Forward declaration
 
-class ActionClient : public Spinner {
+class ActionClient final : public Spinner {
   friend class Node;
 
 public:
@@ -31,7 +25,7 @@ public:
   ActionClient(ActionClient&&) = delete;
   ActionClient& operator=(ActionClient&&) = delete;
 
-  ~ActionClient();
+  ~ActionClient() override;
 
   bool dispatch(const msg::Message& goal);
   bool cancel();
@@ -40,9 +34,9 @@ public:
    * @brief Wait for the result of the action. Returns true if the most recent result has
    * been received.
    *
-   * @param d Duration to wait for the result
+   * @param timeout Duration to wait for the result
    */
-  bool wait_for_result(const Duration& d);
+  bool wait_for_result(const Duration& timeout);
 
   template <typename TFeedback> void set_feedback_callback(FeedbackCallback<TFeedback> callback);
   template <typename TResult> void set_result_callback(ResultCallback<TResult> callback);
@@ -73,7 +67,7 @@ private:
 };
 
 template <typename TFeedback> void ActionClient::set_feedback_callback(FeedbackCallback<TFeedback> callback) {
-  static_assert(std::is_base_of<msg::Message, TFeedback>::value, "TFeedback must be a subclass of msg::Message.");
+  static_assert(std::is_base_of_v<msg::Message, TFeedback>, "TFeedback must be a subclass of msg::Message.");
   std::lock_guard<std::mutex> guard(mutex_);
   if (TFeedback().hash() != request_.feedback_hash) {
     Log::warn << "Message type mismatch in ActionClient::set_feedback_callback." << std::endl;
@@ -82,13 +76,13 @@ template <typename TFeedback> void ActionClient::set_feedback_callback(FeedbackC
   feedback_instance_ = std::make_shared<TFeedback>();
   feedback_callback_ = [callback](const msg::Message& msg) {
     // Safe to static cast because we checked the hash above
-    const TFeedback& typed_msg = static_cast<const TFeedback&>(msg);
+    const auto& typed_msg = static_cast<const TFeedback&>(msg);
     callback(typed_msg);
   };
 }
 
 template <typename TResult> void ActionClient::set_result_callback(ResultCallback<TResult> callback) {
-  static_assert(std::is_base_of<msg::Message, TResult>::value, "TResult must be a subclass of msg::Message.");
+  static_assert(std::is_base_of_v<msg::Message, TResult>, "TResult must be a subclass of msg::Message.");
   std::lock_guard<std::mutex> guard(mutex_);
   if (TResult().hash() != request_.result_hash) {
     Log::warn << "Message type mismatch in ActionClient::set_result_callback." << std::endl;
@@ -97,7 +91,7 @@ template <typename TResult> void ActionClient::set_result_callback(ResultCallbac
   result_instance_ = std::make_shared<TResult>();
   result_callback_ = [callback](const msg::Message& msg) {
     // Safe to static cast because we checked the hash above
-    const TResult& typed_msg = static_cast<const TResult&>(msg);
+    const auto& typed_msg = static_cast<const TResult&>(msg);
     callback(typed_msg);
   };
 }
