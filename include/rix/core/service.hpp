@@ -51,8 +51,8 @@ private:
 };
 
 template <typename TRequest, typename TResponse> void Service::set_callback(Callback<TRequest, TResponse> callback) {
-  static_assert(std::is_base_of<msg::Message, TRequest>::value, "TRequest must be a subclass of msg::Message.");
-  static_assert(std::is_base_of<msg::Message, TResponse>::value, "TResponse must be a subclass of msg::Message.");
+  static_assert(std::is_base_of_v<msg::Message, TRequest>, "TRequest must be a subclass of msg::Message.");
+  static_assert(std::is_base_of_v<msg::Message, TResponse>, "TResponse must be a subclass of msg::Message.");
 
   if (TRequest().hash() != info_.request_hash || TResponse().hash() != info_.response_hash) {
     Log::warn << "Message type mismatch in Service::set_callback." << std::endl;
