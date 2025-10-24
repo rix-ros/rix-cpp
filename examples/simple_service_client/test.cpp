@@ -30,7 +30,8 @@ TEST(SimpleServiceClientTest, CreateServiceClientFailure) {
   msg::mediator::NodeInfo node_info;
   TestFixture()
       .create_node("simple_service_client", node_info)
-      .create_service_client<msg::standard::UInt32, msg::standard::String>("/alphabet", node_info, true) // Simulate failure
+      .create_service_client<msg::standard::UInt32, msg::standard::String>(
+          "/alphabet", node_info, true) // Simulate failure
       .destroy_node(node_info)
       .build<SimpleServiceClient>([](TestFixture& fixture) {
         SimpleServiceClient node(1);

@@ -312,7 +312,7 @@ TEST(RobotModel, GetTransformsTestRX200) {
   frames.insert({"world", -1});
 
   for (size_t i = 0; i < tf.transforms.size(); ++i) {
-    const auto &t = tf.transforms[i];
+    const auto& t = tf.transforms[i];
     print_transform(tf.transforms[i]);
     EXPECT_TRUE(frames.find(t.header.frame_id) != frames.end())
         << "Transforms must be ordered such that, for any given transform, its parent frame appears earlier in the "

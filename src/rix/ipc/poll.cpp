@@ -3,16 +3,17 @@
 
 namespace rix {
 
-bool SelectPoller::poll(const std::vector<std::shared_ptr<GenericSocket>> &all_sockets,
-                        const Duration &duration, PollFlag flag,
-                        std::vector<std::shared_ptr<GenericSocket>> &sockets,
-                        std::vector<std::shared_ptr<GenericSocket>> &exception_sockets) {
+bool SelectPoller::poll(const std::vector<std::shared_ptr<GenericSocket>>& all_sockets,
+                        const Duration& duration,
+                        PollFlag flag,
+                        std::vector<std::shared_ptr<GenericSocket>>& sockets,
+                        std::vector<std::shared_ptr<GenericSocket>>& exception_sockets) {
   fd_set fds;
   fd_set exception_fds;
   FD_ZERO(&fds);
   FD_ZERO(&exception_fds);
   int max_fd = -1;
-  for (const auto &socket : all_sockets) {
+  for (const auto& socket : all_sockets) {
     int fd = socket->get_fd();
     FD_SET(fd, &fds);
     FD_SET(fd, &exception_fds);
@@ -24,13 +25,16 @@ bool SelectPoller::poll(const std::vector<std::shared_ptr<GenericSocket>> &all_s
     return false;
   }
 
-  struct timeval tv;
-  int64_t ns = duration.to_nanoseconds();
-  tv.tv_sec = static_cast<long>(ns / 1'000'000'000);
-  tv.tv_usec = static_cast<long>(ns % 1'000'000'000 / 1'000);
+  struct timeval tv {};
+  const int64_t ns = duration.to_nanoseconds();
+  tv.tv_sec = static_cast<int>(ns / 1'000'000'000);
+  tv.tv_usec = static_cast<int>(ns % 1'000'000'000 / 1'000);
 
-  int ret = ::select(max_fd + 1, (flag == PollFlag::READ) ? &fds : nullptr, (flag == PollFlag::WRITE) ? &fds : nullptr,
-                     &exception_fds, (duration.to_nanoseconds() < 0) ? nullptr : &tv);
+  int ret = ::select(max_fd + 1,
+                     (flag == PollFlag::READ) ? &fds : nullptr,
+                     (flag == PollFlag::WRITE) ? &fds : nullptr,
+                     &exception_fds,
+                     (duration.to_nanoseconds() < 0) ? nullptr : &tv);
   if (ret < 0) {
     return false;
   }
@@ -39,7 +43,7 @@ bool SelectPoller::poll(const std::vector<std::shared_ptr<GenericSocket>> &all_s
   sockets.reserve(all_sockets.size());
   exception_sockets.clear();
   exception_sockets.reserve(all_sockets.size());
-  for (const auto &socket : all_sockets) {
+  for (const auto& socket : all_sockets) {
     int fd = socket->get_fd();
     if (FD_ISSET(fd, &fds)) {
       sockets.push_back(socket);
@@ -53,15 +57,16 @@ bool SelectPoller::poll(const std::vector<std::shared_ptr<GenericSocket>> &all_s
   return true;
 }
 
-bool PollPoller::poll(const std::vector<std::shared_ptr<GenericSocket>> &all_sockets,
-                      const Duration &duration, PollFlag flag,
-                      std::vector<std::shared_ptr<GenericSocket>> &sockets,
-                      std::vector<std::shared_ptr<GenericSocket>> &exception_sockets) {
-  std::vector<struct pollfd> pfds;
-  pfds.reserve(all_sockets.size());
-  for (const auto &socket : all_sockets) {
-    int fd = socket->get_fd();
-    struct pollfd pfd;
+bool PollPoller::poll(const std::vector<std::shared_ptr<GenericSocket>>& all_sockets,
+                      const Duration& duration,
+                      const PollFlag flag,
+                      std::vector<std::shared_ptr<GenericSocket>>& sockets,
+                      std::vector<std::shared_ptr<GenericSocket>>& exception_sockets) {
+  std::vector<struct pollfd> pollfds;
+  pollfds.reserve(all_sockets.size());
+  for (const auto& socket : all_sockets) {
+    const int fd = socket->get_fd();
+    struct pollfd pfd {};
     pfd.fd = fd;
     pfd.events = 0;
     // Unnecessary to set for EXCEPT
@@ -70,27 +75,26 @@ bool PollPoller::poll(const std::vector<std::shared_ptr<GenericSocket>> &all_soc
     } else if (flag == PollFlag::WRITE) {
       pfd.events |= POLLOUT;
     }
-    pfds.push_back(pfd);
+    pollfds.push_back(pfd);
   }
 
-  int timeout_ms = duration.to_milliseconds();
-  int ret = ::poll(pfds.data(), pfds.size(), timeout_ms);
+  int timeout_ms = static_cast<int>(duration.to_milliseconds());
+  int ret = ::poll(pollfds.data(), pollfds.size(), timeout_ms);
   if (ret < 0) {
     return false;
   }
   sockets.clear();
-  sockets.reserve(pfds.size());
+  sockets.reserve(pollfds.size());
   exception_sockets.clear();
-  exception_sockets.reserve(pfds.size());
+  exception_sockets.reserve(pollfds.size());
 
-  for (size_t i = 0; i < pfds.size(); ++i) {
-    if (pfds[i].revents & (POLLHUP | POLLERR | POLLNVAL)) {
+  for (size_t i = 0; i < pollfds.size(); ++i) {
+    if (pollfds[i].revents & (POLLHUP | POLLERR | POLLNVAL)) {
       exception_sockets.push_back(all_sockets[i]);
       continue;
     }
-    if (flag == PollFlag::READ && (pfds[i].revents & POLLIN)) {
-      sockets.push_back(all_sockets[i]);
-    } else if (flag == PollFlag::WRITE && (pfds[i].revents & POLLOUT)) {
+    if ((flag == PollFlag::READ && (pollfds[i].revents & POLLIN)) ||
+        (flag == PollFlag::WRITE && (pollfds[i].revents & POLLOUT))) {
       sockets.push_back(all_sockets[i]);
     }
   }

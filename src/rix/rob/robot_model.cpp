@@ -1,7 +1,9 @@
 #include "rix/rob/robot_model.hpp"
 
+#include "rix/util/environment.hpp"
 #include <eigen3/Eigen/Geometry>
 #include <nlohmann/json.hpp>
+#include <stack>
 
 #include "rix/rob/eigen_util.hpp"
 
@@ -36,7 +38,8 @@ void parse_jrdf(Json& json,
 
 RobotModel RobotModel::from_model(const std::string& name) {
   std::string jrdf_path = get_env("HOME", std::string());
-  if (jrdf_path.empty()) return RobotModel();
+  if (jrdf_path.empty())
+    return RobotModel();
   if (jrdf_path[jrdf_path.size() - 1] != '/') {
     jrdf_path.push_back('/');
   }
@@ -128,7 +131,6 @@ std::vector<std::shared_ptr<Link>> RobotModel::get_end_effectors() const {
   return end_effectors;
 }
 
-/**< TODO: Implement the get_joints_in_chain method */
 std::vector<std::shared_ptr<Joint>> RobotModel::get_joints_in_chain(const std::string& link_name) const {
   auto it = links.find(link_name);
   if (it == links.end()) {
@@ -146,7 +148,6 @@ std::vector<std::shared_ptr<Joint>> RobotModel::get_joints_in_chain(const std::s
   return joint_list;
 }
 
-/**< TODO: Implement the get_transforms method */
 msg::geometry::TF RobotModel::get_transforms() const {
   msg::geometry::TF tf;
 
@@ -188,7 +189,6 @@ msg::geometry::TF RobotModel::get_transforms() const {
   return tf;
 }
 
-/**< TODO: Implement the get_joint_states method */
 msg::sensor::JS RobotModel::get_joint_states() const {
   msg::sensor::JS js;
   js.stamp = Time::now().to_msg();
@@ -212,7 +212,7 @@ msg::geometry::TF RobotModel::get_static_transforms() const {
     std::shared_ptr<Link> link = pair.second;
 
     transform.header.frame_id = link_name;
-    transform.child_frame_id = link_name + "/intertial";
+    transform.child_frame_id = link_name + "/inertial";
     transform.transform = link->inertial().origin;
     tf.transforms.push_back(transform);
     transform.header.seq++;
@@ -269,7 +269,7 @@ bool convert_json_sphere(const Json& src, Sphere& dst) {
     return false;
   if (!src.at("radius").is_number())
     return false;
-  double radius = src.at("radius").template get<double>();
+  double radius = src.at("radius").get<double>();
   dst.radius = radius;
   return true;
 }
@@ -290,9 +290,9 @@ bool convert_json_box(const Json& src, Box& dst) {
   if (!src.at("size")[2].is_number())
     return false;
 
-  dst.dim.x = src.at("size")[0].template get<double>();
-  dst.dim.y = src.at("size")[1].template get<double>();
-  dst.dim.z = src.at("size")[2].template get<double>();
+  dst.dim.x = src.at("size")[0].get<double>();
+  dst.dim.y = src.at("size")[1].get<double>();
+  dst.dim.z = src.at("size")[2].get<double>();
   return true;
 }
 
@@ -307,8 +307,8 @@ bool convert_json_cylinder(const Json& src, Cylinder& dst) {
     return false;
   if (!src.at("length").is_number())
     return false;
-  dst.radius = src.at("radius").template get<double>();
-  dst.length = src.at("length").template get<double>();
+  dst.radius = src.at("radius").get<double>();
+  dst.length = src.at("length").get<double>();
   return true;
 }
 
@@ -319,7 +319,7 @@ bool convert_json_mesh(const Json& src, Mesh& dst) {
     return false;
   if (!src.at("filename").is_string())
     return false;
-  dst.filename = src.at("filename").template get<std::string>();
+  dst.filename = src.at("filename").get<std::string>();
 
   dst.scale.x = dst.scale.y = dst.scale.z = 1;
   if (src.contains("scale")) {
@@ -333,9 +333,9 @@ bool convert_json_mesh(const Json& src, Mesh& dst) {
       return false;
     if (!src.at("scale")[2].is_number())
       return false;
-    dst.scale.x = src.at("scale")[0].template get<double>();
-    dst.scale.y = src.at("scale")[1].template get<double>();
-    dst.scale.z = src.at("scale")[2].template get<double>();
+    dst.scale.x = src.at("scale")[0].get<double>();
+    dst.scale.y = src.at("scale")[1].get<double>();
+    dst.scale.z = src.at("scale")[2].get<double>();
   }
   return true;
 }
@@ -347,7 +347,7 @@ bool convert_json_material(const Json& src, Material& dst) {
   if (src.contains("texture_filename")) {
     if (!src.at("texture_filename").is_string())
       return false;
-    dst.texture_filename = src.at("texture_filename").template get<std::string>();
+    dst.texture_filename = src.at("texture_filename").get<std::string>();
   } else if (src.contains("color")) {
     if (!src.at("color").is_array())
       return false;
@@ -361,10 +361,10 @@ bool convert_json_material(const Json& src, Material& dst) {
       return false;
     if (!src.at("color")[3].is_number())
       return false;
-    dst.color.r = src.at("color")[0].template get<float>();
-    dst.color.g = src.at("color")[1].template get<float>();
-    dst.color.b = src.at("color")[2].template get<float>();
-    dst.color.a = src.at("color")[3].template get<float>();
+    dst.color.r = src.at("color")[0].get<float>();
+    dst.color.g = src.at("color")[1].get<float>();
+    dst.color.b = src.at("color")[2].get<float>();
+    dst.color.a = src.at("color")[3].get<float>();
   } else {
     return false;
   }
@@ -389,8 +389,8 @@ bool convert_json_origin(const Json& src, msg::geometry::Transform& dst) {
   if (!src[5].is_number())
     return false;
 
-  Eigen::Vector3d xyz_v(src[0].template get<double>(), src[1].template get<double>(), src[2].template get<double>());
-  Eigen::Vector3d rpy_v(src[3].template get<double>(), src[4].template get<double>(), src[5].template get<double>());
+  Eigen::Vector3d xyz_v(src[0].get<double>(), src[1].get<double>(), src[2].get<double>());
+  Eigen::Vector3d rpy_v(src[3].get<double>(), src[4].get<double>(), src[5].get<double>());
 
   Eigen::Affine3d matrix = Eigen::Translation3d(xyz_v) * Eigen::AngleAxisd(rpy_v[0], Eigen::Vector3d::UnitX()) *
                            Eigen::AngleAxisd(rpy_v[1], Eigen::Vector3d::UnitY()) *
@@ -413,7 +413,7 @@ bool convert_json_inertial(const Json& src, Inertial& dst) {
     return false;
   if (!src.at("mass").is_number())
     return false;
-  dst.mass = src.at("mass").template get<double>();
+  dst.mass = src.at("mass").get<double>();
 
   if (!src.contains("ixx"))
     return false;
@@ -440,12 +440,12 @@ bool convert_json_inertial(const Json& src, Inertial& dst) {
   if (!src.at("izz").is_number())
     return false;
 
-  dst.ixx = src.at("ixx").template get<double>();
-  dst.ixy = src.at("ixy").template get<double>();
-  dst.ixz = src.at("ixz").template get<double>();
-  dst.iyy = src.at("iyy").template get<double>();
-  dst.iyz = src.at("iyz").template get<double>();
-  dst.izz = src.at("izz").template get<double>();
+  dst.ixx = src.at("ixx").get<double>();
+  dst.ixy = src.at("ixy").get<double>();
+  dst.ixz = src.at("ixz").get<double>();
+  dst.iyy = src.at("iyy").get<double>();
+  dst.iyz = src.at("iyz").get<double>();
+  dst.izz = src.at("izz").get<double>();
   return true;
 }
 
@@ -456,7 +456,7 @@ bool convert_json_geometry(const Json& src, std::shared_ptr<Geometry>& dst) {
     return false;
   if (!src.at("type").is_string())
     return false;
-  std::string type = src.at("type").template get<std::string>();
+  std::string type = src.at("type").get<std::string>();
   if (type == "box") {
     auto dst_ptr = std::make_shared<Box>();
     if (!convert_json_box(src, *dst_ptr))
@@ -530,7 +530,7 @@ std::shared_ptr<Link> convert_json_link(const Json& src,
     return nullptr;
   if (!src.at("name").is_string())
     return nullptr;
-  std::string name = src.at("name").template get<std::string>();
+  std::string name = src.at("name").get<std::string>();
 
   auto parent_it = parent_map.find(name);
   std::string parent = "";
@@ -584,13 +584,13 @@ bool convert_json_joint_dynamics(const Json& src, JointDynamics& dst) {
   if (src.contains("damping")) {
     if (!src.at("damping").is_number())
       return false;
-    dst.damping = src.at("damping").template get<double>();
+    dst.damping = src.at("damping").get<double>();
   }
   dst.friction = 0;
   if (src.contains("friction")) {
     if (!src.at("friction").is_number())
       return false;
-    dst.friction = src.at("friction").template get<double>();
+    dst.friction = src.at("friction").get<double>();
   }
   return true;
 }
@@ -604,21 +604,21 @@ bool convert_json_joint_mimic(const Json& src, JointMimic& dst) {
     return false;
   if (!src.at("offset").is_number())
     return false;
-  dst.offset = src.at("offset").template get<double>();
+  dst.offset = src.at("offset").get<double>();
 
   dst.multiplier = 0;
   if (!src.contains("multiplier"))
     return false;
   if (!src.at("multiplier").is_number())
     return false;
-  dst.multiplier = src.at("multiplier").template get<double>();
+  dst.multiplier = src.at("multiplier").get<double>();
 
   dst.name = "";
   if (!src.contains("name"))
     return false;
   if (!src.at("name").is_string())
     return false;
-  dst.name = src.at("name").template get<std::string>();
+  dst.name = src.at("name").get<std::string>();
   return true;
 }
 
@@ -630,25 +630,25 @@ bool convert_json_joint_limits(const Json& src, JointLimits& dst) {
     return false;
   if (!src.at("effort").is_number())
     return false;
-  dst.effort = src.at("effort").template get<double>();
+  dst.effort = src.at("effort").get<double>();
 
   if (!src.contains("velocity"))
     return false;
   if (!src.at("velocity").is_number())
     return false;
-  dst.effort = src.at("velocity").template get<double>();
+  dst.effort = src.at("velocity").get<double>();
 
   dst.lower = 0;
   if (src.contains("lower")) {
     if (!src.at("lower").is_number())
       return false;
-    dst.lower = src.at("lower").template get<double>();
+    dst.lower = src.at("lower").get<double>();
   }
   dst.upper = 0;
   if (src.contains("upper")) {
     if (!src.at("upper").is_number())
       return false;
-    dst.upper = src.at("upper").template get<double>();
+    dst.upper = src.at("upper").get<double>();
   }
   return true;
 }
@@ -661,26 +661,26 @@ std::shared_ptr<Joint> convert_json_joint(const Json& src) {
     return nullptr;
   if (!src.at("name").is_string())
     return nullptr;
-  std::string name = src.at("name").template get<std::string>();
+  std::string name = src.at("name").get<std::string>();
 
   if (!src.contains("parent"))
     return nullptr;
   if (!src.at("parent").is_string())
     return nullptr;
-  std::string parent = src.at("parent").template get<std::string>();
+  std::string parent = src.at("parent").get<std::string>();
 
   if (!src.contains("child"))
     return nullptr;
   if (!src.at("child").is_string())
     return nullptr;
-  std::string child = src.at("child").template get<std::string>();
+  std::string child = src.at("child").get<std::string>();
 
   Joint::Type type;
   if (!src.contains("type"))
     return nullptr;
   if (!src.at("type").is_string())
     return nullptr;
-  std::string type_str = src.at("type").template get<std::string>();
+  std::string type_str = src.at("type").get<std::string>();
   if (type_str == "revolute") {
     type = Joint::Type::REVOLUTE;
   } else if (type_str == "prismatic") {
@@ -708,9 +708,9 @@ std::shared_ptr<Joint> convert_json_joint(const Json& src) {
       return nullptr;
     if (!src.at("axis")[2].is_number())
       return nullptr;
-    axis.x = src.at("axis")[0].template get<double>();
-    axis.y = src.at("axis")[1].template get<double>();
-    axis.z = src.at("axis")[2].template get<double>();
+    axis.x = src.at("axis")[0].get<double>();
+    axis.y = src.at("axis")[1].get<double>();
+    axis.z = src.at("axis")[2].get<double>();
   }
 
   msg::geometry::Transform origin = transform_identity();

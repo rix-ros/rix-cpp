@@ -1,27 +1,34 @@
 #pragma once
 
 #include "rix/core/mediator.hpp"
-#include "socket_builder.hpp"
-#include "socket_manager.hpp"
+#include "rix/msg/mediator/ActRequest.hpp"
+#include "rix/msg/mediator/ActResponse.hpp"
+#include "rix/msg/mediator/SrvRequest.hpp"
+#include "rix/msg/mediator/SrvResponse.hpp"
+#include "rix/msg/mediator/Status.hpp"
+#include "rix/msg/mediator/SubNotify.hpp"
+#include "rix/test/socket_builder.hpp"
+#include "rix/test/socket_manager.hpp"
 #include <gtest/gtest.h>
+#include <rix/msg/standard/UInt64.hpp>
 
 namespace rix {
 
 // High-level test fixture for Node tests
 class MediatorTestFixture {
 public:
-  MediatorTestFixture(const Endpoint& endpoint = Endpoint("127.0.0.1", 0)) : endpoint_(endpoint) {}
+  explicit MediatorTestFixture(const Endpoint& endpoint = Endpoint("127.0.0.1", 0)) : endpoint_(endpoint) {}
 
   MediatorTestFixture& ping() {
-    msg::mediator::Operation op;
-    op.opcode = OPCODE::PING;
-    op.len = 0;
+    msg::mediator::Operation operation;
+    operation.opcode = OPCODE::PING;
+    operation.len = 0;
 
     msg::mediator::Status status;
     status.error = 0;
 
     auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket).recv_message(op, op.size()).send_message(OPCODE::STATUS_RESPONSE, status).close();
+    SocketBuilder(socket).recv_message(operation, operation.size()).send_message(OPCODE::STATUS_RESPONSE, status).close();
     return *this;
   }
 
@@ -234,6 +241,93 @@ public:
         .send_message(OPCODE::SRV_RESPONSE, srv_res)
         .close();
 
+    return *this;
+  }
+
+  // Configure action registration
+  MediatorTestFixture& register_action(uint64_t id,
+                                       uint64_t node_id,
+                                       const std::string& action,
+                                       std::array<uint64_t, 2> goal_hash,
+                                       std::array<uint64_t, 2> feedback_hash,
+                                       std::array<uint64_t, 2> result_hash,
+                                       bool should_fail = false,
+                                       const Endpoint& endpoint = Endpoint("127.0.0.1", 8001)) {
+    msg::mediator::ActInfo act_info;
+    act_info.id = id;
+    act_info.node_id = node_id;
+    act_info.name = action;
+    act_info.goal_hash = goal_hash;
+    act_info.feedback_hash = feedback_hash;
+    act_info.result_hash = result_hash;
+    act_info.endpoint.address = endpoint.address;
+    act_info.endpoint.port = endpoint.port;
+
+    msg::mediator::Status status;
+    status.error = should_fail ? -1 : 0;
+    status.id = act_info.id;
+
+    // Registration socket
+    auto reg_socket = socket_manager_.create_socket();
+    SocketBuilder(reg_socket)
+        .recv_message(OPCODE::ACT_REGISTER, act_info)
+        .send_message(OPCODE::STATUS_RESPONSE, status)
+        .close();
+    return *this;
+  }
+
+  // Configure action deregistration
+  MediatorTestFixture& deregister_action(uint64_t id,
+                                         uint64_t node_id,
+                                         const std::string& action,
+                                         bool should_fail = false,
+                                         const Endpoint& endpoint = Endpoint("127.0.0.1", 8001)) {
+    msg::mediator::ActInfo act_info;
+    act_info.id = id;
+    act_info.node_id = node_id;
+    act_info.name = action;
+    act_info.endpoint.address = endpoint.address;
+    act_info.endpoint.port = endpoint.port;
+
+    auto socket = socket_manager_.create_socket();
+    SocketBuilder(socket).recv_message(OPCODE::ACT_DEREGISTER, act_info).close();
+    return *this;
+  }
+
+  // Configure action client request
+  MediatorTestFixture& request_action_client(uint64_t node_id,
+                                             const std::string& action,
+                                             std::array<uint64_t, 2> goal_hash,
+                                             std::array<uint64_t, 2> feedback_hash,
+                                             std::array<uint64_t, 2> result_hash,
+                                             uint64_t act_id,
+                                             bool should_fail = false,
+                                             const Endpoint& endpoint = Endpoint("127.0.0.1", 8001)) {
+    msg::mediator::ActRequest act_req;
+    act_req.node_id = node_id;
+    act_req.name = action;
+    act_req.goal_hash = goal_hash;
+    act_req.feedback_hash = feedback_hash;
+    act_req.result_hash = result_hash;
+
+    msg::mediator::ActResponse act_res;
+    act_res.error = should_fail ? -1 : 0;
+    if (!should_fail) {
+      act_res.act_info.name = action;
+      act_res.act_info.node_id = node_id;
+      act_res.act_info.id = act_id;
+      act_res.act_info.goal_hash = goal_hash;
+      act_res.act_info.feedback_hash = feedback_hash;
+      act_res.act_info.result_hash = result_hash;
+      act_res.act_info.endpoint.address = endpoint.address;
+      act_res.act_info.endpoint.port = endpoint.port;
+    }
+    // Registration socket
+    auto reg_socket = socket_manager_.create_socket();
+    SocketBuilder(reg_socket)
+        .recv_message(OPCODE::ACT_REQUEST, act_req)
+        .send_message(OPCODE::ACT_RESPONSE, act_res)
+        .close();
     return *this;
   }
 

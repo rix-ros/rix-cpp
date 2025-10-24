@@ -1,4 +1,6 @@
 #include "rix/core/subscriber.hpp"
+#include "rix/msg/mediator/Status.hpp"
+#include "rix/msg/mediator/SubNotify.hpp"
 
 namespace rix {
 
@@ -35,9 +37,9 @@ Subscriber::Subscriber(const msg::mediator::SubInfo& info,
     return;
   }
 
-  msg::mediator::Operation op;
+  msg::mediator::Operation operation;
   msg::mediator::Status status;
-  if (!client->recv_message(op, status)) {
+  if (!client->recv_message(operation, status)) {
     shutdown();
     return;
   }
@@ -132,15 +134,15 @@ void Subscriber::on_spin() {
     auto client = *it;
 
     // Read a message from the publisher
-    msg::mediator::Operation op;
-    if (!client->recv_message(op, *msg_instance_)) {
+    msg::mediator::Operation operation;
+    if (!client->recv_message(operation, *msg_instance_)) {
       clients_.erase(client);
       it++;
       Log::debug << "Removed exceptional publisher from topic \"" << info_.topic_info.name << "\"." << std::endl;
       continue;
     }
 
-    if (op.opcode != OPCODE::PUB_MESSAGE) {
+    if (operation.opcode != OPCODE::PUB_MESSAGE) {
       clients_.erase(client);
       it++;
       Log::debug << "Removed exceptional publisher from topic \"" << info_.topic_info.name << "\"." << std::endl;
@@ -158,8 +160,13 @@ void Subscriber::on_spin() {
 Subscriber::SubNotifyAcceptor::SubNotifyAcceptor(Subscriber& parent) : parent(parent) {}
 
 void Subscriber::SubNotifyAcceptor::on_spin() {
+#ifdef RIX_MULTITHREADED
+  Duration timeout(1.0);
+#else
+  Duration timeout(0.0);
+#endif
   // Check to see if rixhub has made a connection
-  if (!parent.server_->wait_readable(Duration(1.0))) {
+  if (!parent.server_->wait_readable(timeout)) {
     return;
   }
 
@@ -169,12 +176,12 @@ void Subscriber::SubNotifyAcceptor::on_spin() {
     return;
   }
 
-  msg::mediator::Operation op;
+  msg::mediator::Operation operation;
   msg::mediator::SubNotify sub_notify;
-  if (!conn->recv_message(op, sub_notify)) {
+  if (!conn->recv_message(operation, sub_notify)) {
     return;
   }
-  if (op.opcode != OPCODE::SUB_NOTIFY) {
+  if (operation.opcode != OPCODE::SUB_NOTIFY) {
     Log::warn << "Received invalid opcode from rixhub." << std::endl;
     return;
   }

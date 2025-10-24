@@ -1,8 +1,6 @@
 #pragma once
 
-#include <atomic>
 #include <chrono>
-#include <cmath>
 #include <string>
 
 #include "rix/msg/standard/Duration.hpp"
@@ -33,7 +31,7 @@ public:
 class Clock : public GenericClock {
 public:
   Clock() = default;
-  ~Clock() = default;
+  ~Clock() override = default;
   Time now() const noexcept override;
   void sleep_for(const Duration& duration) override;
   void sleep_until(const Time& time) override;
@@ -45,7 +43,7 @@ class Time {
 public:
   using Type = detail::time_t;
 
-  static void set_clock(std::shared_ptr<GenericClock> clock) { clock_ = clock; }
+  static void set_clock(const std::shared_ptr<GenericClock>& clock) { clock_ = clock; }
   static Time now();
 
   /**
@@ -61,10 +59,10 @@ public:
   static void sleep_until(const Time& time);
 
   Time();
-  Time(const Type& time_point);
-  Time(double seconds);
-  Time(int32_t seconds, int32_t nanoseconds);
-  Time(const msg::standard::Time& msg);
+  explicit Time(const Type& time_point);
+  explicit Time(double seconds);
+  Time(uint32_t seconds, uint32_t nanoseconds);
+  explicit Time(const msg::standard::Time& msg);
 
   Time(const Time& other);
   Time& operator=(const Time& other);
@@ -83,7 +81,7 @@ public:
   bool operator>=(const Time& other) const;
 
   std::string to_string(bool local_time = false) const;
-  msg::standard::Time to_msg();
+  msg::standard::Time to_msg() const;
 
   enum RoundType { FLOOR = 0, CEIL, NEAREST };
 
@@ -108,17 +106,17 @@ public:
 
   /**
    * @brief Duration to be used to represent "forever" without causing integer
-   * overflow from addition to a time point near now. Currently is 10 years.
+   * overflow from addition to a time point near now. Currently, is 10 years.
    *
    * @return Duration
    */
   static Duration safe_forever() { return Duration(Type(315'360'000'000'000'000)); } // 10 years in nanoseconds
 
   Duration();
-  Duration(const Type& duration);
-  Duration(double seconds);
+  explicit Duration(const Type& duration);
+  explicit Duration(double seconds);
   Duration(int32_t seconds, int32_t nanoseconds);
-  Duration(const msg::standard::Duration& msg);
+  explicit Duration(const msg::standard::Duration& msg);
 
   Duration(const Duration& other);
   Duration& operator=(const Duration& other);
@@ -144,7 +142,7 @@ public:
   bool operator>(const Duration& other) const;
   bool operator>=(const Duration& other) const;
 
-  msg::standard::Duration to_msg();
+  msg::standard::Duration to_msg() const;
 
   int64_t to_seconds(Time::RoundType type = Time::RoundType::FLOOR) const;
   int64_t to_milliseconds(Time::RoundType type = Time::RoundType::FLOOR) const;
@@ -192,32 +190,22 @@ private:
   Time end_;   //< The end time.
 };
 
-/**
- * @brief A class for setting the rate of a loop.
- *
- * @example shared_mutex.cpp
- * @example tcp_client.cpp
- * @example tcp_client_noblock.cpp
- * @example udp_sender_multicast.cpp
- * @example udp_receiver.cpp
- * @example web_client.cpp
- */
 class Rate {
 public:
-  static inline double min_frequency() { return (1e9 / std::chrono::nanoseconds::max().count()); }
-  static inline double max_frequency() { return 1e9; }
-  static inline Duration min_period() { return Duration(0, 1); }
-  static inline Duration max_period() { return Duration(std::chrono::nanoseconds::max()); }
+  static double min_frequency() { return (1e9 / static_cast<double>(std::chrono::nanoseconds::max().count())); }
+  static double max_frequency() { return 1e9; }
+  static Duration min_period() { return {0, 1}; }
+  static Duration max_period() { return Duration(std::chrono::nanoseconds::max()); }
 
   Rate();
   /**
    * @brief Constructs a Rate object.
    * @param frequency The frequency in hertz.
    */
-  explicit Rate(double frequency); //(Done By Waj) Handle case of 0 frequency
-                                   //(infinite duration)
-  explicit Rate(Duration period);  //(Done By Waj) Handle case of 0 duration
-                                   //(infinite frequency)
+  explicit Rate(double frequency);       //(Done By Waj) Handle case of 0 frequency
+                                         //(infinite duration)
+  explicit Rate(const Duration& period); //(Done By Waj) Handle case of 0 duration
+                                         //(infinite frequency)
 
   Rate(const Rate& other);
   Rate& operator=(const Rate& other);

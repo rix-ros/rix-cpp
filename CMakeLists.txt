@@ -5,9 +5,11 @@ set(CMAKE_CXX_STANDARD 17)
 option(BUILD_TESTS "Build unit tests" OFF)
 option(MULTITHREADED "Enable multi-threaded support" OFF)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Ofast")
 
 add_library(rix
+    src/rix/core/action_client.cpp
+    src/rix/core/action.cpp
     src/rix/core/mediator.cpp
     src/rix/core/node.cpp
     src/rix/core/publisher.cpp

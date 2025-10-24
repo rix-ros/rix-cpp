@@ -1,4 +1,11 @@
 #include "rix/core/mediator.hpp"
+#include "rix/msg/mediator/ActRequest.hpp"
+#include "rix/msg/mediator/ActResponse.hpp"
+#include "rix/msg/mediator/SrvRequest.hpp"
+#include "rix/msg/mediator/SrvResponse.hpp"
+#include "rix/msg/mediator/Status.hpp"
+#include "rix/msg/mediator/SubNotify.hpp"
+#include "rix/msg/standard/UInt64.hpp"
 
 namespace rix {
 
@@ -56,6 +63,10 @@ void Mediator::on_spin() {
     handle_srv_register(operation, conn);
     break;
   }
+  case OPCODE::ACT_REGISTER: {
+    handle_act_register(operation, conn);
+    break;
+  }
   case OPCODE::NODE_DEREGISTER: {
     handle_node_deregister(operation, conn);
     break;
@@ -72,8 +83,16 @@ void Mediator::on_spin() {
     handle_srv_deregister(operation, conn);
     break;
   }
+  case OPCODE::ACT_DEREGISTER: {
+    handle_act_deregister(operation, conn);
+    break;
+  }
   case OPCODE::SRV_REQUEST: {
     handle_srv_request(operation, conn);
+    break;
+  }
+  case OPCODE::ACT_REQUEST: {
+    handle_act_request(operation, conn);
     break;
   }
   case OPCODE::PARAM_SET_REQUEST: {
@@ -222,7 +241,6 @@ void Mediator::handle_sub_register(const msg::mediator::Operation& operation, st
 }
 
 void Mediator::handle_srv_register(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn) {
-
   msg::mediator::Status status;
   status.error = 0;
   msg::mediator::SrvInfo info;
@@ -256,6 +274,43 @@ void Mediator::handle_srv_register(const msg::mediator::Operation& operation, st
 
   services_.insert({info.id, info});
   Log::info << "Registered service \"" << info.name << "\"." << std::endl;
+  conn->send_message(OPCODE::STATUS_RESPONSE, status);
+}
+
+void Mediator::handle_act_register(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+  msg::mediator::Status status;
+  status.error = 0;
+  msg::mediator::ActInfo info;
+  if (!conn->recv_message(info, operation.len)) {
+    status.error = -1;
+    conn->send_message(OPCODE::STATUS_RESPONSE, status);
+    return;
+  }
+  status.id = info.id;
+
+  // Ensure that the action has a existing node ID
+  if (nodes_.find(info.node_id) == nodes_.end()) {
+    status.error = -1;
+    conn->send_message(OPCODE::STATUS_RESPONSE, status);
+    return;
+  }
+
+  // Ensure that the action ID is not already registered
+  if (actions_.find(info.id) != actions_.end()) {
+    status.error = -1;
+    conn->send_message(OPCODE::STATUS_RESPONSE, status);
+    return;
+  }
+
+  // Ensure that the action hash matches the record, or is new
+  if (!validate_action_info(info)) {
+    status.error = -1;
+    conn->send_message(OPCODE::STATUS_RESPONSE, status);
+    return;
+  }
+
+  actions_.insert({info.id, info});
+  Log::info << "Registered action \"" << info.name << "\"." << std::endl;
   conn->send_message(OPCODE::STATUS_RESPONSE, status);
 }
 
@@ -307,6 +362,18 @@ void Mediator::handle_srv_deregister(const msg::mediator::Operation& operation, 
   Log::info << "Deregistered service \"" << info.name << "\"." << std::endl;
 }
 
+void Mediator::handle_act_deregister(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+  msg::mediator::ActInfo info;
+  if (!conn->recv_message(info, operation.len)) {
+    return;
+  }
+  if (actions_.find(info.id) == actions_.end()) {
+    return;
+  }
+  actions_.erase(info.id);
+  Log::info << "Deregistered action \"" << info.name << "\"." << std::endl;
+}
+
 void Mediator::handle_srv_request(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn) {
 
   msg::mediator::SrvResponse response;
@@ -338,6 +405,38 @@ void Mediator::handle_srv_request(const msg::mediator::Operation& operation, std
 
   response.srv_info = it->second;
   conn->send_message(OPCODE::SRV_RESPONSE, response);
+}
+
+void Mediator::handle_act_request(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+  msg::mediator::ActResponse response;
+  response.error = 0;
+
+  msg::mediator::ActRequest request;
+  if (!conn->recv_message(request, operation.len)) {
+    response.error = -1;
+    conn->send_message(OPCODE::ACT_RESPONSE, response);
+    return;
+  }
+
+  // Ensure that the requester has a existing node ID
+  if (nodes_.find(request.node_id) == nodes_.end()) {
+    response.error = -1;
+    conn->send_message(OPCODE::ACT_RESPONSE, response);
+    return;
+  }
+
+  auto it = std::find_if(actions_.begin(), actions_.end(), [&](const auto& act) {
+    return act.second.name == request.name && act.second.goal_hash == request.goal_hash &&
+           act.second.result_hash == request.result_hash && act.second.feedback_hash == request.feedback_hash;
+  });
+  if (it == actions_.end()) {
+    response.error = -1;
+    conn->send_message(OPCODE::ACT_RESPONSE, response);
+    return;
+  }
+
+  response.act_info = it->second;
+  conn->send_message(OPCODE::ACT_RESPONSE, response);
 }
 
 void Mediator::handle_param_set_request(const msg::mediator::Operation& operation,
@@ -483,6 +582,14 @@ bool Mediator::validate_service_info(const msg::mediator::SrvInfo& info) {
   auto it = std::find_if(
       services_.begin(), services_.end(), [&](const auto& srv) { return srv.second.name == service_name; });
   return it == services_.end();
+}
+
+bool Mediator::validate_action_info(const msg::mediator::ActInfo& info) {
+  // return true if the action name does not exist
+  const auto& action_name = info.name;
+  auto it =
+      std::find_if(actions_.begin(), actions_.end(), [&](const auto& act) { return act.second.name == action_name; });
+  return it == actions_.end();
 }
 
 bool Mediator::set_parameter(const msg::mediator::ParamInfo& info) {

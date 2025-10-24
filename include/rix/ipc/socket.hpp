@@ -1,10 +1,8 @@
 #pragma once
 
 #include "rix/ipc/generic_socket.hpp"
-#include <memory>
-
 #include "rix/ipc/posix_socket.hpp"
-#include "rix/ipc/poll.hpp"
+#include <memory>
 
 namespace rix {
 

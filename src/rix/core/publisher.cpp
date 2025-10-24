@@ -1,4 +1,5 @@
 #include "rix/core/publisher.hpp"
+#include "rix/msg/mediator/Status.hpp"
 
 namespace rix {
 
@@ -37,9 +38,9 @@ Publisher::Publisher(const msg::mediator::PubInfo& info, SocketFactory factory, 
     return;
   }
 
-  msg::mediator::Operation op;
+  msg::mediator::Operation operation;
   msg::mediator::Status status;
-  if (!client->recv_message(op, status)) {
+  if (!client->recv_message(operation, status)) {
     shutdown();
     return;
   }

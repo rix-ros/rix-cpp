@@ -1,5 +1,8 @@
 #include "rix/ipc/posix_signal.hpp"
 
+#include <csignal>
+#include <unistd.h>
+
 #include <iostream>
 
 namespace rix {
@@ -55,9 +58,9 @@ bool POSIXSignal::wait(const Duration& d) const {
   fd_set read_fds;
   FD_ZERO(&read_fds);
   FD_SET(notifier[signum_ - 1].pipe[0], &read_fds);
-  struct timeval timeout;
+  struct timeval timeout{};
   timeout.tv_sec = d.to_nanoseconds() / 1'000'000'000;
-  timeout.tv_usec = (d.to_nanoseconds() % 1'000'000'000) / 1'000;
+  timeout.tv_usec = static_cast<int>((d.to_nanoseconds() % 1'000'000'000) / 1'000);
   select(notifier[signum_ - 1].pipe[0] + 1, &read_fds, nullptr, nullptr, &timeout);
   is_readable = FD_ISSET(notifier[signum_ - 1].pipe[0], &read_fds);
 
@@ -73,9 +76,7 @@ bool POSIXSignal::wait(const Duration& d) const {
 
 void POSIXSignal::handler(int signum) {
   if (notifier[signum - 1].is_init) {
-    int ret = write(notifier[signum - 1].pipe[1], (uint8_t*)&signum, sizeof(int));
-    if (ret < 0)
-      return;
+    write(notifier[signum - 1].pipe[1], (uint8_t*)&signum, sizeof(int));
   }
 }
 

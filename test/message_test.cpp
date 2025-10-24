@@ -1,7 +1,6 @@
 #include "rix/core/node.hpp"
 #include "rix/msg/mediator/NodeInfo.hpp"
 #include "rix/msg/mediator/SubNotify.hpp"
-#include "rix/msg/standard/String.hpp"
 #include "rix/msg/standard/Time.hpp"
 #include "rix/msg/standard/UInt32.hpp"
 #include "rix/test/test_fixture.hpp"
@@ -31,7 +30,7 @@ TEST(MessageTest, PublisherAcceptConnectionsAndPublish) {
       .disable_operation_notifications()
       .destroy_publisher(pub_info)
       .destroy_node(node_info)
-      .build<Node>([](TestFixture& fixture) {
+      .build<Node>([](const TestFixture& fixture) {
         auto server_socket = fixture.get_server_socket();
         auto connection_sockets = fixture.get_connection_sockets();
 
@@ -72,7 +71,7 @@ TEST(MessageTest, PublisherAcceptConnectionsAndPublish) {
 
 #ifdef RIX_MULTITHREADED
         // Wait for all messages to be sent on each connection
-        // Each connection socket will notify 3 times (once per message)
+        //  socket will notify 3 times (once per message)
         EXPECT_TRUE(fixture.wait_for_all_connections(3, std::chrono::milliseconds(5000)));
 #endif
 
@@ -210,7 +209,7 @@ TEST(MessageTest, ServiceAcceptRequestAndRespond) {
       .disable_operation_notifications()
       .destroy_service(srv_info)
       .destroy_node(node_info)
-      .build<Node>([](TestFixture& fixture) {
+      .build<Node>([](const TestFixture& fixture) {
         auto server_socket = fixture.get_server_socket();
         auto srv_connections = fixture.get_connection_sockets();
 
@@ -256,6 +255,363 @@ TEST(MessageTest, ServiceAcceptRequestAndRespond) {
         EXPECT_FALSE(srv->ok());
         srv = nullptr;
         node.spin_once();
+      });
+}
+
+TEST(MessageTest, ActionAcceptGoalwithFeedbackAndResult) {
+  // Create request/response pairs
+  std::vector<std::shared_ptr<msg::standard::UInt32>> goals;
+  std::vector<std::vector<std::shared_ptr<msg::standard::UInt32>>> feedbacks;
+  std::vector<std::shared_ptr<msg::standard::Time>> results;
+  for (int i = 1; i <= 3; ++i) {
+    auto goal = std::make_shared<msg::standard::UInt32>();
+    goal->data = i;
+    goals.push_back(goal);
+    feedbacks.push_back(std::vector<std::shared_ptr<msg::standard::UInt32>>());
+    for (int j = 1; j <= 3; ++j) {
+      auto feedback = std::make_shared<msg::standard::UInt32>();
+      feedback->data = i * 10 + j;
+      feedbacks.back().push_back(feedback);
+    }
+    auto result = std::make_shared<msg::standard::Time>();
+    result->sec = i;
+    result->nsec = i + 500;
+    results.push_back(result);
+  }
+
+  msg::mediator::NodeInfo node_info;
+  msg::mediator::ActInfo act_info;
+  TestFixture()
+      .create_node("test_node", node_info)
+      .enable_operation_notifications()
+      .create_action<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>(
+          "test_action", act_info, node_info, 0, false, 1)
+      .accept_action_client(goals[0], feedbacks[0], results[0])
+      .disable_operation_notifications()
+      .destroy_node(node_info)
+      .destroy_action(act_info)
+      .build<Node>([](const TestFixture& fixture) {
+        auto server_socket = fixture.get_server_socket();
+        auto srv_connections = fixture.get_connection_sockets();
+
+        Node node("test_node");
+        EXPECT_TRUE(node.ok());
+
+        // Create service with callback
+        auto callback =
+            [](const msg::standard::UInt32& goal, msg::standard::UInt32& feedback, msg::standard::Time& result) {
+              static int feedback_count = 0;
+              if (feedback_count >= 3) {
+                result.sec = goal.data;
+                result.nsec = goal.data + 500;
+                feedback_count = 0;
+                return true;
+              }
+              feedback_count++;
+              feedback.data = goal.data * 10 + feedback_count;
+              return false;
+            };
+
+        auto act = node.create_action<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("test_action",
+                                                                                                         callback);
+        EXPECT_NE(act, nullptr);
+        EXPECT_TRUE(act->ok());
+
+        // Set wrong callback (should not be called)
+        auto wrong_callback =
+            [](const msg::standard::Time& goal, msg::standard::UInt32& feedback, msg::standard::Time& result) -> bool {
+          EXPECT_FALSE(true) << "Should not be called with wrong message types";
+          return false;
+        };
+        act->set_callback<msg::standard::Time, msg::standard::UInt32, msg::standard::Time>(wrong_callback);
+        EXPECT_TRUE(act->ok());
+
+#ifndef RIX_MULTITHREADED
+        std::thread thr([&node]() { node.spin(); });
+#endif
+        EXPECT_TRUE(server_socket->wait_for_operations(1, std::chrono::milliseconds(5000)));
+        // 2 recv (opcode & goal) + 1 send (status) + 3 send (feedback) + 1 send (result) = 7 operations per connection
+        EXPECT_TRUE(fixture.wait_for_all_connections(7, std::chrono::milliseconds(5000)));
+        EXPECT_TRUE(act->ok());
+
+#ifndef RIX_MULTITHREADED
+        node.shutdown();
+        if (thr.joinable()) {
+          thr.join();
+        }
+#endif
+      });
+}
+
+TEST(MessageTest, ActionAcceptGoalWithCancel) {
+  // Create request/response pairs
+  std::vector<std::shared_ptr<msg::standard::UInt32>> goals;
+  std::vector<std::vector<std::shared_ptr<msg::standard::UInt32>>> feedbacks;
+  std::vector<std::shared_ptr<msg::standard::Time>> results;
+  for (int i = 1; i <= 3; ++i) {
+    auto goal = std::make_shared<msg::standard::UInt32>();
+    goal->data = i;
+    goals.push_back(goal);
+    feedbacks.push_back(std::vector<std::shared_ptr<msg::standard::UInt32>>());
+    auto result = std::make_shared<msg::standard::Time>();
+    result->sec = i;
+    result->nsec = i + 500;
+    results.push_back(result);
+  }
+
+  msg::mediator::NodeInfo node_info;
+  msg::mediator::ActInfo act_info;
+  TestFixture()
+      .create_node("test_node", node_info)
+      .enable_operation_notifications()
+      .create_action<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>(
+          "test_action", act_info, node_info, 0, false, 1)
+      .accept_action_client_with_cancel(goals[0], feedbacks[0])
+      .disable_operation_notifications()
+      .destroy_node(node_info)
+      .destroy_action(act_info)
+      .build<Node>([](const TestFixture& fixture) {
+        auto server_socket = fixture.get_server_socket();
+        auto srv_connections = fixture.get_connection_sockets();
+
+        Node node("test_node");
+        EXPECT_TRUE(node.ok());
+
+        // Create service with callback
+        auto callback =
+            [](const msg::standard::UInt32& goal, msg::standard::UInt32& feedback, msg::standard::Time& result) {
+              static int feedback_count = 0;
+              if (feedback_count >= 3) {
+                result.sec = goal.data;
+                result.nsec = goal.data + 500;
+                feedback_count = 0;
+                return true;
+              }
+              feedback_count++;
+              feedback.data = goal.data * 10 + feedback_count;
+              return false;
+            };
+
+        auto act = node.create_action<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("test_action",
+                                                                                                         callback);
+        EXPECT_NE(act, nullptr);
+        EXPECT_TRUE(act->ok());
+
+        // Set wrong callback (should not be called)
+        auto wrong_callback =
+            [](const msg::standard::Time& goal, msg::standard::UInt32& feedback, msg::standard::Time& result) -> bool {
+          EXPECT_FALSE(true) << "Should not be called with wrong message types";
+          return false;
+        };
+        act->set_callback<msg::standard::Time, msg::standard::UInt32, msg::standard::Time>(wrong_callback);
+        EXPECT_TRUE(act->ok());
+
+#ifndef RIX_MULTITHREADED
+        std::thread thr([&node]() { node.spin(); });
+#endif
+        EXPECT_TRUE(server_socket->wait_for_operations(1, std::chrono::milliseconds(5000)));
+        auto conn_a = srv_connections[0]; // First connection should succeed
+        EXPECT_TRUE(conn_a->wait_for_operations(
+            4, std::chrono::milliseconds(5000))); // 2 recv (opcode & goal) + 1 send (status) + 1 recv (cancel)
+        EXPECT_TRUE(act->ok());
+
+#ifndef RIX_MULTITHREADED
+        node.shutdown();
+        if (thr.joinable()) {
+          thr.join();
+        }
+#endif
+      });
+}
+
+TEST(MessageTest, ActionAcceptGoalFailureAlreadyConnected) {
+  // Create request/response pairs
+  std::vector<std::shared_ptr<msg::standard::UInt32>> goals;
+  std::vector<std::vector<std::shared_ptr<msg::standard::UInt32>>> feedbacks;
+  std::vector<std::shared_ptr<msg::standard::Time>> results;
+  for (int i = 1; i <= 3; ++i) {
+    auto goal = std::make_shared<msg::standard::UInt32>();
+    goal->data = i;
+    goals.push_back(goal);
+    feedbacks.push_back(std::vector<std::shared_ptr<msg::standard::UInt32>>());
+    for (int j = 1; j <= 3; ++j) {
+      auto feedback = std::make_shared<msg::standard::UInt32>();
+      feedback->data = i * 10 + j;
+      feedbacks.back().push_back(feedback);
+    }
+    auto result = std::make_shared<msg::standard::Time>();
+    result->sec = i;
+    result->nsec = i + 500;
+    results.push_back(result);
+  }
+
+  msg::mediator::NodeInfo node_info;
+  msg::mediator::ActInfo act_info;
+  TestFixture()
+      .create_node("test_node", node_info)
+      .enable_operation_notifications()
+      .create_action<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>(
+          "test_action", act_info, node_info, 0, false, 2)
+      .accept_action_client(goals[0], feedbacks[0], results[0])
+      .accept_action_client(goals[1], feedbacks[1], results[1], true)
+      .disable_operation_notifications()
+      .destroy_node(node_info)
+      .destroy_action(act_info)
+      .build<Node>([](const TestFixture& fixture) {
+        auto server_socket = fixture.get_server_socket();
+        auto srv_connections = fixture.get_connection_sockets();
+
+        Node node("test_node");
+        EXPECT_TRUE(node.ok());
+
+        // Create service with callback
+        auto callback =
+            [](const msg::standard::UInt32& goal, msg::standard::UInt32& feedback, msg::standard::Time& result) {
+              static int feedback_count = 0;
+              if (feedback_count >= 3) {
+                result.sec = goal.data;
+                result.nsec = goal.data + 500;
+                feedback_count = 0;
+                return true;
+              }
+              feedback_count++;
+              feedback.data = goal.data * 10 + feedback_count;
+              return false;
+            };
+
+        auto act = node.create_action<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("test_action",
+                                                                                                         callback);
+        EXPECT_NE(act, nullptr);
+        EXPECT_TRUE(act->ok());
+
+        // Set wrong callback (should not be called)
+        auto wrong_callback =
+            [](const msg::standard::Time& goal, msg::standard::UInt32& feedback, msg::standard::Time& result) -> bool {
+          EXPECT_FALSE(true) << "Should not be called with wrong message types";
+          return false;
+        };
+        act->set_callback<msg::standard::Time, msg::standard::UInt32, msg::standard::Time>(wrong_callback);
+        EXPECT_TRUE(act->ok());
+
+        std::thread thr([&node]() { node.spin(); });
+
+        EXPECT_TRUE(server_socket->wait_for_operations(2, std::chrono::milliseconds(5000)));
+        auto conn_a = srv_connections[0]; // First connection should succeed
+        // 2 recv (opcode & goal) + 1 send (status) + 3 send (feedback) + 1 send (result) = 7 operations per connection
+        EXPECT_TRUE(conn_a->wait_for_operations(7, std::chrono::milliseconds(5000)));
+        // 1 recv (goal) + 1 send (status) = 2 operations for failed connection
+        auto conn_b = srv_connections[1]; // Second connection should fail
+        EXPECT_TRUE(conn_b->wait_for_operations(2, std::chrono::milliseconds(5000)));
+        EXPECT_TRUE(act->ok());
+
+        node.shutdown();
+        if (thr.joinable()) {
+          thr.join();
+        }
+      });
+}
+
+TEST(MessageTest, ActionAcceptGoalWithPreempt) {
+  // Create request/response pairs
+  std::vector<std::shared_ptr<msg::standard::UInt32>> goals;
+  std::vector<std::vector<std::shared_ptr<msg::standard::UInt32>>> feedbacks;
+  std::vector<std::shared_ptr<msg::standard::Time>> results;
+  for (int i = 1; i <= 3; ++i) {
+    auto goal = std::make_shared<msg::standard::UInt32>();
+    goal->data = i;
+    goals.push_back(goal);
+    feedbacks.push_back(std::vector<std::shared_ptr<msg::standard::UInt32>>());
+    auto result = std::make_shared<msg::standard::Time>();
+    result->sec = i;
+    result->nsec = i + 500;
+    results.push_back(result);
+  }
+
+  auto preempt_feedback = std::make_shared<msg::standard::UInt32>();
+  preempt_feedback->data = 21;
+  feedbacks[1].push_back(preempt_feedback);
+  preempt_feedback = std::make_shared<msg::standard::UInt32>();
+  preempt_feedback->data = 31;
+  feedbacks[2].push_back(preempt_feedback);
+  preempt_feedback = std::make_shared<msg::standard::UInt32>();
+  preempt_feedback->data = 32;
+  feedbacks[2].push_back(preempt_feedback);
+  preempt_feedback = std::make_shared<msg::standard::UInt32>();
+  preempt_feedback->data = 33;
+  feedbacks[2].push_back(preempt_feedback);
+
+  msg::mediator::NodeInfo node_info;
+  msg::mediator::ActInfo act_info;
+  TestFixture()
+      .create_node("test_node", node_info)
+      .enable_operation_notifications()
+      .create_action<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>(
+          "test_action", act_info, node_info, 0, false, 1)
+      .accept_action_client_with_preempt(goals, feedbacks, results[2])
+      .disable_operation_notifications()
+      .destroy_node(node_info)
+      .destroy_action(act_info)
+      .build<Node>([](const TestFixture& fixture) {
+        auto server_socket = fixture.get_server_socket();
+        auto srv_connections = fixture.get_connection_sockets();
+
+        Node node("test_node");
+        EXPECT_TRUE(node.ok());
+
+        // Create service with callback
+        auto current_goal = std::make_shared<msg::standard::UInt32>();
+        current_goal->data = 0;
+        auto feedback_count = std::make_shared<int>(0);
+        auto callback = [feedback_count, current_goal](const msg::standard::UInt32& goal,
+                                                       msg::standard::UInt32& feedback,
+                                                       msg::standard::Time& result) {
+          if (goal.data != current_goal->data) {
+            *current_goal = goal;
+            *feedback_count = 0;
+          }
+          if (*feedback_count >= 3) {
+            result.sec = goal.data;
+            result.nsec = goal.data + 500;
+            *feedback_count = 0;
+            return true;
+          }
+          (*feedback_count)++;
+          feedback.data = goal.data * 10 + *feedback_count;
+          return false;
+        };
+
+        auto act = node.create_action<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("test_action",
+                                                                                                         callback);
+        EXPECT_NE(act, nullptr);
+        EXPECT_TRUE(act->ok());
+
+        // Set wrong callback (should not be called)
+        auto wrong_callback =
+            [](const msg::standard::Time& goal, msg::standard::UInt32& feedback, msg::standard::Time& result) -> bool {
+          EXPECT_FALSE(true) << "Should not be called with wrong message types";
+          return false;
+        };
+        act->set_callback<msg::standard::Time, msg::standard::UInt32, msg::standard::Time>(wrong_callback);
+        EXPECT_TRUE(act->ok());
+
+#ifndef RIX_MULTITHREADED
+        std::thread thr([&node]() { node.spin(); });
+#endif
+
+        EXPECT_TRUE(server_socket->wait_for_operations(1, std::chrono::milliseconds(5000)));
+        auto conn_a = srv_connections[0]; // First connection should succeed
+        // 3 (2 recv (opcode & goal) + 1 send (status)) + 4 (2 recv (opcode & goal) + 1 send (status) + 1 send
+        // (feedback)) + 7 (2 recv (opcode & goal) + 1 send (status) + 3 send (feedback) + 1 send (result)) = 14
+        // operations
+        EXPECT_TRUE(conn_a->wait_for_operations(14, std::chrono::milliseconds(5000)));
+        EXPECT_TRUE(act->ok());
+
+#ifndef RIX_MULTITHREADED
+        node.shutdown();
+        if (thr.joinable()) {
+          thr.join();
+        }
+#endif
       });
 }
 
@@ -317,5 +673,279 @@ TEST(MessageTest, ServiceClientRequestAndReceive) {
         EXPECT_FALSE(srvcli->ok());
         srvcli = nullptr;
         node.spin_once();
+      });
+}
+
+TEST(MessageTest, ActionClientDispatch) {
+  std::vector<std::shared_ptr<msg::standard::UInt32>> goals;
+  std::vector<std::vector<std::shared_ptr<msg::standard::UInt32>>> feedbacks;
+  std::vector<std::shared_ptr<msg::standard::Time>> results;
+  for (int i = 1; i <= 3; ++i) {
+    auto goal = std::make_shared<msg::standard::UInt32>();
+    goal->data = i;
+    goals.push_back(goal);
+    feedbacks.push_back(std::vector<std::shared_ptr<msg::standard::UInt32>>());
+    for (int j = 1; j <= 3; ++j) {
+      auto feedback = std::make_shared<msg::standard::UInt32>();
+      feedback->data = i * 10 + j;
+      feedbacks.back().push_back(feedback);
+    }
+    auto result = std::make_shared<msg::standard::Time>();
+    result->sec = i;
+    result->nsec = i + 500;
+    results.push_back(result);
+  }
+
+  msg::mediator::NodeInfo node_info;
+  TestFixture()
+      .create_node("test_node", node_info)
+      .create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("test_action", node_info)
+      .send_action_goal(goals[0], feedbacks[0], results[0])
+      .destroy_node(node_info)
+      .build<Node>([](TestFixture& fixture) {
+        Node node("test_node");
+        EXPECT_TRUE(node.ok());
+
+        // Create action client
+        auto actcli =
+            node.create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("test_action");
+        EXPECT_NE(actcli, nullptr);
+        EXPECT_TRUE(actcli->ok());
+
+        std::thread thr([&node]() { node.spin(); });
+
+        // Send action goal and receive feedback/result
+        msg::standard::UInt32 goal;
+        std::vector<msg::standard::UInt32> feedback;
+        msg::standard::Time result;
+        actcli->set_feedback_callback<msg::standard::UInt32>(
+            [&feedback](const msg::standard::UInt32& fb) { feedback.push_back(fb); });
+        actcli->set_result_callback<msg::standard::Time>([&result](const msg::standard::Time& res) { result = res; });
+        goal.data = 1;
+        bool send_result = actcli->dispatch(goal);
+        EXPECT_TRUE(send_result);
+
+        EXPECT_TRUE(actcli->wait_for_result(Duration(5.0))); // Wait up to 5 seconds for result
+
+        EXPECT_EQ(feedback.size(), 3);
+        EXPECT_EQ(feedback[0].data, 11);
+        EXPECT_EQ(feedback[1].data, 12);
+        EXPECT_EQ(feedback[2].data, 13);
+        EXPECT_EQ(result.sec, 1);
+        EXPECT_EQ(result.nsec, 501);
+
+        node.shutdown();
+        if (thr.joinable()) {
+          thr.join();
+        }
+      });
+}
+
+TEST(MessageTest, ActionClientDispatchWithCancel) {
+  std::vector<std::shared_ptr<msg::standard::UInt32>> goals;
+  std::vector<std::vector<std::shared_ptr<msg::standard::UInt32>>> feedbacks;
+  std::vector<std::shared_ptr<msg::standard::Time>> results;
+  for (int i = 1; i <= 3; ++i) {
+    auto goal = std::make_shared<msg::standard::UInt32>();
+    goal->data = i;
+    goals.push_back(goal);
+    feedbacks.push_back(std::vector<std::shared_ptr<msg::standard::UInt32>>());
+    for (int j = 1; j <= 3; ++j) {
+      auto feedback = std::make_shared<msg::standard::UInt32>();
+      feedback->data = i * 10 + j;
+      feedbacks.back().push_back(feedback);
+    }
+    auto result = std::make_shared<msg::standard::Time>();
+    result->sec = i;
+    result->nsec = i + 500;
+    results.push_back(result);
+  }
+
+  msg::mediator::NodeInfo node_info;
+  TestFixture()
+      .create_node("test_node", node_info)
+      .create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("test_action", node_info)
+      .send_action_goal_with_cancel(goals[0], feedbacks[0])
+      .destroy_node(node_info)
+      .build<Node>([](TestFixture& fixture) {
+        Node node("test_node");
+        EXPECT_TRUE(node.ok());
+
+        // Create action client
+        auto actcli =
+            node.create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("test_action");
+        EXPECT_NE(actcli, nullptr);
+        EXPECT_TRUE(actcli->ok());
+
+        std::thread thr([&node]() { node.spin(); });
+
+        // Send action goal and receive feedback/result
+        msg::standard::UInt32 goal;
+        std::vector<msg::standard::UInt32> feedback;
+        msg::standard::Time result;
+        std::mutex feedback_mutex;
+        std::condition_variable feedback_cv;
+        actcli->set_feedback_callback<msg::standard::UInt32>(
+            [&feedback, actcli, &feedback_mutex, &feedback_cv](const msg::standard::UInt32& fb) {
+              std::lock_guard<std::mutex> lock(feedback_mutex);
+              feedback.push_back(fb);
+              if (feedback.size() == 3) {
+                actcli->cancel();
+                feedback_cv.notify_one();
+              }
+            });
+        actcli->set_result_callback<msg::standard::Time>([&result](const msg::standard::Time& res) { result = res; });
+        goal.data = 1;
+        bool send_result = actcli->dispatch(goal);
+        EXPECT_TRUE(send_result);
+
+        {
+          std::unique_lock<std::mutex> lock(feedback_mutex);
+          EXPECT_TRUE(
+              feedback_cv.wait_for(lock, std::chrono::seconds(5), [&feedback]() { return feedback.size() >= 3; }));
+        }
+
+        EXPECT_EQ(feedback.size(), 3);
+        EXPECT_EQ(feedback[0].data, 11);
+        EXPECT_EQ(feedback[1].data, 12);
+        EXPECT_EQ(feedback[2].data, 13);
+
+        node.shutdown();
+        if (thr.joinable()) {
+          thr.join();
+        }
+      });
+}
+
+TEST(MessageTest, ActionClientDispatchFailure) {
+  std::vector<std::shared_ptr<msg::standard::UInt32>> goals;
+  std::vector<std::vector<std::shared_ptr<msg::standard::UInt32>>> feedbacks;
+  std::vector<std::shared_ptr<msg::standard::Time>> results;
+  for (int i = 1; i <= 3; ++i) {
+    auto goal = std::make_shared<msg::standard::UInt32>();
+    goal->data = i;
+    goals.push_back(goal);
+    feedbacks.push_back(std::vector<std::shared_ptr<msg::standard::UInt32>>());
+    for (int j = 1; j <= 3; ++j) {
+      auto feedback = std::make_shared<msg::standard::UInt32>();
+      feedback->data = i * 10 + j;
+      feedbacks.back().push_back(feedback);
+    }
+    auto result = std::make_shared<msg::standard::Time>();
+    result->sec = i;
+    result->nsec = i + 500;
+    results.push_back(result);
+  }
+
+  msg::mediator::NodeInfo node_info;
+  TestFixture()
+      .create_node("test_node", node_info)
+      .create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("test_action", node_info)
+      .send_action_goal(goals[0], feedbacks[0], results[0], true)
+      .destroy_node(node_info)
+      .build<Node>([](TestFixture& fixture) {
+        Node node("test_node");
+        EXPECT_TRUE(node.ok());
+
+        // Create action client
+        auto actcli =
+            node.create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("test_action");
+        EXPECT_NE(actcli, nullptr);
+        EXPECT_TRUE(actcli->ok());
+
+        std::thread thr([&node]() { node.spin(); });
+
+        // Send action goal and receive feedback/result
+        msg::standard::UInt32 goal;
+        std::vector<msg::standard::UInt32> feedback;
+        msg::standard::Time result;
+        actcli->set_feedback_callback<msg::standard::UInt32>(
+            [&feedback](const msg::standard::UInt32& fb) { feedback.push_back(fb); });
+        actcli->set_result_callback<msg::standard::Time>([&result](const msg::standard::Time& res) { result = res; });
+        goal.data = 1;
+        bool send_result = actcli->dispatch(goal);
+        EXPECT_FALSE(send_result);
+
+        node.shutdown();
+        if (thr.joinable()) {
+          thr.join();
+        }
+      });
+}
+
+TEST(MessageTest, ActionClientDispatchPreempt) {
+  std::vector<std::shared_ptr<msg::standard::UInt32>> goals;
+  std::vector<std::vector<std::shared_ptr<msg::standard::UInt32>>> feedbacks;
+  std::vector<std::shared_ptr<msg::standard::Time>> results;
+  for (int i = 1; i <= 2; ++i) {
+    auto goal = std::make_shared<msg::standard::UInt32>();
+    goal->data = i;
+    goals.push_back(goal);
+    feedbacks.push_back(std::vector<std::shared_ptr<msg::standard::UInt32>>());
+    for (int j = 1; j <= 3; ++j) {
+      auto feedback = std::make_shared<msg::standard::UInt32>();
+      feedback->data = i * 10 + j;
+      feedbacks.back().push_back(feedback);
+    }
+    auto result = std::make_shared<msg::standard::Time>();
+    result->sec = i;
+    result->nsec = i + 500;
+    results.push_back(result);
+  }
+
+  feedbacks[0].resize(1);
+
+  msg::mediator::NodeInfo node_info;
+  TestFixture()
+      .create_node("test_node", node_info)
+      .create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("test_action", node_info)
+      .send_action_goal_with_preempt(goals, feedbacks, results[1])
+      .destroy_node(node_info)
+      .build<Node>([](TestFixture& fixture) {
+        Node node("test_node");
+        EXPECT_TRUE(node.ok());
+
+        // Create action client
+        auto actcli =
+            node.create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("test_action");
+        EXPECT_NE(actcli, nullptr);
+        EXPECT_TRUE(actcli->ok());
+
+        std::thread thr([&node]() { node.spin(); });
+
+        // Send action goal and receive feedback/result
+        msg::standard::UInt32 goal;
+        std::vector<msg::standard::UInt32> feedback;
+        msg::standard::Time result;
+        actcli->set_feedback_callback<msg::standard::UInt32>([&feedback, actcli](const msg::standard::UInt32& fb) {
+          static bool first_feedback = true;
+          feedback.push_back(fb);
+          // Preempt after first feedback
+          if (first_feedback) {
+            first_feedback = false;
+            msg::standard::UInt32 preempt_goal;
+            preempt_goal.data = 2;
+            bool send_result = actcli->dispatch(preempt_goal);
+            EXPECT_TRUE(send_result);
+          }
+        });
+        actcli->set_result_callback<msg::standard::Time>([&result](const msg::standard::Time& res) { result = res; });
+        goal.data = 1;
+        bool send_result = actcli->dispatch(goal);
+        EXPECT_TRUE(send_result);
+
+        EXPECT_TRUE(actcli->wait_for_result(Duration(5.0))); // Wait up to 5 seconds for result
+        EXPECT_EQ(feedback.size(), 4);
+        EXPECT_EQ(feedback[0].data, 11); // From first goal
+        EXPECT_EQ(feedback[1].data, 21); // From preempted goal
+        EXPECT_EQ(feedback[2].data, 22);
+        EXPECT_EQ(feedback[3].data, 23);
+        EXPECT_EQ(result.sec, 2);
+        EXPECT_EQ(result.nsec, 502);
+
+        node.shutdown();
+        if (thr.joinable()) {
+          thr.join();
+        }
       });
 }

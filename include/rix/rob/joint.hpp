@@ -13,17 +13,17 @@ namespace rix {
 class JointDynamics {
 public:
   JointDynamics() {};
-  double damping;
-  double friction;
+  double damping{};
+  double friction{};
 };
 
 class JointLimits {
 public:
   JointLimits() {};
-  double lower;
-  double upper;
-  double effort;
-  double velocity;
+  double lower{};
+  double upper{};
+  double effort{};
+  double velocity{};
 };
 
 class Joint; // Forward declaration
@@ -31,50 +31,50 @@ class Joint; // Forward declaration
 class JointMimic {
 public:
   JointMimic() {};
-  double offset;
-  double multiplier;
-  std::string name;
-  mutable std::shared_ptr<Joint> joint;
+  double offset{};
+  double multiplier{};
+  std::string name{};
+  mutable std::shared_ptr<Joint> joint{};
 };
 
 class Joint {
 public:
   enum Type { UNKNOWN, FIXED, CONTINUOUS, REVOLUTE, PRISMATIC };
 
-  Joint(const msg::geometry::Vector3 &axis = vector3_zeros(),
-        const msg::geometry::Transform &origin = transform_identity(), 
-        const Type &type = FIXED,
-        const JointLimits &limits = {}, 
-        const JointDynamics &dynamics = {}, 
-        const JointMimic &mimic = {},
-        const std::string &name = "", 
-        const std::string &parent = "", 
-        const std::string &child = "");
-  Joint(const Joint &j);
-  Joint &operator=(const Joint &j);
+  explicit Joint(const msg::geometry::Vector3& axis = vector3_zeros(),
+                 const msg::geometry::Transform& origin = transform_identity(),
+                 const Type& type = FIXED,
+                 const JointLimits& limits = {},
+                 const JointDynamics& dynamics = {},
+                 JointMimic mimic = {},
+                 std::string name = "",
+                 std::string parent = "",
+                 std::string child = "");
+  Joint(const Joint& j) = default;
+  Joint& operator=(const Joint& j) = default;
 
   bool in_bounds(double position) const;
   double clamp(double position) const;
 
-  const std::string &name() const;
-  const std::string &parent() const;
-  const std::string &child() const;
+  const std::string& name() const;
+  const std::string& parent() const;
+  const std::string& child() const;
   Type type() const;
-  const JointLimits &limits() const;
-  const JointDynamics &dynamics() const;
+  const JointLimits& limits() const;
+  const JointDynamics& dynamics() const;
 
   bool is_mimic() const;
-  const JointMimic &mimic() const;
+  const JointMimic& mimic() const;
 
   double position() const; // rad or m
   double velocity() const; // rad/s or m/s
   double effort() const;   // Nm or N
   msg::sensor::JointState get_state() const;
   void set_state(double position, double velocity, double effort);
-  void set_state(const msg::sensor::JointState &js);
+  void set_state(const msg::sensor::JointState& js);
 
-  const msg::geometry::Vector3 &axis() const;     // Axis of rotation or translation
-  const msg::geometry::Transform &origin() const; // Transform from parent link frame to joint frame
+  const msg::geometry::Vector3& axis() const;     // Axis of rotation or translation
+  const msg::geometry::Transform& origin() const; // Transform from parent link frame to joint frame
   msg::geometry::Transform transform() const;     // Transform based from joint frame to child link frame
 
 private:
@@ -82,13 +82,13 @@ private:
   double velocity_; // The current velocity (rad/s or m/s)
   double effort_;   // The current effort (Nm or N)
 
-  Type type_;                            // The type of the joint (Fixed, Continuous, Revolute, or Prismatic)
-  JointLimits limits_;                   // The limits on the joint
-  JointDynamics dynamics_;               // The dynamics of the joint
-  JointMimic mimic_;                     // The mimic parameters of the joint
-  std::string name_;                     // The name of the joint
-  std::string parent_;                   // The name of the joint's parent link
-  std::string child_;                    // The name of the joint's child link
+  Type type_;                       // The type of the joint (Fixed, Continuous, Revolute, or Prismatic)
+  JointLimits limits_;              // The limits on the joint
+  JointDynamics dynamics_;          // The dynamics of the joint
+  JointMimic mimic_;                // The mimic parameters of the joint
+  std::string name_;                // The name of the joint
+  std::string parent_;              // The name of the joint's parent link
+  std::string child_;               // The name of the joint's child link
   msg::geometry::Vector3 axis_;     // The unit vector along the actuation axis in the parent link frame
   msg::geometry::Transform origin_; // The transform from parent frame to child frame when the position is 0
 };

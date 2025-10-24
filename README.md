@@ -5,7 +5,7 @@
 **RIX** is a high-performance C++ framework for real-time interprocess communication in robotics and distributed systems. It delivers a robust messaging infrastructure, node management, and service orchestration—empowering you to build scalable, reliable robot software architectures.
 
 - 🚀 **Fast & Lightweight:** Zero third-party dependencies, optimized for low-latency and high-throughput.
-- 🧩 **Modular:** Easily extendable with publishers, subscribers, services, timers, and more.
+- 🧩 **Modular:** Easily extendable with publishers, subscribers, services, actions, timers, and more.
 - 🤖 **Robotics-Ready:** Designed to meet the demands of modern robotics applications.
 - 🔒 **Reliable:** TCP-based communication ensures message integrity; loosely-coupled nodes provide system stability across distributed environments.
 - 📝 **Testable:** Test fixture designed to enable users to write readable, straight-forward unit tests for their RIX nodes.
@@ -187,6 +187,86 @@ int main() {
   Node node("service_client_node");
   service_client = node.create_service_client<UInt32, Header>("/my_service");
   node.create_timer(Duration(1.0), timer_callback);
+  node.spin();
+}
+```
+
+### Action Example
+
+Provide a preemptible task via an action server:
+
+```cpp
+#include "rix/rix.hpp"
+#include "rix/msg/standard/UInt32.hpp"
+#include "rix/msg/standard/Header.hpp"
+
+using namespace rix;
+using rix::msg::standard::UInt32;
+using rix::msg::standard::Header;
+
+bool action_callback(const UInt32 &goal, const Header &feedback, Header &result) {
+  static int count = 0;
+  Log::info << "Received action goal!" << std::endl;
+  if (count < goal.data) {
+    Header fb;
+    fb.frame_id = "Action feedback";
+    fb.seq = count++;
+    return false;
+  }
+  result.frame_id = "Hello from action!";
+  result.seq = goal.data;
+  count = 0;
+  return true;
+}
+
+int main() {
+  Node node("action_node");
+  node.create_action_server("/my_action", action_callback);
+  node.spin();
+}
+```
+
+### Action Client Example
+
+Dispatch an action goal from another node:
+
+```cpp
+#include "rix/rix.hpp"
+#include "rix/msg/standard/UInt32.hpp"
+#include "rix/msg/standard/Header.hpp"
+
+using namespace rix;
+using rix::msg::standard::UInt32;
+using rix::msg::standard::Header;
+
+std::shared_ptr<ActionClient> action_client;
+
+void feedback_callback(const Header &feedback) {
+  Log::info << "Action feedback: " << feedback.frame_id << ", " << feedback.seq << std::endl;
+}
+
+void result_callback(const Header &result) {
+  Log::info << "Action completed: " << result.frame_id << ", " << result.seq << std::endl;
+}
+
+void timer_callback(const rix::TimerCallback::Event event) {
+  static int i = 0;
+  if (action_client) {
+    Header result;
+    UInt32 goal;
+    goal.data = 5; // Number of feedback messages to receive
+    if (action_client->dispatch(goal)) {
+        Log::info << "Sent action goal!" << std::endl;
+    }
+  }
+}
+
+int main() {
+  Node node("action_client_node");
+  action_client = node.create_action_client<UInt32, Header, Header>("/my_action");
+  action_client->set_feedback_callback(feedback_callback);
+  action_client->set_result_callback(result_callback);
+  node.create_timer(Duration(2.0), timer_callback);
   node.spin();
 }
 ```

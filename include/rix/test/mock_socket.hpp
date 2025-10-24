@@ -38,7 +38,7 @@ public:
     ON_CALL(*this, remote_endpoint).WillByDefault([]() -> Endpoint { return {}; });
   }
 
-  ~MockSocket() { close(); }
+  ~MockSocket() override { MockSocket::close(); }
 
   MockSocket(const MockSocket&) = delete;
   MockSocket& operator=(const MockSocket&) = delete;

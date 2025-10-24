@@ -9,7 +9,7 @@
 
 namespace rix {
 
-class TimerCallback : public Spinner {
+class TimerCallback final : public Spinner {
 public:
   struct Event {
     Time last_expected{};
@@ -27,7 +27,7 @@ public:
   TimerCallback& operator=(const TimerCallback&) = delete;
   TimerCallback(TimerCallback&&) = delete;
   TimerCallback& operator=(TimerCallback&&) = delete;
-  ~TimerCallback();
+  ~TimerCallback() override;
 
   /**
    * @brief Set the callback for the timer.

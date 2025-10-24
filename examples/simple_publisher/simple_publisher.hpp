@@ -4,7 +4,7 @@
 
 const std::string NAME = "simple_publisher";
 
-class SimplePublisher : public rix::Node {
+class SimplePublisher final : public rix::Node {
 public:
   SimplePublisher(double rate, int port);
   

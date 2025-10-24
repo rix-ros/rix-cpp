@@ -29,9 +29,9 @@ public:
     }
     return *this;
   }
-  SocketManager(SocketManager&& other)
+  SocketManager(SocketManager&& other) noexcept
       : sockets_(std::move(other.sockets_)), socket_factory_(std::move(other.socket_factory_)) {}
-  SocketManager& operator=(SocketManager&& other) {
+  SocketManager& operator=(SocketManager&& other) noexcept {
     if (this != &other) {
       sockets_ = std::move(other.sockets_);
       socket_factory_ = std::move(other.socket_factory_);
@@ -43,16 +43,16 @@ public:
   SocketFactory get_factory() { return socket_factory_; }
 
   // Add a preconfigured socket to the queue
-  void add_socket(std::shared_ptr<MockSocket> socket) { sockets_->push(socket); }
+  void add_socket(const std::shared_ptr<MockSocket>& socket) const { sockets_->push(socket); }
 
   // Create a new mock socket and add it to the queue
-  std::shared_ptr<MockSocket> create_socket() {
+  std::shared_ptr<MockSocket> create_socket() const {
     auto socket = std::make_shared<MockSocket>();
     add_socket(socket);
     return socket;
   }
 
-  void reset() {
+  void reset() const {
     while (!sockets_->empty()) {
       sockets_->pop();
     }

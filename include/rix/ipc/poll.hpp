@@ -16,23 +16,29 @@ class GenericSocket; // Forward declaration
 class GenericPoller {
 public:
   virtual ~GenericPoller() = default;
-  virtual bool poll(const std::vector<std::shared_ptr<GenericSocket>> &all_sockets, const Duration &duration,
-                    PollFlag flag, std::vector<std::shared_ptr<GenericSocket>> &sockets,
-                    std::vector<std::shared_ptr<GenericSocket>> &exception_sockets) = 0;
+  virtual bool poll(const std::vector<std::shared_ptr<GenericSocket>>& all_sockets,
+                    const Duration& duration,
+                    PollFlag flag,
+                    std::vector<std::shared_ptr<GenericSocket>>& sockets,
+                    std::vector<std::shared_ptr<GenericSocket>>& exception_sockets) = 0;
 };
 
-class SelectPoller : public GenericPoller {
+class SelectPoller final : public GenericPoller {
 public:
-  bool poll(const std::vector<std::shared_ptr<GenericSocket>> &all_sockets, const Duration &duration,
-            PollFlag flag, std::vector<std::shared_ptr<GenericSocket>> &sockets,
-            std::vector<std::shared_ptr<GenericSocket>> &exception_sockets) override;
+  bool poll(const std::vector<std::shared_ptr<GenericSocket>>& all_sockets,
+            const Duration& duration,
+            PollFlag flag,
+            std::vector<std::shared_ptr<GenericSocket>>& sockets,
+            std::vector<std::shared_ptr<GenericSocket>>& exception_sockets) override;
 };
 
-class PollPoller : public GenericPoller {
+class PollPoller final : public GenericPoller {
 public:
-  bool poll(const std::vector<std::shared_ptr<GenericSocket>> &all_sockets, const Duration &duration,
-            PollFlag flag, std::vector<std::shared_ptr<GenericSocket>> &sockets,
-            std::vector<std::shared_ptr<GenericSocket>> &exception_sockets) override;
+  bool poll(const std::vector<std::shared_ptr<GenericSocket>>& all_sockets,
+            const Duration& duration,
+            PollFlag flag,
+            std::vector<std::shared_ptr<GenericSocket>>& sockets,
+            std::vector<std::shared_ptr<GenericSocket>>& exception_sockets) override;
 };
 
 // Define the default poller here

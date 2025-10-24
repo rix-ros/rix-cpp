@@ -2,32 +2,32 @@
 
 #include <eigen3/Eigen/Geometry>
 #include <random>
+#include <utility>
 
 #include "rix/rob/eigen_util.hpp"
 
 namespace rix {
 
 double get_random(double lower, double upper) {
-  std::random_device               rd;
-  std::mt19937                     gen(rd());
+  std::random_device rd;
+  std::mt19937 gen(rd());
   std::uniform_real_distribution<> dist(lower, upper); // [lower, upper)
   return dist(gen);
 }
 
 KinematicsSolver::KinematicsSolver(std::shared_ptr<RobotModel> robot,
-                                   double                      step_scale,
-                                   double                      tolerance,
-                                   uint32_t                    max_iterations)
-    : robot_(robot), step_scale_(step_scale), tolerance_(tolerance),
-      max_iterations_(max_iterations) {}
+                                   double step_scale,
+                                   double tolerance,
+                                   uint32_t max_iterations)
+    : robot_(std::move(robot)), step_scale_(step_scale), tolerance_(tolerance), max_iterations_(max_iterations) {}
 
-bool KinematicsSolver::solve_ik(const std::string&              link_name,
+bool KinematicsSolver::solve_ik(const std::string& link_name,
                                 const msg::geometry::Transform& goal,
-                                msg::sensor::JS                 initial_guess,
-                                msg::sensor::JS&                solution) {
+                                msg::sensor::JS initial_guess,
+                                msg::sensor::JS& solution) const {
   auto chain = robot_->get_joints_in_chain(link_name);
   if (initial_guess.joint_states.empty()) {
-    for (auto j : chain) {
+    for (const auto& j : chain) {
       double p;
       if (j->limits().lower == 0 && j->limits().upper == 0) {
         p = get_random(-M_PI, M_PI);
@@ -50,7 +50,7 @@ bool KinematicsSolver::solve_ik(const std::string&              link_name,
 
   // The gradient descent loop
   Eigen::Affine3d goal_eigen = msg_to_eigen(goal);
-  bool            converged = false;
+  bool converged = false;
   for (size_t i = 0; i < max_iterations_; i++) {
     converged = iterate_ik(chain, link_name, goal_eigen);
     if (converged)
@@ -58,25 +58,22 @@ bool KinematicsSolver::solve_ik(const std::string&              link_name,
   }
 
   if (converged) {
-    // std::cout << "Converged!" << std::endl;
     solution.joint_states.clear();
     solution.joint_states.reserve(chain.size());
     for (auto& j : chain) {
       solution.joint_states.push_back(j->get_state());
-      // std::cout << "Found " << j->name() << " as " << j->position() << std::endl;
     }
-    // std::cout << std::endl;
   }
   return converged;
 }
 
-bool KinematicsSolver::solve_ik(const std::string&              link_name,
+bool KinematicsSolver::solve_ik(const std::string& link_name,
                                 const msg::geometry::Transform& goal,
-                                msg::sensor::JS                 initial_guess,
-                                std::vector<msg::sensor::JS>&   solution) {
+                                msg::sensor::JS initial_guess,
+                                std::vector<msg::sensor::JS>& solution) const {
   auto chain = robot_->get_joints_in_chain(link_name);
   if (initial_guess.joint_states.empty()) {
-    for (auto j : chain) {
+    for (const auto& j : chain) {
       double p;
       if (j->limits().lower == 0 && j->limits().upper == 0) {
         p = get_random(-M_PI, M_PI);
@@ -99,7 +96,7 @@ bool KinematicsSolver::solve_ik(const std::string&              link_name,
 
   // The gradient descent loop
   Eigen::Affine3d goal_eigen = msg_to_eigen(goal);
-  bool            converged = false;
+  bool converged = false;
   for (size_t i = 0; i < max_iterations_; i++) {
     converged = iterate_ik(chain, link_name, goal_eigen);
 
@@ -116,9 +113,9 @@ bool KinematicsSolver::solve_ik(const std::string&              link_name,
 }
 
 msg::geometry::Transform KinematicsSolver::solve_fk(const std::string& link) const {
-  auto            chain = robot_->get_joints_in_chain(link);
+  auto chain = robot_->get_joints_in_chain(link);
   Eigen::Affine3d transform = Eigen::Affine3d::Identity();
-  for (auto j : chain) {
+  for (const auto& j : chain) {
     auto O_J = msg_to_eigen(j->origin());
     auto X = msg_to_eigen(j->transform());
     transform = transform * O_J * X;
@@ -126,18 +123,17 @@ msg::geometry::Transform KinematicsSolver::solve_fk(const std::string& link) con
   return eigen_to_msg(transform);
 }
 
-Eigen::MatrixXd
-KinematicsSolver::get_jacobian(const std::vector<std::shared_ptr<Joint>>& chain,
-                               Eigen::Affine3d&                           ee_transform) {
+Eigen::MatrixXd KinematicsSolver::get_jacobian(const std::vector<std::shared_ptr<Joint>>& chain,
+                                               Eigen::Affine3d& ee_transform) {
   // Initialize 6 x N matrix
   Eigen::MatrixXd J;
-  J.resize(6, chain.size());
+  J.resize(6, static_cast<int>(chain.size()));
 
   // Get transforms to base frame for each joint
   std::vector<Eigen::Affine3d> Tj;
   Tj.reserve(chain.size());
   Eigen::Affine3d transform = Eigen::Affine3d::Identity();
-  for (auto j : chain) {
+  for (const auto& j : chain) {
     auto O_J = msg_to_eigen(j->origin());
     auto X = msg_to_eigen(j->transform());
     transform = transform * O_J * X;
@@ -149,8 +145,8 @@ KinematicsSolver::get_jacobian(const std::vector<std::shared_ptr<Joint>>& chain,
   Eigen::Vector3d ol = ee_transform.translation(); // link origin
 
   // Assemble Jacobian
-  for (size_t i = 0; i < chain.size(); ++i) {
-    auto&           j = chain[i];
+  for (int i = 0; i < chain.size(); ++i) {
+    auto& j = chain[i];
     Eigen::Vector3d oj = Tj[i].translation();
     Eigen::Vector3d zj = Tj[i].linear() * msg_to_eigen(j->axis());
 
@@ -182,8 +178,8 @@ KinematicsSolver::get_jacobian(const std::vector<std::shared_ptr<Joint>>& chain,
 }
 
 bool KinematicsSolver::iterate_ik(const std::vector<std::shared_ptr<Joint>>& chain,
-                                  const std::string&                         link_name,
-                                  const Eigen::Affine3d&                     goal) {
+                                  const std::string& link_name,
+                                  const Eigen::Affine3d& goal) const {
   // Get the end effector transform during Jacobian calculation so we don't have to do it
   // twice (small speed-up)
   Eigen::Affine3d ee_transform;
@@ -242,9 +238,9 @@ bool KinematicsSolver::iterate_ik(const std::vector<std::shared_ptr<Joint>>& cha
 
   Eigen::VectorXd dq = Jinv * dp;
 
-  for (size_t k = 0; k < dq.rows(); k++) {
-    auto&  j = chain[k];
-    double new_pos = j->clamp(j->position() + step_scale_ * dq(k));
+  for (int k = 0; k < dq.rows(); k++) {
+    auto& j = chain[k];
+    const double new_pos = j->clamp(j->position() + step_scale_ * dq(k));
     j->set_state(new_pos, 0.0, 0.0);
   }
   return false;

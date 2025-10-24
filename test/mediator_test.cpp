@@ -1,4 +1,5 @@
 #include "rix/msg/standard/String.hpp"
+#include "rix/msg/standard/UInt32.hpp"
 #include "rix/test/mediator_test_fixture.hpp"
 #include <gtest/gtest.h>
 
@@ -6,16 +7,14 @@ using namespace rix;
 
 TEST(MediatorTest, Ping) {
   // Clear, self-documenting test
+
   auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
                      .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 1)
                      .ping();
+  const auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
-
-    med->spin_once(); // Process ping
-  }
+  med->spin_once(); // Process ping
 }
 
 TEST(MediatorTest, RegisterAndDeregisterNode) {
@@ -25,15 +24,13 @@ TEST(MediatorTest, RegisterAndDeregisterNode) {
                      .register_node("test_node", 1234)
                      .deregister_node("test_node", 1234);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    med->spin_once(); // Process deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-  }
+  med->spin_once(); // Process registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  med->spin_once(); // Process deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
 }
 
 TEST(MediatorTest, RegisterNodeFailureDuplicateID) {
@@ -42,16 +39,14 @@ TEST(MediatorTest, RegisterNodeFailureDuplicateID) {
                      .register_node("test_node", 1234, false)
                      .register_node("other_node", 1234, true);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process registration
-    EXPECT_EQ(med->get_node_count(), 1);
+  med->spin_once(); // Process registration
+  EXPECT_EQ(med->get_node_count(), 1);
 
-    med->spin_once();                    // Process duplicate registration
-    EXPECT_EQ(med->get_node_count(), 1); // Still only one node
-  }
+  med->spin_once();                    // Process duplicate registration
+  EXPECT_EQ(med->get_node_count(), 1); // Still only one node
 }
 
 TEST(MediatorTest, DeregisterUnregisteredNode) {
@@ -61,19 +56,17 @@ TEST(MediatorTest, DeregisterUnregisteredNode) {
                      .register_node("other_node", 4321, false)
                      .deregister_node("unknown_node", 9999);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process registration
-    EXPECT_EQ(med->get_node_count(), 1);
+  med->spin_once(); // Process registration
+  EXPECT_EQ(med->get_node_count(), 1);
 
-    med->spin_once(); // Process second registration
-    EXPECT_EQ(med->get_node_count(), 2);
+  med->spin_once(); // Process second registration
+  EXPECT_EQ(med->get_node_count(), 2);
 
-    med->spin_once();                    // Process deregistration of unknown node
-    EXPECT_EQ(med->get_node_count(), 2); // Still two nodes
-  }
+  med->spin_once();                    // Process deregistration of unknown node
+  EXPECT_EQ(med->get_node_count(), 2); // Still two nodes
 }
 
 TEST(MediatorTest, RegisterAndDeregisterPublisher) {
@@ -84,26 +77,24 @@ TEST(MediatorTest, RegisterAndDeregisterPublisher) {
                      .deregister_publisher(5678, 1234, "test_topic", msg::standard::UInt32().hash())
                      .deregister_node("test_node", 1234);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_publisher_count(), 0);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_publisher_count(), 0);
 
-    med->spin_once(); // Process publisher registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_publisher_count(), 1);
+  med->spin_once(); // Process publisher registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_publisher_count(), 1);
 
-    med->spin_once(); // Process publisher deregistration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_publisher_count(), 0);
+  med->spin_once(); // Process publisher deregistration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_publisher_count(), 0);
 
-    med->spin_once(); // Process node deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-    EXPECT_EQ(med->get_publisher_count(), 0);
-  }
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
+  EXPECT_EQ(med->get_publisher_count(), 0);
 }
 
 TEST(MediatorTest, RegisterPublisherFailureDuplicateID) {
@@ -115,30 +106,28 @@ TEST(MediatorTest, RegisterPublisherFailureDuplicateID) {
                      .deregister_publisher(5678, 1234, "test_topic", msg::standard::UInt32().hash())
                      .deregister_node("test_node", 1234);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_publisher_count(), 0);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_publisher_count(), 0);
 
-    med->spin_once(); // Process publisher registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_publisher_count(), 1);
+  med->spin_once(); // Process publisher registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_publisher_count(), 1);
 
-    med->spin_once();                         // Process duplicate publisher registration
-    EXPECT_EQ(med->get_node_count(), 1);      // Still one node
-    EXPECT_EQ(med->get_publisher_count(), 1); // Still one publisher
+  med->spin_once();                         // Process duplicate publisher registration
+  EXPECT_EQ(med->get_node_count(), 1);      // Still one node
+  EXPECT_EQ(med->get_publisher_count(), 1); // Still one publisher
 
-    med->spin_once(); // Process publisher deregistration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_publisher_count(), 0);
+  med->spin_once(); // Process publisher deregistration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_publisher_count(), 0);
 
-    med->spin_once(); // Process node deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-    EXPECT_EQ(med->get_publisher_count(), 0);
-  }
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
+  EXPECT_EQ(med->get_publisher_count(), 0);
 }
 
 TEST(MediatorTest, RegisterPublisherFailureInvalidMessageHash) {
@@ -150,30 +139,28 @@ TEST(MediatorTest, RegisterPublisherFailureInvalidMessageHash) {
                      .deregister_publisher(5678, 1234, "test_topic", msg::standard::UInt32().hash())
                      .deregister_node("test_node", 1234);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_publisher_count(), 0);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_publisher_count(), 0);
 
-    med->spin_once(); // Process publisher registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_publisher_count(), 1);
+  med->spin_once(); // Process publisher registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_publisher_count(), 1);
 
-    med->spin_once();                         // Process invalid message hash registration
-    EXPECT_EQ(med->get_node_count(), 1);      // Still one node
-    EXPECT_EQ(med->get_publisher_count(), 1); // Still one publisher
+  med->spin_once();                         // Process invalid message hash registration
+  EXPECT_EQ(med->get_node_count(), 1);      // Still one node
+  EXPECT_EQ(med->get_publisher_count(), 1); // Still one publisher
 
-    med->spin_once(); // Process publisher deregistration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_publisher_count(), 0);
+  med->spin_once(); // Process publisher deregistration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_publisher_count(), 0);
 
-    med->spin_once(); // Process node deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-    EXPECT_EQ(med->get_publisher_count(), 0);
-  }
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
+  EXPECT_EQ(med->get_publisher_count(), 0);
 }
 
 TEST(MediatorTest, RegisterPublisherFailureInvalidNodeID) {
@@ -185,30 +172,28 @@ TEST(MediatorTest, RegisterPublisherFailureInvalidNodeID) {
                      .deregister_publisher(5678, 1234, "test_topic", msg::standard::UInt32().hash())
                      .deregister_node("test_node", 1234);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_publisher_count(), 0);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_publisher_count(), 0);
 
-    med->spin_once(); // Process publisher registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_publisher_count(), 1);
+  med->spin_once(); // Process publisher registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_publisher_count(), 1);
 
-    med->spin_once();                         // Process invalid node ID publisher registration
-    EXPECT_EQ(med->get_node_count(), 1);      // Still one node
-    EXPECT_EQ(med->get_publisher_count(), 1); // Still one publisher
+  med->spin_once();                         // Process invalid node ID publisher registration
+  EXPECT_EQ(med->get_node_count(), 1);      // Still one node
+  EXPECT_EQ(med->get_publisher_count(), 1); // Still one publisher
 
-    med->spin_once(); // Process publisher deregistration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_publisher_count(), 0);
+  med->spin_once(); // Process publisher deregistration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_publisher_count(), 0);
 
-    med->spin_once(); // Process node deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-    EXPECT_EQ(med->get_publisher_count(), 0);
-  }
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
+  EXPECT_EQ(med->get_publisher_count(), 0);
 }
 
 TEST(MediatorTest, DeregisterUnregisteredPublisher) {
@@ -220,30 +205,28 @@ TEST(MediatorTest, DeregisterUnregisteredPublisher) {
                      .deregister_publisher(5678, 1234, "test_topic", msg::standard::UInt32().hash())
                      .deregister_node("test_node", 1234);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_publisher_count(), 0);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_publisher_count(), 0);
 
-    med->spin_once(); // Process publisher registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_publisher_count(), 1);
+  med->spin_once(); // Process publisher registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_publisher_count(), 1);
 
-    med->spin_once();                         // Process deregistration of unknown publisher
-    EXPECT_EQ(med->get_node_count(), 1);      // Still one node
-    EXPECT_EQ(med->get_publisher_count(), 1); // Still one publisher
+  med->spin_once();                         // Process deregistration of unknown publisher
+  EXPECT_EQ(med->get_node_count(), 1);      // Still one node
+  EXPECT_EQ(med->get_publisher_count(), 1); // Still one publisher
 
-    med->spin_once(); // Process publisher deregistration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_publisher_count(), 0);
+  med->spin_once(); // Process publisher deregistration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_publisher_count(), 0);
 
-    med->spin_once(); // Process node deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-    EXPECT_EQ(med->get_publisher_count(), 0);
-  }
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
+  EXPECT_EQ(med->get_publisher_count(), 0);
 }
 
 TEST(MediatorTest, RegisterAndDeregisterSubscriber) {
@@ -254,26 +237,24 @@ TEST(MediatorTest, RegisterAndDeregisterSubscriber) {
                      .deregister_subscriber(5678, 1234, "test_topic", msg::standard::UInt32().hash())
                      .deregister_node("test_node", 1234);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_subscriber_count(), 0);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 
-    med->spin_once(); // Process subscriber registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_subscriber_count(), 1);
+  med->spin_once(); // Process subscriber registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_subscriber_count(), 1);
 
-    med->spin_once(); // Process subscriber deregistration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_subscriber_count(), 0);
+  med->spin_once(); // Process subscriber deregistration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 
-    med->spin_once(); // Process node deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-    EXPECT_EQ(med->get_subscriber_count(), 0);
-  }
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 }
 
 TEST(MediatorTest, RegisterSubscriberFailureDuplicateID) {
@@ -285,30 +266,28 @@ TEST(MediatorTest, RegisterSubscriberFailureDuplicateID) {
                      .deregister_subscriber(5678, 1234, "test_topic", msg::standard::UInt32().hash())
                      .deregister_node("test_node", 1234);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_subscriber_count(), 0);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 
-    med->spin_once(); // Process subscriber registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_subscriber_count(), 1);
+  med->spin_once(); // Process subscriber registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_subscriber_count(), 1);
 
-    med->spin_once();                          // Process duplicate subscriber registration
-    EXPECT_EQ(med->get_node_count(), 1);       // Still one node
-    EXPECT_EQ(med->get_subscriber_count(), 1); // Still one subscriber
+  med->spin_once();                          // Process duplicate subscriber registration
+  EXPECT_EQ(med->get_node_count(), 1);       // Still one node
+  EXPECT_EQ(med->get_subscriber_count(), 1); // Still one subscriber
 
-    med->spin_once(); // Process subscriber deregistration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_subscriber_count(), 0);
+  med->spin_once(); // Process subscriber deregistration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 
-    med->spin_once(); // Process node deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-    EXPECT_EQ(med->get_subscriber_count(), 0);
-  }
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 }
 
 TEST(MediatorTest, RegisterSubscriberFailureInvalidMessageHash) {
@@ -320,30 +299,28 @@ TEST(MediatorTest, RegisterSubscriberFailureInvalidMessageHash) {
                      .deregister_subscriber(5678, 1234, "test_topic", msg::standard::UInt32().hash())
                      .deregister_node("test_node", 1234);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_subscriber_count(), 0);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 
-    med->spin_once(); // Process subscriber registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_subscriber_count(), 1);
+  med->spin_once(); // Process subscriber registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_subscriber_count(), 1);
 
-    med->spin_once();                          // Process invalid message hash registration
-    EXPECT_EQ(med->get_node_count(), 1);       // Still one node
-    EXPECT_EQ(med->get_subscriber_count(), 1); // Still one subscriber
+  med->spin_once();                          // Process invalid message hash registration
+  EXPECT_EQ(med->get_node_count(), 1);       // Still one node
+  EXPECT_EQ(med->get_subscriber_count(), 1); // Still one subscriber
 
-    med->spin_once(); // Process subscriber deregistration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_subscriber_count(), 0);
+  med->spin_once(); // Process subscriber deregistration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 
-    med->spin_once(); // Process node deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-    EXPECT_EQ(med->get_subscriber_count(), 0);
-  }
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 }
 
 TEST(MediatorTest, RegisterSubscriberFailureInvalidNodeID) {
@@ -355,30 +332,28 @@ TEST(MediatorTest, RegisterSubscriberFailureInvalidNodeID) {
                      .deregister_subscriber(5678, 1234, "test_topic", msg::standard::UInt32().hash())
                      .deregister_node("test_node", 1234);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_subscriber_count(), 0);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 
-    med->spin_once(); // Process subscriber registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_subscriber_count(), 1);
+  med->spin_once(); // Process subscriber registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_subscriber_count(), 1);
 
-    med->spin_once();                          // Process invalid node ID subscriber registration
-    EXPECT_EQ(med->get_node_count(), 1);       // Still one node
-    EXPECT_EQ(med->get_subscriber_count(), 1); // Still one subscriber
+  med->spin_once();                          // Process invalid node ID subscriber registration
+  EXPECT_EQ(med->get_node_count(), 1);       // Still one node
+  EXPECT_EQ(med->get_subscriber_count(), 1); // Still one subscriber
 
-    med->spin_once(); // Process subscriber deregistration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_subscriber_count(), 0);
+  med->spin_once(); // Process subscriber deregistration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 
-    med->spin_once(); // Process node deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-    EXPECT_EQ(med->get_subscriber_count(), 0);
-  }
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 }
 
 TEST(MediatorTest, NotifySubscribersFromSubRegister) {
@@ -422,50 +397,48 @@ TEST(MediatorTest, NotifySubscribersFromSubRegister) {
           .deregister_subscriber(5678, 4321, "test_topic", msg::standard::UInt32().hash())
           .deregister_node("other_node", 4321);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_publisher_count(), 0);
-    EXPECT_EQ(med->get_subscriber_count(), 0);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_publisher_count(), 0);
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 
-    med->spin_once(); // Process publisher registration 1
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_publisher_count(), 1);
-    EXPECT_EQ(med->get_subscriber_count(), 0);
+  med->spin_once(); // Process publisher registration 1
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_publisher_count(), 1);
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 
-    med->spin_once(); // Process publisher registration 2
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_publisher_count(), 2);
-    EXPECT_EQ(med->get_subscriber_count(), 0);
+  med->spin_once(); // Process publisher registration 2
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_publisher_count(), 2);
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 
-    med->spin_once(); // Process publisher registration 3
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_publisher_count(), 3);
-    EXPECT_EQ(med->get_subscriber_count(), 0);
+  med->spin_once(); // Process publisher registration 3
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_publisher_count(), 3);
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 
-    med->spin_once(); // Process second node registration
-    EXPECT_EQ(med->get_node_count(), 2);
-    EXPECT_EQ(med->get_publisher_count(), 3);
-    EXPECT_EQ(med->get_subscriber_count(), 0);
+  med->spin_once(); // Process second node registration
+  EXPECT_EQ(med->get_node_count(), 2);
+  EXPECT_EQ(med->get_publisher_count(), 3);
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 
-    med->spin_once(); // Process subscriber registration
-    EXPECT_EQ(med->get_node_count(), 2);
-    EXPECT_EQ(med->get_publisher_count(), 3);
-    EXPECT_EQ(med->get_subscriber_count(), 1);
+  med->spin_once(); // Process subscriber registration
+  EXPECT_EQ(med->get_node_count(), 2);
+  EXPECT_EQ(med->get_publisher_count(), 3);
+  EXPECT_EQ(med->get_subscriber_count(), 1);
 
-    med->spin_once(); // Process subscriber deregistration
-    EXPECT_EQ(med->get_node_count(), 2);
-    EXPECT_EQ(med->get_publisher_count(), 3);
-    EXPECT_EQ(med->get_subscriber_count(), 0);
+  med->spin_once(); // Process subscriber deregistration
+  EXPECT_EQ(med->get_node_count(), 2);
+  EXPECT_EQ(med->get_publisher_count(), 3);
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 
-    med->spin_once(); // Process node deregistration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_publisher_count(), 3);
-    EXPECT_EQ(med->get_subscriber_count(), 0);
-  }
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_publisher_count(), 3);
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 }
 
 TEST(MediatorTest, NotifySubscribersFromPubRegister) {
@@ -517,50 +490,48 @@ TEST(MediatorTest, NotifySubscribersFromPubRegister) {
           .deregister_subscriber(5678, 4321, "test_topic", msg::standard::UInt32().hash())
           .deregister_node("other_node", 4321);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_publisher_count(), 0);
-    EXPECT_EQ(med->get_subscriber_count(), 0);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_publisher_count(), 0);
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 
-    med->spin_once(); // Process subscriber registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_publisher_count(), 0);
-    EXPECT_EQ(med->get_subscriber_count(), 1);
+  med->spin_once(); // Process subscriber registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_publisher_count(), 0);
+  EXPECT_EQ(med->get_subscriber_count(), 1);
 
-    med->spin_once(); // Process second node registration
-    EXPECT_EQ(med->get_node_count(), 2);
-    EXPECT_EQ(med->get_publisher_count(), 0);
-    EXPECT_EQ(med->get_subscriber_count(), 1);
+  med->spin_once(); // Process second node registration
+  EXPECT_EQ(med->get_node_count(), 2);
+  EXPECT_EQ(med->get_publisher_count(), 0);
+  EXPECT_EQ(med->get_subscriber_count(), 1);
 
-    med->spin_once(); // Process publisher registration 1
-    EXPECT_EQ(med->get_node_count(), 2);
-    EXPECT_EQ(med->get_publisher_count(), 1);
-    EXPECT_EQ(med->get_subscriber_count(), 1);
+  med->spin_once(); // Process publisher registration 1
+  EXPECT_EQ(med->get_node_count(), 2);
+  EXPECT_EQ(med->get_publisher_count(), 1);
+  EXPECT_EQ(med->get_subscriber_count(), 1);
 
-    med->spin_once(); // Process publisher registration 2
-    EXPECT_EQ(med->get_node_count(), 2);
-    EXPECT_EQ(med->get_publisher_count(), 2);
-    EXPECT_EQ(med->get_subscriber_count(), 1);
+  med->spin_once(); // Process publisher registration 2
+  EXPECT_EQ(med->get_node_count(), 2);
+  EXPECT_EQ(med->get_publisher_count(), 2);
+  EXPECT_EQ(med->get_subscriber_count(), 1);
 
-    med->spin_once(); // Process publisher registration 3
-    EXPECT_EQ(med->get_node_count(), 2);
-    EXPECT_EQ(med->get_publisher_count(), 3);
-    EXPECT_EQ(med->get_subscriber_count(), 1);
+  med->spin_once(); // Process publisher registration 3
+  EXPECT_EQ(med->get_node_count(), 2);
+  EXPECT_EQ(med->get_publisher_count(), 3);
+  EXPECT_EQ(med->get_subscriber_count(), 1);
 
-    med->spin_once(); // Process subscriber deregistration
-    EXPECT_EQ(med->get_node_count(), 2);
-    EXPECT_EQ(med->get_publisher_count(), 3);
-    EXPECT_EQ(med->get_subscriber_count(), 0);
+  med->spin_once(); // Process subscriber deregistration
+  EXPECT_EQ(med->get_node_count(), 2);
+  EXPECT_EQ(med->get_publisher_count(), 3);
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 
-    med->spin_once(); // Process node deregistration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_publisher_count(), 3);
-    EXPECT_EQ(med->get_subscriber_count(), 0);
-  }
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_publisher_count(), 3);
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 }
 
 TEST(MediatorTest, DeregisterUnregisteredSubscriber) {
@@ -572,30 +543,28 @@ TEST(MediatorTest, DeregisterUnregisteredSubscriber) {
                      .deregister_subscriber(5678, 1234, "test_topic", msg::standard::UInt32().hash())
                      .deregister_node("test_node", 1234);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_subscriber_count(), 0);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 
-    med->spin_once(); // Process subscriber registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_subscriber_count(), 1);
+  med->spin_once(); // Process subscriber registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_subscriber_count(), 1);
 
-    med->spin_once();                          // Process deregistration of unknown subscriber
-    EXPECT_EQ(med->get_node_count(), 1);       // Still one node
-    EXPECT_EQ(med->get_subscriber_count(), 1); // Still one subscriber
+  med->spin_once();                          // Process deregistration of unknown subscriber
+  EXPECT_EQ(med->get_node_count(), 1);       // Still one node
+  EXPECT_EQ(med->get_subscriber_count(), 1); // Still one subscriber
 
-    med->spin_once(); // Process subscriber deregistration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_subscriber_count(), 0);
+  med->spin_once(); // Process subscriber deregistration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 
-    med->spin_once(); // Process node deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-    EXPECT_EQ(med->get_subscriber_count(), 0);
-  }
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 }
 
 TEST(MediatorTest, RegisterAndDeregisterService) {
@@ -607,26 +576,24 @@ TEST(MediatorTest, RegisterAndDeregisterService) {
           .deregister_service(5678, 1234, "test_service", msg::standard::UInt32().hash(), msg::standard::Time().hash())
           .deregister_node("test_node", 1234);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_service_count(), 0);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_service_count(), 0);
 
-    med->spin_once(); // Process service registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_service_count(), 1);
+  med->spin_once(); // Process service registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_service_count(), 1);
 
-    med->spin_once(); // Process service deregistration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_service_count(), 0);
+  med->spin_once(); // Process service deregistration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_service_count(), 0);
 
-    med->spin_once(); // Process node deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-    EXPECT_EQ(med->get_service_count(), 0);
-  }
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
+  EXPECT_EQ(med->get_service_count(), 0);
 }
 
 TEST(MediatorTest, RegisterServiceFailureDuplicateID) {
@@ -640,30 +607,28 @@ TEST(MediatorTest, RegisterServiceFailureDuplicateID) {
           .deregister_service(5678, 1234, "test_service", msg::standard::UInt32().hash(), msg::standard::Time().hash())
           .deregister_node("test_node", 1234);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_service_count(), 0);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_service_count(), 0);
 
-    med->spin_once(); // Process service registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_service_count(), 1);
+  med->spin_once(); // Process service registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_service_count(), 1);
 
-    med->spin_once();                       // Process duplicate service registration
-    EXPECT_EQ(med->get_node_count(), 1);    // Still one node
-    EXPECT_EQ(med->get_service_count(), 1); // Still one service
+  med->spin_once();                       // Process duplicate service registration
+  EXPECT_EQ(med->get_node_count(), 1);    // Still one node
+  EXPECT_EQ(med->get_service_count(), 1); // Still one service
 
-    med->spin_once(); // Process service deregistration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_service_count(), 0);
+  med->spin_once(); // Process service deregistration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_service_count(), 0);
 
-    med->spin_once(); // Process node deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-    EXPECT_EQ(med->get_service_count(), 0);
-  }
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
+  EXPECT_EQ(med->get_service_count(), 0);
 }
 
 TEST(MediatorTest, RegisterServiceFailureInvalidRequestHash) {
@@ -677,30 +642,28 @@ TEST(MediatorTest, RegisterServiceFailureInvalidRequestHash) {
           .deregister_service(5678, 1234, "test_service", msg::standard::UInt32().hash(), msg::standard::Time().hash())
           .deregister_node("test_node", 1234);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_service_count(), 0);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_service_count(), 0);
 
-    med->spin_once(); // Process service registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_service_count(), 1);
+  med->spin_once(); // Process service registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_service_count(), 1);
 
-    med->spin_once();                       // Process invalid request hash registration
-    EXPECT_EQ(med->get_node_count(), 1);    // Still one node
-    EXPECT_EQ(med->get_service_count(), 1); // Still one service
+  med->spin_once();                       // Process invalid request hash registration
+  EXPECT_EQ(med->get_node_count(), 1);    // Still one node
+  EXPECT_EQ(med->get_service_count(), 1); // Still one service
 
-    med->spin_once(); // Process service deregistration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_service_count(), 0);
+  med->spin_once(); // Process service deregistration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_service_count(), 0);
 
-    med->spin_once(); // Process node deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-    EXPECT_EQ(med->get_service_count(), 0);
-  }
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
+  EXPECT_EQ(med->get_service_count(), 0);
 }
 
 TEST(MediatorTest, RegisterServiceFailureInvalidResponseHash) {
@@ -714,30 +677,28 @@ TEST(MediatorTest, RegisterServiceFailureInvalidResponseHash) {
           .deregister_service(5678, 1234, "test_service", msg::standard::UInt32().hash(), msg::standard::Time().hash())
           .deregister_node("test_node", 1234);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_service_count(), 0);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_service_count(), 0);
 
-    med->spin_once(); // Process service registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_service_count(), 1);
+  med->spin_once(); // Process service registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_service_count(), 1);
 
-    med->spin_once();                       // Process invalid response hash registration
-    EXPECT_EQ(med->get_node_count(), 1);    // Still one node
-    EXPECT_EQ(med->get_service_count(), 1); // Still one service
+  med->spin_once();                       // Process invalid response hash registration
+  EXPECT_EQ(med->get_node_count(), 1);    // Still one node
+  EXPECT_EQ(med->get_service_count(), 1); // Still one service
 
-    med->spin_once(); // Process service deregistration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_service_count(), 0);
+  med->spin_once(); // Process service deregistration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_service_count(), 0);
 
-    med->spin_once(); // Process node deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-    EXPECT_EQ(med->get_service_count(), 0);
-  }
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
+  EXPECT_EQ(med->get_service_count(), 0);
 }
 
 TEST(MediatorTest, RegisterServiceFailureInvalidNodeID) {
@@ -751,30 +712,28 @@ TEST(MediatorTest, RegisterServiceFailureInvalidNodeID) {
           .deregister_service(5678, 1234, "test_service", msg::standard::UInt32().hash(), msg::standard::Time().hash())
           .deregister_node("test_node", 1234);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_service_count(), 0);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_service_count(), 0);
 
-    med->spin_once(); // Process service registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_service_count(), 1);
+  med->spin_once(); // Process service registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_service_count(), 1);
 
-    med->spin_once();                       // Process invalid node ID service registration
-    EXPECT_EQ(med->get_node_count(), 1);    // Still one node
-    EXPECT_EQ(med->get_service_count(), 1); // Still one service
+  med->spin_once();                       // Process invalid node ID service registration
+  EXPECT_EQ(med->get_node_count(), 1);    // Still one node
+  EXPECT_EQ(med->get_service_count(), 1); // Still one service
 
-    med->spin_once(); // Process service deregistration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_service_count(), 0);
+  med->spin_once(); // Process service deregistration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_service_count(), 0);
 
-    med->spin_once(); // Process node deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-    EXPECT_EQ(med->get_service_count(), 0);
-  }
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
+  EXPECT_EQ(med->get_service_count(), 0);
 }
 
 TEST(MediatorTest, DeregisterUnregisteredService) {
@@ -787,30 +746,28 @@ TEST(MediatorTest, DeregisterUnregisteredService) {
           .deregister_service(5678, 1234, "test_service", msg::standard::UInt32().hash(), msg::standard::Time().hash())
           .deregister_node("test_node", 1234);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_service_count(), 0);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_service_count(), 0);
 
-    med->spin_once(); // Process service registration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_service_count(), 1);
+  med->spin_once(); // Process service registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_service_count(), 1);
 
-    med->spin_once();                       // Process deregistration of unknown service
-    EXPECT_EQ(med->get_node_count(), 1);    // Still one node
-    EXPECT_EQ(med->get_service_count(), 1); // Still one service
+  med->spin_once();                       // Process deregistration of unknown service
+  EXPECT_EQ(med->get_node_count(), 1);    // Still one node
+  EXPECT_EQ(med->get_service_count(), 1); // Still one service
 
-    med->spin_once(); // Process service deregistration
-    EXPECT_EQ(med->get_node_count(), 1);
-    EXPECT_EQ(med->get_service_count(), 0);
+  med->spin_once(); // Process service deregistration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_service_count(), 0);
 
-    med->spin_once(); // Process node deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-    EXPECT_EQ(med->get_service_count(), 0);
-  }
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
+  EXPECT_EQ(med->get_service_count(), 0);
 }
 
 TEST(MediatorTest, RequestServiceClient) {
@@ -824,25 +781,23 @@ TEST(MediatorTest, RequestServiceClient) {
           .deregister_service(5678, 1234, "test_service", msg::standard::UInt32().hash(), msg::standard::Time().hash())
           .deregister_node("test_node", 1234);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
 
-    med->spin_once(); // Process service registration
-    EXPECT_EQ(med->get_service_count(), 1);
+  med->spin_once(); // Process service registration
+  EXPECT_EQ(med->get_service_count(), 1);
 
-    med->spin_once(); // Process service client request
-    EXPECT_TRUE(med->ok());
+  med->spin_once(); // Process service client request
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process service deregistration
-    EXPECT_EQ(med->get_service_count(), 0);
+  med->spin_once(); // Process service deregistration
+  EXPECT_EQ(med->get_service_count(), 0);
 
-    med->spin_once(); // Process node deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-  }
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
 }
 
 TEST(MediatorTest, RequestServiceClientFailure) {
@@ -854,20 +809,286 @@ TEST(MediatorTest, RequestServiceClientFailure) {
               1234, "nonexistent_service", msg::standard::UInt32().hash(), msg::standard::Time().hash(), 0, true)
           .deregister_node("test_node", 1234);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
 
-    med->spin_once(); // Process service client request for nonexistent service
-    EXPECT_TRUE(med->ok());
-    EXPECT_EQ(med->get_service_count(), 0); // No service should be registered
+  med->spin_once(); // Process service client request for nonexistent service
+  EXPECT_TRUE(med->ok());
+  EXPECT_EQ(med->get_service_count(), 0); // No service should be registered
 
-    med->spin_once(); // Process node deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-  }
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
+}
+
+TEST(MediatorTest, RegisterAndDeregisterAction) {
+  auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
+                     .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 4)
+                     .register_node("test_node", 1234)
+                     .register_action(5678,
+                                      1234,
+                                      "test_action",
+                                      msg::standard::UInt32().hash(),
+                                      msg::standard::String().hash(),
+                                      msg::standard::Time().hash())
+                     .deregister_action(5678, 1234, "test_action")
+                     .deregister_node("test_node", 1234);
+
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
+
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_action_count(), 0);
+
+  med->spin_once(); // Process action registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_action_count(), 1);
+
+  med->spin_once(); // Process action deregistration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_action_count(), 0);
+
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
+  EXPECT_EQ(med->get_action_count(), 0);
+}
+
+TEST(MediatorTest, RegisterActionFailureDuplicateID) {
+  auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
+                     .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 5)
+                     .register_node("test_node", 1234)
+                     .register_action(5678,
+                                      1234,
+                                      "test_action",
+                                      msg::standard::UInt32().hash(),
+                                      msg::standard::String().hash(),
+                                      msg::standard::Time().hash())
+                     .register_action(5678,
+                                      1234,
+                                      "test_action",
+                                      msg::standard::UInt32().hash(),
+                                      msg::standard::String().hash(),
+                                      msg::standard::Time().hash(),
+                                      true)
+                     .deregister_action(5678, 1234, "test_action")
+                     .deregister_node("test_node", 1234);
+
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
+
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_action_count(), 0);
+
+  med->spin_once(); // Process action registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_action_count(), 1);
+
+  med->spin_once();                      // Process duplicate action registration
+  EXPECT_EQ(med->get_node_count(), 1);   // Still one node
+  EXPECT_EQ(med->get_action_count(), 1); // Still one action
+
+  med->spin_once(); // Process action deregistration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_action_count(), 0);
+
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
+  EXPECT_EQ(med->get_action_count(), 0);
+}
+
+TEST(MediatorTest, RegisterActionFailureDuplicateName) {
+  auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
+                     .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 5)
+                     .register_node("test_node", 1234)
+                     .register_action(5678,
+                                      1234,
+                                      "test_action",
+                                      msg::standard::UInt32().hash(),
+                                      msg::standard::String().hash(),
+                                      msg::standard::Time().hash())
+                     .register_action(8765,
+                                      1234,
+                                      "test_action",
+                                      msg::standard::UInt32().hash(),
+                                      msg::standard::String().hash(),
+                                      msg::standard::Time().hash(),
+                                      true)
+                     .deregister_action(5678, 1234, "test_action")
+                     .deregister_node("test_node", 1234);
+
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
+
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_action_count(), 0);
+
+  med->spin_once(); // Process action registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_action_count(), 1);
+
+  med->spin_once();                      // Process duplicate name action registration
+  EXPECT_EQ(med->get_node_count(), 1);   // Still one node
+  EXPECT_EQ(med->get_action_count(), 1); // Still one action
+
+  med->spin_once(); // Process action deregistration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_action_count(), 0);
+
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
+  EXPECT_EQ(med->get_action_count(), 0);
+}
+
+TEST(MediatorTest, RegisterActionFailureInvalidNodeID) {
+  auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
+                     .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 5)
+                     .register_node("test_node", 1234)
+                     .register_action(5678,
+                                      1234,
+                                      "test_action",
+                                      msg::standard::UInt32().hash(),
+                                      msg::standard::String().hash(),
+                                      msg::standard::Time().hash())
+                     .register_action(8765,
+                                      4321,
+                                      "other_action",
+                                      msg::standard::UInt32().hash(),
+                                      msg::standard::String().hash(),
+                                      msg::standard::Time().hash(),
+                                      true)
+                     .deregister_action(5678, 1234, "test_action")
+                     .deregister_node("test_node", 1234);
+
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
+
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_action_count(), 0);
+
+  med->spin_once(); // Process action registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_action_count(), 1);
+
+  med->spin_once();                      // Process invalid node ID action registration
+  EXPECT_EQ(med->get_node_count(), 1);   // Still one node
+  EXPECT_EQ(med->get_action_count(), 1); // Still one action
+
+  med->spin_once(); // Process action deregistration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_action_count(), 0);
+
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
+  EXPECT_EQ(med->get_action_count(), 0);
+}
+
+TEST(MediatorTest, DeregisterUnregisteredAction) {
+  auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
+                     .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 5)
+                     .register_node("test_node", 1234)
+                     .register_action(5678,
+                                      1234,
+                                      "test_action",
+                                      msg::standard::UInt32().hash(),
+                                      msg::standard::String().hash(),
+                                      msg::standard::Time().hash())
+                     .deregister_action(9999, 1234, "other_action")
+                     .deregister_action(5678, 1234, "test_action")
+                     .deregister_node("test_node", 1234);
+
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
+
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_action_count(), 0);
+
+  med->spin_once(); // Process action registration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_action_count(), 1);
+
+  med->spin_once();                      // Process deregistration of unknown action
+  EXPECT_EQ(med->get_node_count(), 1);   // Still one node
+  EXPECT_EQ(med->get_action_count(), 1); // Still one action
+
+  med->spin_once(); // Process action deregistration
+  EXPECT_EQ(med->get_node_count(), 1);
+  EXPECT_EQ(med->get_action_count(), 0);
+
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
+  EXPECT_EQ(med->get_action_count(), 0);
+}
+
+TEST(MediatorTest, RequestActionClient) {
+  auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
+                     .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 5)
+                     .register_node("test_node", 1234)
+                     .register_action(5678,
+                                      1234,
+                                      "test_action",
+                                      msg::standard::UInt32().hash(),
+                                      msg::standard::String().hash(),
+                                      msg::standard::Time().hash())
+                     .request_action_client(1234,
+                                            "test_action",
+                                            msg::standard::UInt32().hash(),
+                                            msg::standard::String().hash(),
+                                            msg::standard::Time().hash(),
+                                            5678)
+                     .deregister_action(5678, 1234, "test_action")
+                     .deregister_node("test_node", 1234);
+
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
+
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
+
+  med->spin_once(); // Process action registration
+  EXPECT_EQ(med->get_action_count(), 1);
+
+  med->spin_once(); // Process action client request
+  EXPECT_TRUE(med->ok());
+
+  med->spin_once(); // Process action deregistration
+  EXPECT_EQ(med->get_action_count(), 0);
+
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
+}
+
+TEST(MediatorTest, RequestActionClientFailure) {
+  auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
+                     .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 3)
+                     .register_node("test_node", 1234)
+                     .request_action_client(1234,
+                                            "nonexistent_action",
+                                            msg::standard::UInt32().hash(),
+                                            msg::standard::String().hash(),
+                                            msg::standard::Time().hash(),
+                                            0,
+                                            true)
+                     .deregister_node("test_node", 1234);
+
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
+
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
+
+  med->spin_once(); // Process action client request for nonexistent action
+  EXPECT_TRUE(med->ok());
+  EXPECT_EQ(med->get_action_count(), 0); // No action should be registered
+
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
 }
 
 TEST(MediatorTest, ParameterSetRequest) {
@@ -880,19 +1101,17 @@ TEST(MediatorTest, ParameterSetRequest) {
                      .request_parameter_set(1234, "test_param", param)
                      .deregister_node("test_node", 1234);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
 
-    med->spin_once(); // Process parameter set request
-    EXPECT_TRUE(med->ok());
+  med->spin_once(); // Process parameter set request
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-  }
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
 }
 
 TEST(MediatorTest, ParameterSetRequestFailureInvalidMessageHash) {
@@ -910,22 +1129,20 @@ TEST(MediatorTest, ParameterSetRequestFailureInvalidMessageHash) {
                      .request_parameter_set(1234, "test_param", wrong_param, true)
                      .deregister_node("test_node", 1234);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
 
-    med->spin_once(); // Process parameter set request
-    EXPECT_TRUE(med->ok());
+  med->spin_once(); // Process parameter set request
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process invalid parameter set request
-    EXPECT_TRUE(med->ok());
+  med->spin_once(); // Process invalid parameter set request
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-  }
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
 }
 
 TEST(MediatorTest, ParameterSetRequestFailureInvalidNodeID) {
@@ -940,13 +1157,11 @@ TEST(MediatorTest, ParameterSetRequestFailureInvalidNodeID) {
                      .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 1)
                      .request_parameter_set(1234, "test_param", param, true);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process parameter set request with invalid node ID
-    EXPECT_TRUE(med->ok());
-  }
+  med->spin_once(); // Process parameter set request with invalid node ID
+  EXPECT_TRUE(med->ok());
 }
 
 TEST(MediatorTest, ParameterGetRequest) {
@@ -960,22 +1175,20 @@ TEST(MediatorTest, ParameterGetRequest) {
                      .request_parameter_get(1234, "test_param", param)
                      .deregister_node("test_node", 1234);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
 
-    med->spin_once(); // Process parameter set request
-    EXPECT_TRUE(med->ok());
+  med->spin_once(); // Process parameter set request
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process parameter get request
-    EXPECT_TRUE(med->ok());
+  med->spin_once(); // Process parameter get request
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-  }
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
 }
 
 TEST(MediatorTest, ParameterGetRequestFailureNonexistent) {
@@ -988,19 +1201,17 @@ TEST(MediatorTest, ParameterGetRequestFailureNonexistent) {
                      .request_parameter_get(1234, "test_param", param, true)
                      .deregister_node("test_node", 1234);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
 
-    med->spin_once(); // Process parameter get request with failure
-    EXPECT_TRUE(med->ok());
+  med->spin_once(); // Process parameter get request with failure
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-  }
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
 }
 
 TEST(MediatorTest, ParameterGetRequestFailureInvalidNodeID) {
@@ -1011,13 +1222,11 @@ TEST(MediatorTest, ParameterGetRequestFailureInvalidNodeID) {
                      .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 1)
                      .request_parameter_get(1234, "test_param", param, true);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process parameter get request with failure
-    EXPECT_TRUE(med->ok());
-  }
+  med->spin_once(); // Process parameter get request with failure
+  EXPECT_TRUE(med->ok());
 }
 
 TEST(MediatorTest, SystemInfoGetRequest) {
@@ -1071,28 +1280,26 @@ TEST(MediatorTest, SystemInfoGetRequest) {
                      .request_system_info(1234, sys_info)
                      .deregister_node("test_node", 1234);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
 
-    med->spin_once(); // Process publisher registration
-    EXPECT_EQ(med->get_publisher_count(), 1);
+  med->spin_once(); // Process publisher registration
+  EXPECT_EQ(med->get_publisher_count(), 1);
 
-    med->spin_once(); // Process subscriber registration
-    EXPECT_EQ(med->get_subscriber_count(), 1);
+  med->spin_once(); // Process subscriber registration
+  EXPECT_EQ(med->get_subscriber_count(), 1);
 
-    med->spin_once(); // Process service registration
-    EXPECT_EQ(med->get_service_count(), 1);
+  med->spin_once(); // Process service registration
+  EXPECT_EQ(med->get_service_count(), 1);
 
-    med->spin_once(); // Process system info request
-    EXPECT_TRUE(med->ok());
+  med->spin_once(); // Process system info request
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-  }
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
 }
 
 TEST(MediatorTest, SystemInfoGetRequestFailureInvalidNodeID) {
@@ -1147,28 +1354,26 @@ TEST(MediatorTest, SystemInfoGetRequestFailureInvalidNodeID) {
                      .request_system_info(4321, empty_sys_info) // Expect failure (empty info)
                      .deregister_node("test_node", 1234);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
 
-    med->spin_once(); // Process publisher registration
-    EXPECT_EQ(med->get_publisher_count(), 1);
+  med->spin_once(); // Process publisher registration
+  EXPECT_EQ(med->get_publisher_count(), 1);
 
-    med->spin_once(); // Process subscriber registration
-    EXPECT_EQ(med->get_subscriber_count(), 1);
+  med->spin_once(); // Process subscriber registration
+  EXPECT_EQ(med->get_subscriber_count(), 1);
 
-    med->spin_once(); // Process service registration
-    EXPECT_EQ(med->get_service_count(), 1);
+  med->spin_once(); // Process service registration
+  EXPECT_EQ(med->get_service_count(), 1);
 
-    med->spin_once(); // Process system info request failure
-    EXPECT_TRUE(med->ok());
+  med->spin_once(); // Process system info request failure
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-  }
+  med->spin_once(); // Process node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
 }
 
 TEST(MediatorTest, SubscriberRegisteredAfterPublisherDeregistered) {
@@ -1186,34 +1391,32 @@ TEST(MediatorTest, SubscriberRegisteredAfterPublisherDeregistered) {
                      .deregister_node("sub_node", 4321)
                      .deregister_node("pub_node", 1234);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process pub_node registration
-    EXPECT_EQ(med->get_node_count(), 1);
+  med->spin_once(); // Process pub_node registration
+  EXPECT_EQ(med->get_node_count(), 1);
 
-    med->spin_once(); // Process publisher registration
-    EXPECT_EQ(med->get_publisher_count(), 1);
+  med->spin_once(); // Process publisher registration
+  EXPECT_EQ(med->get_publisher_count(), 1);
 
-    med->spin_once(); // Process publisher deregistration
-    EXPECT_EQ(med->get_publisher_count(), 0);
+  med->spin_once(); // Process publisher deregistration
+  EXPECT_EQ(med->get_publisher_count(), 0);
 
-    med->spin_once(); // Process sub_node registration
-    EXPECT_EQ(med->get_node_count(), 2);
+  med->spin_once(); // Process sub_node registration
+  EXPECT_EQ(med->get_node_count(), 2);
 
-    med->spin_once(); // Process subscriber registration (no pubs to notify about)
-    EXPECT_EQ(med->get_subscriber_count(), 1);
+  med->spin_once(); // Process subscriber registration (no pubs to notify about)
+  EXPECT_EQ(med->get_subscriber_count(), 1);
 
-    med->spin_once(); // Process subscriber deregistration
-    EXPECT_EQ(med->get_subscriber_count(), 0);
+  med->spin_once(); // Process subscriber deregistration
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 
-    med->spin_once(); // Process sub_node deregistration
-    EXPECT_EQ(med->get_node_count(), 1);
+  med->spin_once(); // Process sub_node deregistration
+  EXPECT_EQ(med->get_node_count(), 1);
 
-    med->spin_once(); // Process pub_node deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-  }
+  med->spin_once(); // Process pub_node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
 }
 
 TEST(MediatorTest, PublisherRegisteredAfterSubscriberReceivesNotification) {
@@ -1243,34 +1446,32 @@ TEST(MediatorTest, PublisherRegisteredAfterSubscriberReceivesNotification) {
           .deregister_node("pub_node", 1234)
           .deregister_node("sub_node", 4321);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process sub_node registration
-    EXPECT_EQ(med->get_node_count(), 1);
+  med->spin_once(); // Process sub_node registration
+  EXPECT_EQ(med->get_node_count(), 1);
 
-    med->spin_once(); // Process subscriber registration
-    EXPECT_EQ(med->get_subscriber_count(), 1);
+  med->spin_once(); // Process subscriber registration
+  EXPECT_EQ(med->get_subscriber_count(), 1);
 
-    med->spin_once(); // Process pub_node registration
-    EXPECT_EQ(med->get_node_count(), 2);
+  med->spin_once(); // Process pub_node registration
+  EXPECT_EQ(med->get_node_count(), 2);
 
-    med->spin_once(); // Process publisher registration (should notify subscriber)
-    EXPECT_EQ(med->get_publisher_count(), 1);
+  med->spin_once(); // Process publisher registration (should notify subscriber)
+  EXPECT_EQ(med->get_publisher_count(), 1);
 
-    med->spin_once(); // Process publisher deregistration
-    EXPECT_EQ(med->get_publisher_count(), 0);
+  med->spin_once(); // Process publisher deregistration
+  EXPECT_EQ(med->get_publisher_count(), 0);
 
-    med->spin_once(); // Process subscriber deregistration
-    EXPECT_EQ(med->get_subscriber_count(), 0);
+  med->spin_once(); // Process subscriber deregistration
+  EXPECT_EQ(med->get_subscriber_count(), 0);
 
-    med->spin_once(); // Process pub_node deregistration
-    EXPECT_EQ(med->get_node_count(), 1);
+  med->spin_once(); // Process pub_node deregistration
+  EXPECT_EQ(med->get_node_count(), 1);
 
-    med->spin_once(); // Process sub_node deregistration
-    EXPECT_EQ(med->get_node_count(), 0);
-  }
+  med->spin_once(); // Process sub_node deregistration
+  EXPECT_EQ(med->get_node_count(), 0);
 }
 
 TEST(MediatorTest, MultipleNodesOnSameTopic) {
@@ -1325,31 +1526,29 @@ TEST(MediatorTest, MultipleNodesOnSameTopic) {
           .notify_subscriber(
               9013, Endpoint("127.0.0.1", 8004), "shared_topic", msg::standard::UInt32().hash(), notify2);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node1 registration
-    EXPECT_EQ(med->get_node_count(), 1);
+  med->spin_once(); // Process node1 registration
+  EXPECT_EQ(med->get_node_count(), 1);
 
-    med->spin_once(); // Process node2 registration
-    EXPECT_EQ(med->get_node_count(), 2);
+  med->spin_once(); // Process node2 registration
+  EXPECT_EQ(med->get_node_count(), 2);
 
-    med->spin_once(); // Process node3 registration
-    EXPECT_EQ(med->get_node_count(), 3);
+  med->spin_once(); // Process node3 registration
+  EXPECT_EQ(med->get_node_count(), 3);
 
-    med->spin_once(); // Process publisher 1 registration
-    EXPECT_EQ(med->get_publisher_count(), 1);
+  med->spin_once(); // Process publisher 1 registration
+  EXPECT_EQ(med->get_publisher_count(), 1);
 
-    med->spin_once(); // Process publisher 2 registration
-    EXPECT_EQ(med->get_publisher_count(), 2);
+  med->spin_once(); // Process publisher 2 registration
+  EXPECT_EQ(med->get_publisher_count(), 2);
 
-    med->spin_once(); // Process subscriber 1 registration (notified of 2 pubs)
-    EXPECT_EQ(med->get_subscriber_count(), 1);
+  med->spin_once(); // Process subscriber 1 registration (notified of 2 pubs)
+  EXPECT_EQ(med->get_subscriber_count(), 1);
 
-    med->spin_once(); // Process subscriber 2 registration (notified of 2 pubs)
-    EXPECT_EQ(med->get_subscriber_count(), 2);
-  }
+  med->spin_once(); // Process subscriber 2 registration (notified of 2 pubs)
+  EXPECT_EQ(med->get_subscriber_count(), 2);
 }
 
 TEST(MediatorTest, MultipleNodesOnDifferentTopics) {
@@ -1388,33 +1587,31 @@ TEST(MediatorTest, MultipleNodesOnDifferentTopics) {
               9013, 4321, "topic_a", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 8004))
           .notify_subscriber(9013, Endpoint("127.0.0.1", 8004), "topic_a", msg::standard::UInt32().hash(), notify2);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node1 registration
-    EXPECT_EQ(med->get_node_count(), 1);
+  med->spin_once(); // Process node1 registration
+  EXPECT_EQ(med->get_node_count(), 1);
 
-    med->spin_once(); // Process node2 registration
-    EXPECT_EQ(med->get_node_count(), 2);
+  med->spin_once(); // Process node2 registration
+  EXPECT_EQ(med->get_node_count(), 2);
 
-    med->spin_once(); // Process publisher on topic_a
-    EXPECT_EQ(med->get_publisher_count(), 1);
+  med->spin_once(); // Process publisher on topic_a
+  EXPECT_EQ(med->get_publisher_count(), 1);
 
-    med->spin_once(); // Process publisher on topic_b
-    EXPECT_EQ(med->get_publisher_count(), 2);
+  med->spin_once(); // Process publisher on topic_b
+  EXPECT_EQ(med->get_publisher_count(), 2);
 
-    med->spin_once(); // Process subscriber on topic_b (matches pub on topic_b)
-    EXPECT_EQ(med->get_subscriber_count(), 1);
+  med->spin_once(); // Process subscriber on topic_b (matches pub on topic_b)
+  EXPECT_EQ(med->get_subscriber_count(), 1);
 
-    med->spin_once(); // Process subscriber on topic_a (matches pub on topic_a)
-    EXPECT_EQ(med->get_subscriber_count(), 2);
+  med->spin_once(); // Process subscriber on topic_a (matches pub on topic_a)
+  EXPECT_EQ(med->get_subscriber_count(), 2);
 
-    // Verify counts remain stable
-    EXPECT_EQ(med->get_node_count(), 2);
-    EXPECT_EQ(med->get_publisher_count(), 2);
-    EXPECT_EQ(med->get_subscriber_count(), 2);
-  }
+  // Verify counts remain stable
+  EXPECT_EQ(med->get_node_count(), 2);
+  EXPECT_EQ(med->get_publisher_count(), 2);
+  EXPECT_EQ(med->get_subscriber_count(), 2);
 }
 
 TEST(MediatorTest, SameTopicDifferentMessageHashesIsolated) {
@@ -1434,22 +1631,20 @@ TEST(MediatorTest, SameTopicDifferentMessageHashesIsolated) {
           .register_subscriber(
               9012, 1234, "test_topic", msg::standard::Time().hash(), true, Endpoint("127.0.0.1", 8003)); // Should fail
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node registration
-    EXPECT_EQ(med->get_node_count(), 1);
+  med->spin_once(); // Process node registration
+  EXPECT_EQ(med->get_node_count(), 1);
 
-    med->spin_once(); // Process first publisher (UInt32 hash)
-    EXPECT_EQ(med->get_publisher_count(), 1);
+  med->spin_once(); // Process first publisher (UInt32 hash)
+  EXPECT_EQ(med->get_publisher_count(), 1);
 
-    med->spin_once();                         // Process second publisher (String hash) - should fail
-    EXPECT_EQ(med->get_publisher_count(), 1); // Still only 1
+  med->spin_once();                         // Process second publisher (String hash) - should fail
+  EXPECT_EQ(med->get_publisher_count(), 1); // Still only 1
 
-    med->spin_once();                          // Process subscriber (Time hash) - should fail
-    EXPECT_EQ(med->get_subscriber_count(), 0); // No subscribers registered
-  }
+  med->spin_once();                          // Process subscriber (Time hash) - should fail
+  EXPECT_EQ(med->get_subscriber_count(), 0); // No subscribers registered
 }
 
 TEST(MediatorTest, MultiplePublishersDeregisteredBeforeSubscriber) {
@@ -1468,35 +1663,33 @@ TEST(MediatorTest, MultiplePublishersDeregisteredBeforeSubscriber) {
                      .register_subscriber(
                          9012, 5555, "test_topic", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 8002));
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process pub_node1 registration
-    EXPECT_EQ(med->get_node_count(), 1);
+  med->spin_once(); // Process pub_node1 registration
+  EXPECT_EQ(med->get_node_count(), 1);
 
-    med->spin_once(); // Process pub_node2 registration
-    EXPECT_EQ(med->get_node_count(), 2);
+  med->spin_once(); // Process pub_node2 registration
+  EXPECT_EQ(med->get_node_count(), 2);
 
-    med->spin_once(); // Process publisher 1 registration
-    EXPECT_EQ(med->get_publisher_count(), 1);
+  med->spin_once(); // Process publisher 1 registration
+  EXPECT_EQ(med->get_publisher_count(), 1);
 
-    med->spin_once(); // Process publisher 2 registration
-    EXPECT_EQ(med->get_publisher_count(), 2);
+  med->spin_once(); // Process publisher 2 registration
+  EXPECT_EQ(med->get_publisher_count(), 2);
 
-    med->spin_once(); // Process publisher 1 deregistration
-    EXPECT_EQ(med->get_publisher_count(), 1);
+  med->spin_once(); // Process publisher 1 deregistration
+  EXPECT_EQ(med->get_publisher_count(), 1);
 
-    med->spin_once(); // Process publisher 2 deregistration
-    EXPECT_EQ(med->get_publisher_count(), 0);
+  med->spin_once(); // Process publisher 2 deregistration
+  EXPECT_EQ(med->get_publisher_count(), 0);
 
-    med->spin_once(); // Process sub_node registration
-    EXPECT_EQ(med->get_node_count(), 3);
+  med->spin_once(); // Process sub_node registration
+  EXPECT_EQ(med->get_node_count(), 3);
 
-    med->spin_once(); // Process subscriber registration (no pubs available)
-    EXPECT_EQ(med->get_subscriber_count(), 1);
-    EXPECT_EQ(med->get_publisher_count(), 0); // No publishers
-  }
+  med->spin_once(); // Process subscriber registration (no pubs available)
+  EXPECT_EQ(med->get_subscriber_count(), 1);
+  EXPECT_EQ(med->get_publisher_count(), 0); // No publishers
 }
 
 TEST(MediatorTest, PartialPublisherDeregistrationBeforeSubscriber) {
@@ -1526,32 +1719,30 @@ TEST(MediatorTest, PartialPublisherDeregistrationBeforeSubscriber) {
               9012, 5555, "test_topic", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 8002))
           .notify_subscriber(9012, Endpoint("127.0.0.1", 8002), "test_topic", msg::standard::UInt32().hash(), notify);
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process pub_node1 registration
-    EXPECT_EQ(med->get_node_count(), 1);
+  med->spin_once(); // Process pub_node1 registration
+  EXPECT_EQ(med->get_node_count(), 1);
 
-    med->spin_once(); // Process pub_node2 registration
-    EXPECT_EQ(med->get_node_count(), 2);
+  med->spin_once(); // Process pub_node2 registration
+  EXPECT_EQ(med->get_node_count(), 2);
 
-    med->spin_once(); // Process publisher 1 registration
-    EXPECT_EQ(med->get_publisher_count(), 1);
+  med->spin_once(); // Process publisher 1 registration
+  EXPECT_EQ(med->get_publisher_count(), 1);
 
-    med->spin_once(); // Process publisher 2 registration
-    EXPECT_EQ(med->get_publisher_count(), 2);
+  med->spin_once(); // Process publisher 2 registration
+  EXPECT_EQ(med->get_publisher_count(), 2);
 
-    med->spin_once();                         // Process publisher 1 deregistration
-    EXPECT_EQ(med->get_publisher_count(), 1); // Only pub 2 remains
+  med->spin_once();                         // Process publisher 1 deregistration
+  EXPECT_EQ(med->get_publisher_count(), 1); // Only pub 2 remains
 
-    med->spin_once(); // Process sub_node registration
-    EXPECT_EQ(med->get_node_count(), 3);
+  med->spin_once(); // Process sub_node registration
+  EXPECT_EQ(med->get_node_count(), 3);
 
-    med->spin_once(); // Process subscriber registration (notified only of pub 2)
-    EXPECT_EQ(med->get_subscriber_count(), 1);
-    EXPECT_EQ(med->get_publisher_count(), 1); // Still 1 publisher
-  }
+  med->spin_once(); // Process subscriber registration (notified only of pub 2)
+  EXPECT_EQ(med->get_subscriber_count(), 1);
+  EXPECT_EQ(med->get_publisher_count(), 1); // Still 1 publisher
 }
 
 TEST(MediatorTest, CrossNodeServiceIsolation) {
@@ -1575,20 +1766,18 @@ TEST(MediatorTest, CrossNodeServiceIsolation) {
                                        true,
                                        Endpoint("127.0.0.1", 8002)); // Should fail - name exists
 
-  {
-    auto med = fixture.build();
-    EXPECT_TRUE(med->ok());
+  auto med = fixture.build();
+  EXPECT_TRUE(med->ok());
 
-    med->spin_once(); // Process node1 registration
-    EXPECT_EQ(med->get_node_count(), 1);
+  med->spin_once(); // Process node1 registration
+  EXPECT_EQ(med->get_node_count(), 1);
 
-    med->spin_once(); // Process node2 registration
-    EXPECT_EQ(med->get_node_count(), 2);
+  med->spin_once(); // Process node2 registration
+  EXPECT_EQ(med->get_node_count(), 2);
 
-    med->spin_once(); // Process service 1 registration
-    EXPECT_EQ(med->get_service_count(), 1);
+  med->spin_once(); // Process service 1 registration
+  EXPECT_EQ(med->get_service_count(), 1);
 
-    med->spin_once();                       // Process service 2 registration - should fail
-    EXPECT_EQ(med->get_service_count(), 1); // Still only 1
-  }
+  med->spin_once();                       // Process service 2 registration - should fail
+  EXPECT_EQ(med->get_service_count(), 1); // Still only 1
 }
