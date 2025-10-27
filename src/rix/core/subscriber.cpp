@@ -161,10 +161,10 @@ void Subscriber::SubNotifyAcceptor::spin_once() {
   }
 
   std::lock_guard<std::mutex> guard(parent.callback_mutex_);
-  // Connect to the specified publishers (non-blocking)
+  // Connect to the specified publishers (blocking)
   for (const auto &pub : sub_notify.publishers) {
     auto client = parent.socket_factory_();
-    client->set_blocking(false);
+    client->set_blocking(true);
     client->connect(rix::ipc::Endpoint(pub.endpoint.address, pub.endpoint.port));
     parent.clients_.insert(client);
     rix::util::Log::debug << "Connected to publisher at \"" << pub.endpoint.address << ":" << pub.endpoint.port
