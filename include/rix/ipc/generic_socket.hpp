@@ -85,7 +85,11 @@ public:
     size_t bytes = 0;
     while (bytes < buffer.size()) {
       ssize_t result = recv(buffer.data() + bytes, buffer.size() - bytes, 0);
-      if (result <= 0) {
+      if(result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
+      {
+        continue;
+      }
+      else {
         return false;
       }
       bytes += result;
