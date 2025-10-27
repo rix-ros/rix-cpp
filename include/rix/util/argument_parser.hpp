@@ -1,24 +1,19 @@
 #pragma once
 
 #include <any>
-#include <cctype>
-#include <cstdint>
 #include <functional>
-#include <iomanip>
 #include <iostream>
 #include <map>
-#include <set>
-#include <sstream>
 #include <string>
 #include <typeindex>
 #include <vector>
 
-namespace rix::util {
+namespace rix {
 
 namespace detail {
 template <typename> struct is_std_vector : std::false_type {};
 template <typename T, typename A> struct is_std_vector<std::vector<T, A>> : std::true_type {};
-bool isalnum(const std::string &str);
+bool isalnum(const std::string& str);
 } // namespace detail
 
 /**
@@ -28,15 +23,14 @@ class ArgumentParser {
 
 public:
   using Value = std::any;
-  using ParserFunction = std::function<bool(const std::string &, std::any &)>;
+  using ParserFunction = std::function<bool(const std::string&, std::any&)>;
 
 private:
   /**
    * @brief A class representing a command line argument.
    */
   struct Arg {
-    Arg(const std::string &name, const std::string &description, char short_name, const Value &default_value,
-        bool required);
+    Arg(const std::string& name, std::string description, char short_name, const Value& default_value, bool required);
 
     std::string name{};        ///< long name (--<name>), must be alphanumeric and greater than 2 characters
     std::string description{}; ///< description of the argument
@@ -46,8 +40,8 @@ private:
     char short_name{};         ///< short name (single character) (-<short_name>), must be alphanumeric
   };
 
-  void add(const Arg &arg);
-  bool parse_arg(char **argv, int argc, int &offset, Arg &arg);
+  void add(const Arg& arg);
+  bool parse_arg(char** argv, int argc, int& offset, Arg& arg);
 
 public:
   /**
@@ -55,30 +49,26 @@ public:
    * @param name The name of the program.
    * @param description The description of the program.
    */
-  ArgumentParser(const std::string &name, const std::string &description, bool disable_help = false);
+  ArgumentParser(std::string name, std::string description, bool disable_help = false);
 
-  /**
-   * @brief Adds an argument to the parser.
-   * @param argument The argument to add.
-   */
-  template <typename T> void add(const std::string &name, const std::string &description);
-  template <typename T> void add(const std::string &name, const std::string &description, const T &default_value);
+  template <typename T> void add(const std::string& name, const std::string& description);
+  template <typename T> void add(const std::string& name, const std::string& description, const T& default_value);
   template <typename T>
-  void add(const std::string &name, const std::string &description, char short_name, const T &default_value);
+  void add(const std::string& name, const std::string& description, char short_name, const T& default_value);
 
   /**
    * @brief Parses the command-line arguments.
    * @param argc The number of arguments.
    * @param argv The array of arguments.
    */
-  bool parse(int argc, char **argv);
+  bool parse(int argc, char** argv);
 
   /**
    * @brief Gets the values of an option.
    * @param name The name of the option.
    * @return The value of the option.
    */
-  template <typename T> bool get(const std::string &name, T &value);
+  template <typename T> bool get(const std::string& name, T& value);
 
   /**
    * @brief Gets the help message.
@@ -86,7 +76,7 @@ public:
    */
   std::string help();
 
-  template <typename T> void add_parser(ParserFunction parser);
+  template <typename T> void add_parser(const ParserFunction& parser);
 
 private:
   ///< The name of the program.
@@ -104,10 +94,10 @@ private:
   ///< disable automatic help argument
   bool disable_help_{false};
 
-  void detect_help_column_widths(size_t &name_width, size_t &short_width, size_t &desc_width, size_t &default_width);
+  void detect_help_column_widths(int& name_width, int& short_width, int& desc_width, int& default_width) const;
 };
 
-template <typename T> bool ArgumentParser::get(const std::string &name, T &value) {
+template <typename T> bool ArgumentParser::get(const std::string& name, T& value) {
   auto arg = args_.find(name);
   if (arg == args_.end()) {
     return false;
@@ -116,12 +106,12 @@ template <typename T> bool ArgumentParser::get(const std::string &name, T &value
   // At compile time, check if T is a std::vector
   if constexpr (detail::is_std_vector<T>::value) {
     using ElemType = typename T::value_type;
-    const auto &vec = std::any_cast<const std::vector<std::any> &>(arg->second.value);
+    const auto& vec = std::any_cast<const std::vector<std::any>&>(arg->second.value);
     std::vector<ElemType> result;
     result.reserve(vec.size());
 
     // Iterate and cast each element
-    for (const auto &elem : vec) {
+    for (const auto& elem : vec) {
       if (elem.type() != typeid(ElemType)) {
         return false;
       }
@@ -140,18 +130,20 @@ template <typename T> bool ArgumentParser::get(const std::string &name, T &value
   return true;
 }
 
-template <typename T> void ArgumentParser::add(const std::string &name, const std::string &description) {
+template <typename T> void ArgumentParser::add(const std::string& name, const std::string& description) {
   add(Arg(name, description, '\0', T(), true));
 }
 
 template <typename T>
-void ArgumentParser::add(const std::string &name, const std::string &description, const T &default_value) {
+void ArgumentParser::add(const std::string& name, const std::string& description, const T& default_value) {
   add(Arg(name, description, '\0', default_value, false));
 }
 
 template <typename T>
-void ArgumentParser::add(const std::string &name, const std::string &description, char short_name,
-                         const T &default_value) {
+void ArgumentParser::add(const std::string& name,
+                         const std::string& description,
+                         char short_name,
+                         const T& default_value) {
   if (!std::isalnum(short_name)) {
     throw std::invalid_argument("Short name must be alphanumeric.");
   }
@@ -160,18 +152,19 @@ void ArgumentParser::add(const std::string &name, const std::string &description
 
 namespace detail {
 
-bool parse_vector(ArgumentParser::ParserFunction parser, const std::string &str, std::any &value);
+bool parse_vector(const ArgumentParser::ParserFunction& parser, const std::string& str, std::any& value);
 
 } // namespace detail
 
-template <typename T> void ArgumentParser::add_parser(ParserFunction parser) {
-  auto it = parsers_.find(typeid(T));
-  if (it != parsers_.end()) {
+template <typename T> void ArgumentParser::add_parser(const ParserFunction& parser) {
+  if (const auto it = parsers_.find(typeid(T)); it != parsers_.end()) {
     throw std::invalid_argument("Parser for type already exists.");
   }
   parsers_[typeid(T)] = parser;
-  parsers_[typeid(std::vector<T>)] =
-      std::bind(detail::parse_vector, parser, std::placeholders::_1, std::placeholders::_2);
+  parsers_[typeid(std::vector<T>)] = [parser](const std::string& in, std::vector<T>& out) {
+    detail::parse_vector(parser, in, out);
+  };
+  // std::bind(detail::parse_vector, parser, std::placeholders::_1, std::placeholders::_2);
 }
 
-} // namespace rix::util
+} // namespace rix

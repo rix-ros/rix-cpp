@@ -4,44 +4,42 @@
 #include <iostream>
 #include <map>
 #include <memory>
-#include <stack>
 #include <string>
 #include <vector>
 
 #include "rix/msg/geometry/TF.hpp"
-#include "rix/msg/geometry/TransformStamped.hpp"
-#include "rix/msg/geometry/Twist.hpp"
 #include "rix/msg/sensor/JS.hpp"
 #include "rix/rob/joint.hpp"
 #include "rix/rob/link.hpp"
 #include "rix/util/log.hpp"
-#include "rix/util/time.hpp"
 
-namespace rix::rob {
+namespace rix {
 
 class RobotModel {
 public:
+  static RobotModel from_model(const std::string& name);
+
   /**
    * @brief Factory method to create a RobotModel from a JSON string
    *
    * @param json_str A string formatted as valid JSON
    * @return RobotModel A RobotModel parsed from the JSON string
    */
-  static RobotModel from_json(const std::string &json_str);
+  static RobotModel from_json(const std::string& json_str);
 
   /**
    * @brief Construct a new RobotModel object.
    *
    * @param file_path The pathname of a valid JRDF (JSON Robot Description File)
    */
-  RobotModel(const std::string &file_path);
+  RobotModel(const std::string& file_path);
 
   /**
    * @brief Copy constructor
    *
    * @param other The RobotModel to copy
    */
-  RobotModel(const RobotModel &other);
+  RobotModel(const RobotModel& other);
 
   /**
    * @brief Copy assignment operator
@@ -49,7 +47,7 @@ public:
    * @param other The RobotModel to copy
    * @return RobotModel&
    */
-  RobotModel &operator=(const RobotModel &other);
+  RobotModel& operator=(const RobotModel& other);
 
   /**
    * @brief Returns true if the JRDF was successfully parsed in the
@@ -88,7 +86,7 @@ public:
    * @param name The name of the joint to check.
    * @return true if the joint exists, false otherwise
    */
-  bool has_joint(const std::string &name) const;
+  bool has_joint(const std::string& name) const;
 
   /**
    * @brief Returns true if the link exsits, false otherwise.
@@ -96,7 +94,7 @@ public:
    * @param name The name of the link to check
    * @return true if the link exists, false otherwise
    */
-  bool has_link(const std::string &name) const;
+  bool has_link(const std::string& name) const;
 
   /**
    * @brief Get the joint object by name. If the joint does not exist, an exception will be thrown.
@@ -104,7 +102,7 @@ public:
    * @param name The name of the joint to get.
    * @return A reference to the joint object.
    */
-  std::shared_ptr<Joint> get_joint(const std::string &name) const;
+  std::shared_ptr<Joint> get_joint(const std::string& name) const;
 
   /**
    * @brief Get the link object by name. If the link does not exist, an exception will be thrown.
@@ -112,7 +110,7 @@ public:
    * @param name The name of the link to get.
    * @return A reference to the link object.
    */
-  std::shared_ptr<Link> get_link(const std::string &name) const;
+  std::shared_ptr<Link> get_link(const std::string& name) const;
 
   /**
    * @brief Return the root link name of the RobotModel. This is the link that has
@@ -135,7 +133,7 @@ public:
    * @param link_name The name of the link to get the joint chain for.
    *
    */
-  std::vector<std::shared_ptr<Joint>> get_joints_in_chain(const std::string &link_name) const;
+  std::vector<std::shared_ptr<Joint>> get_joints_in_chain(const std::string& link_name) const;
 
   /**
    * @brief Create a TF message from the current state of the RobotModel.
@@ -159,40 +157,40 @@ public:
    *      [A->B, B->C, C->D, E->F, B->E]
    * B->E must come before E->F because B is the parent of E.
    *
-   * @return rix::msg::geometry::TF
+   * @return msg::geometry::TF
    */
-  rix::msg::geometry::TF get_transforms() const;
+  msg::geometry::TF get_transforms() const;
 
   /**
    * @brief Create a JS message from the current state of the RobotModel.
    * There is no order to the joint states in the JS message.
    *
-   * @return rix::msg::sensor::JS
+   * @return msg::sensor::JS
    */
-  rix::msg::sensor::JS get_joint_states() const;
+  msg::sensor::JS get_joint_states() const;
 
   /**
    * @brief Get the static transforms from the RobotModel. This returns any
    * inertial, visual, or collision frames for each link.
    *
-   * @return rix::msg::geometry::TF
+   * @return msg::geometry::TF
    */
-  rix::msg::geometry::TF get_static_transforms() const;
+  msg::geometry::TF get_static_transforms() const;
 
-  void set_state(const rix::msg::sensor::JS &js);
-  void set_state(const rix::msg::sensor::JointState &js);
-  void set_state(const std::string &joint_name, double position, double velocity, double effort);
+  void set_state(const msg::sensor::JS& js);
+  void set_state(const msg::sensor::JointState& js);
+  void set_state(const std::string& joint_name, double position, double velocity, double effort);
 
-  void set_world_to_root(const rix::msg::geometry::Transform &world_to_root);
-  const rix::msg::geometry::Transform &get_world_to_root() const;
+  void set_world_to_root(const msg::geometry::Transform& world_to_root);
+  const msg::geometry::Transform& get_world_to_root() const;
 
 private:
   std::string root;
   std::map<std::string, std::shared_ptr<Joint>> joints;
   std::map<std::string, std::shared_ptr<Link>> links;
-  rix::msg::geometry::Transform world_to_root;
+  msg::geometry::Transform world_to_root;
 
   RobotModel();
 };
 
-} // namespace rix::rob
+} // namespace rix

@@ -8,7 +8,7 @@
 
 #include <memory>
 
-namespace rix::ipc {
+namespace rix {
 
 const int MAX_CONN = 128;
 
@@ -19,26 +19,26 @@ public:
   virtual ~GenericSocket() = default;
 
   // Disable copy and move semantics (force use of shared/unique pointers)
-  GenericSocket(const GenericSocket &) = delete;
-  GenericSocket &operator=(const GenericSocket &) = delete;
-  GenericSocket(GenericSocket &&) = delete;
-  GenericSocket &operator=(GenericSocket &&) = delete;
+  GenericSocket(const GenericSocket&) = delete;
+  GenericSocket& operator=(const GenericSocket&) = delete;
+  GenericSocket(GenericSocket&&) = delete;
+  GenericSocket& operator=(GenericSocket&&) = delete;
 
   // Socket state operations
-  virtual bool bind(const Endpoint &endpoint) const = 0;
+  virtual bool bind(const Endpoint& endpoint) const = 0;
   virtual bool listen(int backlog) const = 0;
-  virtual std::shared_ptr<GenericSocket> accept(Endpoint &remote_endpoint) const = 0;
+  virtual std::shared_ptr<GenericSocket> accept(Endpoint& remote_endpoint) const = 0;
   std::shared_ptr<GenericSocket> accept() const {
     Endpoint ep;
     return accept(ep);
   }
-  virtual bool connect(const Endpoint &endpoint) const = 0;
+  virtual bool connect(const Endpoint& endpoint) const = 0;
   virtual void close() const = 0;
 
   // I/O multiplexing operations
-  virtual bool wait_readable(const rix::util::Duration &timeout) const = 0;
-  virtual bool wait_writable(const rix::util::Duration &timeout) const = 0;
-  virtual bool wait_exception(const rix::util::Duration &timeout) const = 0;
+  virtual bool wait_readable(const Duration& timeout) const = 0;
+  virtual bool wait_writable(const Duration& timeout) const = 0;
+  virtual bool wait_exception(const Duration& timeout) const = 0;
 
   // Socket control operations
   virtual bool set_blocking(bool blocking) const = 0;
@@ -52,19 +52,19 @@ public:
 
   virtual int get_fd() const { return -1; }
 
-  bool is_writable() const { return wait_writable(rix::util::Duration(0.0)); }
-  bool is_readable() const { return wait_readable(rix::util::Duration(0.0)); }
-  bool is_exception() const { return wait_exception(rix::util::Duration(0.0)); }
+  bool is_writable() const { return wait_writable(Duration(0.0)); }
+  bool is_readable() const { return wait_readable(Duration(0.0)); }
+  bool is_exception() const { return wait_exception(Duration(0.0)); }
 
   // Write operation and message
-  virtual bool send_message(uint8_t opcode, const rix::msg::Message &msg) const {
+  virtual bool send_message(uint8_t opcode, const msg::Message& msg) const {
     // Serialize the message
-    rix::msg::mediator::Operation op;
-    op.len = msg.size();
-    op.opcode = opcode;
-    std::vector<uint8_t> buffer(op.size() + msg.size());
+    msg::mediator::Operation operation;
+    operation.len = msg.size();
+    operation.opcode = opcode;
+    std::vector<uint8_t> buffer(operation.size() + msg.size());
     size_t offset = 0;
-    op.serialize(buffer.data(), offset);
+    operation.serialize(buffer.data(), offset);
     msg.serialize(buffer.data(), offset);
 
     size_t bytes = 0;
@@ -79,7 +79,7 @@ public:
   }
 
   // Read message only
-  virtual bool recv_message(rix::msg::Message &msg, size_t len) const {
+  virtual bool recv_message(msg::Message& msg, size_t len) const {
     // Read the message body only
     std::vector<uint8_t> buffer(len);
     size_t bytes = 0;
@@ -98,22 +98,38 @@ public:
   }
 
   // Read both operation and message (useful if message type is known)
-  bool recv_message(rix::msg::mediator::Operation &op, rix::msg::Message &msg) const {
+  bool recv_message(msg::mediator::Operation& operation, msg::Message& msg) const {
     // Read the operation header first
-    if (!recv_message(op, op.size())) {
+    if (!recv_message(operation, operation.size())) {
       return false;
     }
     // Then read the message body
-    if (!recv_message(msg, op.len)) {
+    if (!recv_message(msg, operation.len)) {
       return false;
     }
     return true;
   }
 
-  static void set_poller(std::shared_ptr<GenericPoller> poller) { poller_ = poller; }
-  static bool poll(const std::vector<std::shared_ptr<GenericSocket>> &all_sockets, const rix::util::Duration &duration,
-                   PollFlag flag, std::vector<std::shared_ptr<GenericSocket>> &sockets,
-                   std::vector<std::shared_ptr<GenericSocket>> &exception_sockets) {
+  void ignore_message(size_t len) const {
+    // Read and discard 'len' bytes
+    std::vector<uint8_t> buffer(len);
+    size_t bytes = 0;
+    while (bytes < buffer.size()) {
+      ssize_t result = recv(buffer.data() + bytes, buffer.size() - bytes, 0);
+      if (result <= 0) {
+        return;
+      }
+      bytes += result;
+    }
+  }
+
+  static std::shared_ptr<GenericPoller> get_poller() { return poller_; }
+  static void set_poller(const std::shared_ptr<GenericPoller>& poller) { poller_ = poller; }
+  static bool poll(const std::vector<std::shared_ptr<GenericSocket>>& all_sockets,
+                   const Duration& duration,
+                   const PollFlag flag,
+                   std::vector<std::shared_ptr<GenericSocket>>& sockets,
+                   std::vector<std::shared_ptr<GenericSocket>>& exception_sockets) {
     if (!poller_) {
       return false;
     }
@@ -122,9 +138,9 @@ public:
 
 private:
   // Low-level I/O operations to be implemented by derived classes
-  virtual ssize_t send(const void *buf, size_t len, int flags) const = 0;
-  virtual ssize_t recv(void *buf, size_t len, int flags) const = 0;
+  virtual ssize_t send(const void* buf, size_t len, int flags) const = 0;
+  virtual ssize_t recv(void* buf, size_t len, int flags) const = 0;
   static inline std::shared_ptr<GenericPoller> poller_{std::make_shared<Poller>()};
 };
 
-} // namespace rix::ipc
+} // namespace rix

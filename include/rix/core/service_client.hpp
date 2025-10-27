@@ -1,48 +1,43 @@
 #pragma once
 
 #include <functional>
-#include <memory>
 #include <mutex>
 
 #include "rix/core/common.hpp"
 #include "rix/core/spinner.hpp"
-#include "rix/msg/mediator/Operation.hpp"
 #include "rix/msg/mediator/SrvRequest.hpp"
-#include "rix/msg/mediator/SrvResponse.hpp"
-#include "rix/msg/mediator/Status.hpp"
-#include "rix/msg/standard/UInt32.hpp"
-#include "rix/util/log.hpp"
 
-namespace rix::core {
+namespace rix {
 
 class Node; // Forward declaration
 
-class ServiceClient : Spinner {
+class ServiceClient final : public Spinner {
   friend class Node;
 
 public:
-  ServiceClient(const ServiceClient &) = delete;
-  ServiceClient &operator=(const ServiceClient &) = delete;
-  ServiceClient(ServiceClient &&) = delete;
-  ServiceClient &operator=(ServiceClient &&) = delete;
+  ServiceClient(const ServiceClient&) = delete;
+  ServiceClient& operator=(const ServiceClient&) = delete;
+  ServiceClient(ServiceClient&&) = delete;
+  ServiceClient& operator=(ServiceClient&&) = delete;
 
-  ~ServiceClient();
+  ~ServiceClient() override;
 
-  bool ok() const override;
-  void shutdown() override;
-  bool call(const rix::msg::Message &request, rix::msg::Message &response);
+  bool call(const msg::Message& request, msg::Message& response);
 
 private:
-  rix::msg::mediator::SrvRequest request_;
+  msg::mediator::SrvRequest request_;
   SocketFactory socket_factory_;
-  std::atomic<bool> shutdown_flag_;
-  rix::ipc::Endpoint endpoint_;
+  Endpoint endpoint_;
+
+#ifdef RIX_MULTITHREADED
+  std::thread spin_thread_{};
+#endif
 
   using Spinner::spin;
-  void spin_once() override;
+  using Spinner::spin_once;
+  void on_spin() override;
 
-  ServiceClient(const rix::msg::mediator::SrvRequest &request, SocketFactory factory,
-                const rix::ipc::Endpoint &rixhub_endpoint);
+  ServiceClient(const msg::mediator::SrvRequest& request, SocketFactory factory, const Endpoint& rixhub_endpoint);
 };
 
-} // namespace rix::core
+} // namespace rix

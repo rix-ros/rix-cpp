@@ -1,11 +1,11 @@
 #include "rix/ipc/posix_signal.hpp"
 
+#include <csignal>
+#include <unistd.h>
+
 #include <iostream>
 
 namespace rix {
-namespace ipc {
-
-std::array<POSIXSignal::Notifier, 32> POSIXSignal::notifier = {};
 
 POSIXSignal::POSIXSignal(int signum) : signum_(signum) {
   if (signum < 1 || signum > 32) {
@@ -49,7 +49,7 @@ bool POSIXSignal::raise() const {
   return ::raise(signum_) == 0;
 }
 
-bool POSIXSignal::wait(const rix::util::Duration &d) const {
+bool POSIXSignal::wait(const Duration& d) const {
   if (signum_ < 1 || signum_ > 32)
     return false;
 
@@ -58,16 +58,15 @@ bool POSIXSignal::wait(const rix::util::Duration &d) const {
   fd_set read_fds;
   FD_ZERO(&read_fds);
   FD_SET(notifier[signum_ - 1].pipe[0], &read_fds);
-  struct timeval timeout;
+  struct timeval timeout{};
   timeout.tv_sec = d.to_nanoseconds() / 1'000'000'000;
-  timeout.tv_usec = (d.to_nanoseconds() % 1'000'000'000) / 1'000;
-  is_readable = select(notifier[signum_ - 1].pipe[0] + 1, &read_fds, nullptr,
-                       nullptr, &timeout) > 0;
+  timeout.tv_usec = static_cast<int>((d.to_nanoseconds() % 1'000'000'000) / 1'000);
+  select(notifier[signum_ - 1].pipe[0] + 1, &read_fds, nullptr, nullptr, &timeout);
+  is_readable = FD_ISSET(notifier[signum_ - 1].pipe[0], &read_fds);
 
   if (is_readable) {
     int signum_read = -1;
-    ssize_t bytes_read = read(notifier[signum_ - 1].pipe[0],
-                              (uint8_t *)&signum_read, sizeof(int));
+    ssize_t bytes_read = read(notifier[signum_ - 1].pipe[0], (uint8_t*)&signum_read, sizeof(int));
     if (bytes_read != sizeof(int))
       return false;
     return signum_read == signum_;
@@ -77,10 +76,8 @@ bool POSIXSignal::wait(const rix::util::Duration &d) const {
 
 void POSIXSignal::handler(int signum) {
   if (notifier[signum - 1].is_init) {
-    int ret = write(notifier[signum - 1].pipe[1], (uint8_t *)&signum, sizeof(int));
-    if (ret < 0) return;
+    write(notifier[signum - 1].pipe[1], (uint8_t*)&signum, sizeof(int));
   }
 }
 
-} // namespace ipc
 } // namespace rix

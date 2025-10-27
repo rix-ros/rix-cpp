@@ -1,6 +1,12 @@
 #include "rix/ipc/posix_socket.hpp"
+#include <arpa/inet.h>
+#include <cstring>
+#include <fcntl.h>
+#include <sys/poll.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 
-namespace rix::ipc {
+namespace rix {
 
 POSIXSocket::POSIXSocket() : fd_(::socket(AF_INET, SOCK_STREAM, 0)) {
   static bool sigpipe_flag = false;
@@ -15,20 +21,20 @@ POSIXSocket::POSIXSocket(int fd) : fd_(fd) {}
 
 POSIXSocket::~POSIXSocket() { close(); }
 
-bool POSIXSocket::bind(const Endpoint &endpoint) const {
-  struct sockaddr_in addr;
+bool POSIXSocket::bind(const Endpoint& endpoint) const {
+  struct sockaddr_in addr{};
   addr.sin_family = AF_INET;
   addr.sin_port = htons(endpoint.port);
   inet_pton(AF_INET, endpoint.address.c_str(), &addr.sin_addr);
-  return ::bind(fd_, (struct sockaddr *)&addr, sizeof(addr)) == 0;
+  return ::bind(fd_, (struct sockaddr*)&addr, sizeof(addr)) == 0;
 }
 
 bool POSIXSocket::listen(int backlog) const { return ::listen(fd_, backlog) == 0; }
 
-std::shared_ptr<GenericSocket> POSIXSocket::accept(Endpoint &remote_endpoint) const {
-  struct sockaddr_in addr;
+std::shared_ptr<GenericSocket> POSIXSocket::accept(Endpoint& remote_endpoint) const {
+  struct sockaddr_in addr{};
   socklen_t len = sizeof(addr);
-  int sock_fd = ::accept(fd_, (struct sockaddr *)&addr, &len);
+  int sock_fd = ::accept(fd_, (struct sockaddr*)&addr, &len);
   if (sock_fd < 0) {
     return nullptr;
   }
@@ -38,23 +44,23 @@ std::shared_ptr<GenericSocket> POSIXSocket::accept(Endpoint &remote_endpoint) co
   return std::shared_ptr<POSIXSocket>(new POSIXSocket(sock_fd));
 }
 
-bool POSIXSocket::connect(const Endpoint &endpoint) const {
-  struct sockaddr_in addr;
+bool POSIXSocket::connect(const Endpoint& endpoint) const {
+  struct sockaddr_in addr{};
   addr.sin_family = AF_INET;
   addr.sin_port = htons(endpoint.port);
   inet_pton(AF_INET, endpoint.address.c_str(), &addr.sin_addr);
-  return ::connect(fd_, (struct sockaddr *)&addr, sizeof(addr)) == 0;
+  return ::connect(fd_, (struct sockaddr*)&addr, sizeof(addr)) == 0;
 }
 
 void POSIXSocket::close() const { ::close(fd_); }
 
-ssize_t POSIXSocket::send(const void *buf, size_t len, int flags) const { return ::send(fd_, buf, len, flags); }
+ssize_t POSIXSocket::send(const void* buf, size_t len, int flags) const { return ::send(fd_, buf, len, flags); }
 
-ssize_t POSIXSocket::recv(void *buf, size_t len, int flags) const { return ::recv(fd_, buf, len, flags); }
+ssize_t POSIXSocket::recv(void* buf, size_t len, int flags) const { return ::recv(fd_, buf, len, flags); }
 
-bool POSIXSocket::wait_readable(const rix::util::Duration &timeout) const {
+bool POSIXSocket::wait_readable(const Duration& timeout) const {
   // Implement with poll
-  struct pollfd pfd;
+  struct pollfd pfd{};
   pfd.fd = fd_;
   pfd.events = POLLIN;
   int timeout_ms = static_cast<int>(timeout.to_milliseconds());
@@ -62,8 +68,8 @@ bool POSIXSocket::wait_readable(const rix::util::Duration &timeout) const {
   return ret > 0 && (pfd.revents & POLLIN);
 }
 
-bool POSIXSocket::wait_writable(const rix::util::Duration &timeout) const {
-  struct pollfd pfd;
+bool POSIXSocket::wait_writable(const Duration& timeout) const {
+  struct pollfd pfd{};
   pfd.fd = fd_;
   pfd.events = POLLOUT;
 
@@ -72,8 +78,8 @@ bool POSIXSocket::wait_writable(const rix::util::Duration &timeout) const {
   return ret > 0 && (pfd.revents & POLLOUT);
 }
 
-bool POSIXSocket::wait_exception(const rix::util::Duration &timeout) const {
-  struct pollfd pfd;
+bool POSIXSocket::wait_exception(const Duration& timeout) const {
+  struct pollfd pfd{};
   pfd.fd = fd_;
   pfd.events = 0;
 
@@ -120,10 +126,10 @@ bool POSIXSocket::get_reuse_address() const {
 }
 
 Endpoint POSIXSocket::local_endpoint() const {
-  struct sockaddr_in addr;
+  struct sockaddr_in addr{};
   socklen_t addrlen = sizeof(addr);
-  if (getsockname(fd_, (struct sockaddr *)&addr, &addrlen) < 0) {
-    return Endpoint();
+  if (getsockname(fd_, (struct sockaddr*)&addr, &addrlen) < 0) {
+    return {};
   }
   Endpoint ep;
   ep.address.resize(INET_ADDRSTRLEN);
@@ -134,10 +140,10 @@ Endpoint POSIXSocket::local_endpoint() const {
 }
 
 Endpoint POSIXSocket::remote_endpoint() const {
-  struct sockaddr_in addr;
+  struct sockaddr_in addr{};
   socklen_t addrlen = sizeof(addr);
-  if (getpeername(fd_, (struct sockaddr *)&addr, &addrlen) < 0) {
-    return Endpoint();
+  if (getpeername(fd_, reinterpret_cast<struct sockaddr*>(&addr), &addrlen) < 0) {
+    return {};
   }
   Endpoint ep;
   ep.address.resize(INET_ADDRSTRLEN);
@@ -149,4 +155,4 @@ Endpoint POSIXSocket::remote_endpoint() const {
 
 int POSIXSocket::get_fd() const { return fd_; }
 
-} // namespace rix::ipc
+} // namespace rix

@@ -1,16 +1,16 @@
 #pragma once
 
-#include <chrono>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <mutex>
 #include <sstream>
 #include <string>
+#include <utility>
 
 #include "rix/util/time.hpp"
 
-namespace rix::util {
+namespace rix {
 
 namespace detail {
 
@@ -20,23 +20,23 @@ namespace detail {
  * file at the same time.
  *
  */
-class TeeBuffer : public std::streambuf {
+class TeeBuffer final : public std::streambuf {
 public:
-  TeeBuffer(std::vector<std::streambuf *> targets);
+  explicit TeeBuffer(std::vector<std::streambuf*> targets);
 
   int overflow(int c) override;
   int sync() override;
-  void add(std::streambuf *target);
+  void add(std::streambuf* target);
 
 private:
-  std::vector<std::streambuf *> targets_;
+  std::vector<std::streambuf*> targets_;
 };
 
-inline TeeBuffer::TeeBuffer(std::vector<std::streambuf *> targets) : targets_(targets) {}
-inline int TeeBuffer::overflow(int c) {
+inline TeeBuffer::TeeBuffer(std::vector<std::streambuf*> targets) : targets_(std::move(targets)) {}
+inline int TeeBuffer::overflow(const int c) {
   if (c != EOF) {
     for (auto target : targets_) {
-      if (target->sputc(c) == EOF) {
+      if (target->sputc(static_cast<char>(c)) == EOF) {
         return EOF;
       }
     }
@@ -52,7 +52,7 @@ inline int TeeBuffer::sync() {
   }
   return result;
 }
-inline void TeeBuffer::add(std::streambuf *target) { targets_.push_back(target); }
+inline void TeeBuffer::add(std::streambuf* target) { targets_.push_back(target); }
 
 /**
  * @brief TeeStream class. This is used to write data to multiple streams at
@@ -62,13 +62,13 @@ inline void TeeBuffer::add(std::streambuf *target) { targets_.push_back(target);
  */
 class TeeStream : public std::ostream {
 public:
-  TeeStream(const TeeBuffer &tee_buffer);
+  explicit TeeStream(TeeBuffer tee_buffer);
 
 private:
   TeeBuffer tee_buffer_;
 };
 
-inline TeeStream::TeeStream(const TeeBuffer &tee_buffer) : std::ostream(&tee_buffer_), tee_buffer_(tee_buffer) {}
+inline TeeStream::TeeStream(TeeBuffer tee_buffer) : std::ostream(&tee_buffer_), tee_buffer_(std::move(tee_buffer)) {}
 
 /**
  * @brief NullBuffer class. This is used as a fake stream that writes
@@ -106,7 +106,7 @@ private:
    */
   inline static detail::NullBuffer null_buffer{};
   inline static std::ofstream logFile{};
-  inline static detail::TeeBuffer tee_buffer{std::vector<std::streambuf *>{std::cout.rdbuf()}};
+  inline static detail::TeeBuffer tee_buffer{std::vector<std::streambuf*>{std::cout.rdbuf()}};
   inline static std::mutex mutex{};
 
   /**
@@ -120,22 +120,22 @@ private:
    */
   template <Level level> class LogStream {
   public:
-    template <typename T> std::ostream &operator<<(const T &val);
+    template <typename T> std::ostream& operator<<(const T& val);
 
     inline static std::ostream null_stream{&Log::null_buffer};
     inline static std::ostream tee_stream{&Log::tee_buffer};
-    inline static std::mutex &mutex{Log::mutex};
+    inline static std::mutex& mutex{Log::mutex};
 
-    inline static std::string create_header(const Time &t);
-    inline static std::string create_plain_header(const Time &t);
+    inline static std::string create_header(const Time& t);
+    inline static std::string create_plain_header(const Time& t);
   };
 
 public:
-  inline static void init(const std::string &name);
+  inline static void init(const std::string& name);
   inline static void set_log_level(Level level) { level_ = level; }
 
   /**
-   * The public LogStream objects. These are used to log inforamtion at the
+   * The public LogStream objects. These are used to log information at the
    * corresponding level. If RIX_UTIL_LOG_LEVEL is greater than the template
    * level parameter, then no data will be logged when used.
    *
@@ -159,7 +159,7 @@ private:
   inline static std::string get_level_string(Level level);
 };
 
-template <Log::Level level> template <typename T> inline std::ostream &Log::LogStream<level>::operator<<(const T &val) {
+template <Log::Level level> template <typename T> inline std::ostream& Log::LogStream<level>::operator<<(const T& val) {
   if (level < level_) {
     return null_stream;
   }
@@ -169,7 +169,7 @@ template <Log::Level level> template <typename T> inline std::ostream &Log::LogS
   return tee_stream << header << val;
 }
 
-template <Log::Level level> inline std::string Log::LogStream<level>::create_header(const Time &t) {
+template <Log::Level level> inline std::string Log::LogStream<level>::create_header(const Time& t) {
   std::stringstream ss;
 
   // Date field
@@ -187,7 +187,7 @@ template <Log::Level level> inline std::string Log::LogStream<level>::create_hea
   return ss.str();
 }
 
-template <Log::Level level> inline std::string Log::LogStream<level>::create_plain_header(const Time &t) {
+template <Log::Level level> inline std::string Log::LogStream<level>::create_plain_header(const Time& t) {
   std::stringstream ss;
 
   // Date field
@@ -205,7 +205,7 @@ template <Log::Level level> inline std::string Log::LogStream<level>::create_pla
   return ss.str();
 }
 
-inline void Log::init(const std::string &name) {
+inline void Log::init(const std::string& name) {
   if (is_init_) {
     return;
   }
@@ -251,4 +251,4 @@ inline std::string Log::get_level_string(Level level) {
   }
 }
 
-} // namespace rix::util
+} // namespace rix

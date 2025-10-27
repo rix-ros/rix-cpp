@@ -4,18 +4,18 @@
 #include "rix/msg/geometry/Transform.hpp"
 #include "rix/msg/geometry/Vector3.hpp"
 
-namespace rix::rob {
+namespace rix {
 
-inline rix::msg::geometry::Vector3 vector3_zeros() {
-  rix::msg::geometry::Vector3 vec;
+inline msg::geometry::Vector3 vector3_zeros() {
+  msg::geometry::Vector3 vec;
   vec.x = 0.0;
   vec.y = 0.0;
   vec.z = 0.0;
   return vec;
 }
 
-inline rix::msg::geometry::Transform transform_identity() {
-  rix::msg::geometry::Transform t;
+inline msg::geometry::Transform transform_identity() {
+  msg::geometry::Transform t;
   t.translation = vector3_zeros();
   t.rotation.w = 1.0;
   t.rotation.x = 0.0;
@@ -24,8 +24,8 @@ inline rix::msg::geometry::Transform transform_identity() {
   return t;
 }
 
-inline rix::msg::geometry::Inertia default_inertia() {
-  rix::msg::geometry::Inertia i;
+inline msg::geometry::Inertia default_inertia() {
+  msg::geometry::Inertia i;
   i.mass = 0;
   i.center_of_mass = vector3_zeros();
   i.ixx = 1;
@@ -37,4 +37,4 @@ inline rix::msg::geometry::Inertia default_inertia() {
   return i;
 }
 
-} // namespace rix::rob
+} // namespace rix
