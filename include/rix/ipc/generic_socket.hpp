@@ -2,7 +2,7 @@
 
 #include "rix/ipc/endpoint.hpp"
 #include "rix/ipc/poll.hpp"
-#include "rix/msg/mediator/Operation.hpp"
+#include "rix/sys_msgs/Operation.hpp"
 #include "rix/msg/message.hpp"
 #include "rix/util/time.hpp"
 
@@ -57,12 +57,13 @@ public:
   bool is_exception() const { return wait_exception(Duration(0.0)); }
 
   // Write operation and message
-  virtual bool send_message(uint8_t opcode, const msg::Message& msg) const {
+  virtual bool send_message(uint8_t opcode, const Message& msg) const {
     // Serialize the message
-    msg::mediator::Operation operation;
+    sys_msgs::Operation operation;
     operation.len = msg.size();
     operation.opcode = opcode;
-    std::vector<uint8_t> buffer(operation.size() + msg.size());
+    size_t op_size = operation.size();
+    std::vector<uint8_t> buffer(op_size + msg.size());
     size_t offset = 0;
     operation.serialize(buffer.data(), offset);
     msg.serialize(buffer.data(), offset);
@@ -79,7 +80,7 @@ public:
   }
 
   // Read message only
-  virtual bool recv_message(msg::Message& msg, size_t len) const {
+  virtual bool recv_message(Message& msg, size_t len) const {
     // Read the message body only
     std::vector<uint8_t> buffer(len);
     size_t bytes = 0;
@@ -98,7 +99,7 @@ public:
   }
 
   // Read both operation and message (useful if message type is known)
-  bool recv_message(msg::mediator::Operation& operation, msg::Message& msg) const {
+  bool recv_message(sys_msgs::Operation& operation, Message& msg) const {
     // Read the operation header first
     if (!recv_message(operation, operation.size())) {
       return false;

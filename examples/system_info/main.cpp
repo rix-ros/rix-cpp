@@ -1,4 +1,4 @@
-#include "rix/msg/standard/Header.hpp"
+#include "rix/std_msgs/Header.hpp"
 #include "rix/rix.hpp"
 
 using namespace rix;
@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  rix::msg::mediator::SystemInfo system_info;
+  rix::sys_msgs::SystemInfo system_info;
   if (!node.get_system_info(system_info)) {
     Log::error << "Failed to get system info" << std::endl;
     return 1;

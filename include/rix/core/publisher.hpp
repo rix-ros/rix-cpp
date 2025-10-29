@@ -6,7 +6,7 @@
 
 #include "rix/core/common.hpp"
 #include "rix/core/spinner.hpp"
-#include "rix/msg/mediator/PubInfo.hpp"
+#include "rix/sys_msgs/PubInfo.hpp"
 
 namespace rix {
 
@@ -22,11 +22,11 @@ public:
   Publisher& operator=(Publisher&&) = delete;
   ~Publisher() override;
 
-  void publish(const msg::Message& msg);
+  void publish(const Message& msg);
   size_t get_subscriber_count() const;
 
 private:
-  msg::mediator::PubInfo info_;
+  sys_msgs::PubInfo info_;
   SocketFactory socket_factory_;
   std::shared_ptr<GenericSocket> server_;
   std::set<std::shared_ptr<GenericSocket>> connections_;
@@ -38,7 +38,7 @@ private:
   std::thread spin_thread_{};
 #endif
 
-  Publisher(const msg::mediator::PubInfo& info, SocketFactory factory, Endpoint rixhub_endpoint);
+  Publisher(const sys_msgs::PubInfo& info, SocketFactory factory, Endpoint rixhub_endpoint);
 
   using Spinner::spin;
   using Spinner::spin_once;

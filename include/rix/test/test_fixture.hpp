@@ -1,16 +1,16 @@
 #pragma once
 
 #include "rix/core/node.hpp"
+#include "rix/std_msgs/UInt64.hpp"
+#include "rix/std_msgs/Void.hpp"
+#include "rix/sys_msgs/ActResponse.hpp"
+#include "rix/sys_msgs/SrvResponse.hpp"
+#include "rix/sys_msgs/SubNotify.hpp"
 #include "rix/test/mock_clock.hpp"
 #include "rix/test/mock_poller.hpp"
 #include "socket_builder.hpp"
 #include "socket_manager.hpp"
 #include <gtest/gtest.h>
-#include <rix/msg/mediator/ActResponse.hpp>
-#include <rix/msg/mediator/SrvResponse.hpp>
-#include <rix/msg/mediator/SubNotify.hpp>
-#include <rix/msg/standard/UInt64.hpp>
-#include <rix/msg/standard/Void.hpp>
 
 namespace rix {
 
@@ -154,7 +154,7 @@ public:
 
   // Configure node registration to succeed
   TestFixture& create_node(const std::string& name,
-                           msg::mediator::NodeInfo& node_info,
+                           sys_msgs::NodeInfo& node_info,
                            bool should_fail = false,
                            int ping_count = 0,
                            const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
@@ -167,7 +167,7 @@ public:
     node_info.endpoint.address = bound_endpoint.address;
     node_info.endpoint.port = bound_endpoint.port;
 
-    msg::mediator::Status status;
+    sys_msgs::Status status;
     status.error = should_fail ? -1 : 0;
     status.id = node_info.id;
 
@@ -181,7 +181,7 @@ public:
   }
 
   // Configure node deregistration
-  TestFixture& destroy_node(const msg::mediator::NodeInfo& node_info) {
+  TestFixture& destroy_node(const sys_msgs::NodeInfo& node_info) {
     auto socket = socket_manager_.create_socket();
     SocketBuilder(socket).connect(rixhub_endpoint_).send_message(OPCODE::NODE_DEREGISTER, node_info).close();
     return *this;
@@ -190,13 +190,13 @@ public:
   // Configure publisher registration
   template <typename TMsg>
   TestFixture& create_publisher(const std::string& topic,
-                                msg::mediator::PubInfo& pub_info,
-                                const msg::mediator::NodeInfo& node_info,
+                                sys_msgs::PubInfo& pub_info,
+                                const sys_msgs::NodeInfo& node_info,
                                 bool should_fail = false,
                                 int subscriber_count = 0,
                                 const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
                                 const Endpoint& bound_endpoint = Endpoint(DEFAULT_IP, 8000)) {
-    static_assert(std::is_base_of_v<msg::Message, TMsg>, "TMsg must be derived from msg::Message");
+    static_assert(std::is_base_of_v<Message, TMsg>, "TMsg must be derived from Message");
 
     // Create the server socket for publisher connections
     create_server(endpoint, bound_endpoint, subscriber_count);
@@ -208,7 +208,7 @@ public:
     pub_info.endpoint.address = bound_endpoint.address;
     pub_info.endpoint.port = bound_endpoint.port;
 
-    msg::mediator::Status status;
+    sys_msgs::Status status;
     status.error = should_fail ? -1 : 0;
     status.id = pub_info.id;
 
@@ -224,7 +224,7 @@ public:
   }
 
   // Configure publisher deregistration
-  TestFixture& destroy_publisher(const msg::mediator::PubInfo& pub_info) {
+  TestFixture& destroy_publisher(const sys_msgs::PubInfo& pub_info) {
     auto socket = socket_manager_.create_socket();
     SocketBuilder(socket).connect(rixhub_endpoint_).send_message(OPCODE::PUB_DEREGISTER, pub_info).close();
     return *this;
@@ -233,13 +233,13 @@ public:
   // Configure subscriber registration
   template <typename TMsg>
   TestFixture& create_subscriber(const std::string& topic,
-                                 msg::mediator::SubInfo& sub_info,
-                                 const msg::mediator::NodeInfo& node_info,
+                                 sys_msgs::SubInfo& sub_info,
+                                 const sys_msgs::NodeInfo& node_info,
                                  bool should_fail = false,
                                  int notification_count = 0,
                                  const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
                                  const Endpoint& bound_endpoint = Endpoint(DEFAULT_IP, 8000)) {
-    static_assert(std::is_base_of_v<msg::Message, TMsg>, "TMsg must be derived from msg::Message");
+    static_assert(std::is_base_of_v<Message, TMsg>, "TMsg must be derived from Message");
 
     // Create the client socket for subscriber connections
     create_server(endpoint, bound_endpoint, notification_count);
@@ -251,7 +251,7 @@ public:
     sub_info.endpoint.address = bound_endpoint.address;
     sub_info.endpoint.port = bound_endpoint.port;
 
-    msg::mediator::Status status;
+    sys_msgs::Status status;
     status.error = should_fail ? -1 : 0;
     status.id = sub_info.id;
 
@@ -267,7 +267,7 @@ public:
   }
 
   // Configure subscriber deregistration
-  TestFixture& destroy_subscriber(const msg::mediator::SubInfo& sub_info) {
+  TestFixture& destroy_subscriber(const sys_msgs::SubInfo& sub_info) {
     auto socket = socket_manager_.create_socket();
     SocketBuilder(socket).connect(rixhub_endpoint_).send_message(OPCODE::SUB_DEREGISTER, sub_info).close();
     return *this;
@@ -276,14 +276,14 @@ public:
   // Configure service registration
   template <typename TReq, typename TRes>
   TestFixture& create_service(const std::string& service,
-                              msg::mediator::SrvInfo& srv_info,
-                              const msg::mediator::NodeInfo& node_info,
+                              sys_msgs::SrvInfo& srv_info,
+                              const sys_msgs::NodeInfo& node_info,
                               bool should_fail = false,
                               int client_count = 0,
                               const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
                               const Endpoint& bound_endpoint = Endpoint(DEFAULT_IP, 8000)) {
-    static_assert(std::is_base_of_v<msg::Message, TReq>, "TReq must be derived from msg::Message");
-    static_assert(std::is_base_of_v<msg::Message, TRes>, "TRes must be derived from msg::Message");
+    static_assert(std::is_base_of_v<Message, TReq>, "TReq must be derived from Message");
+    static_assert(std::is_base_of_v<Message, TRes>, "TRes must be derived from Message");
     // Create the server socket for service connections
     create_server(endpoint, bound_endpoint, client_count);
 
@@ -295,7 +295,7 @@ public:
     srv_info.endpoint.address = bound_endpoint.address;
     srv_info.endpoint.port = bound_endpoint.port;
 
-    msg::mediator::Status status;
+    sys_msgs::Status status;
     status.error = should_fail ? -1 : 0;
     status.id = srv_info.id;
 
@@ -311,7 +311,7 @@ public:
   }
 
   // Configure service deregistration
-  TestFixture& destroy_service(const msg::mediator::SrvInfo& srv_info) {
+  TestFixture& destroy_service(const sys_msgs::SrvInfo& srv_info) {
     const auto socket = socket_manager_.create_socket();
     SocketBuilder(socket).connect(rixhub_endpoint_).send_message(OPCODE::SRV_DEREGISTER, srv_info).close();
     return *this;
@@ -320,16 +320,16 @@ public:
   // Configure action registration
   template <typename TGoal, typename TFeedback, typename TResult>
   TestFixture& create_action(const std::string& action,
-                             msg::mediator::ActInfo& act_info,
-                             const msg::mediator::NodeInfo& node_info,
+                             sys_msgs::ActInfo& act_info,
+                             const sys_msgs::NodeInfo& node_info,
                              int iters_between_accept = 0,
                              bool should_fail = false,
                              int client_count = 0,
                              const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
                              const Endpoint& bound_endpoint = Endpoint(DEFAULT_IP, 8000)) {
-    static_assert(std::is_base_of_v<msg::Message, TGoal>, "TGoal must be derived from msg::Message");
-    static_assert(std::is_base_of_v<msg::Message, TFeedback>, "TFeedback must be derived from msg::Message");
-    static_assert(std::is_base_of_v<msg::Message, TResult>, "TResult must be derived from msg::Message");
+    static_assert(std::is_base_of_v<Message, TGoal>, "TGoal must be derived from Message");
+    static_assert(std::is_base_of_v<Message, TFeedback>, "TFeedback must be derived from Message");
+    static_assert(std::is_base_of_v<Message, TResult>, "TResult must be derived from Message");
     // Create the server socket for action connections
     create_server(endpoint, bound_endpoint, client_count, iters_between_accept);
 
@@ -342,7 +342,7 @@ public:
     act_info.feedback_hash = TFeedback().hash();
     act_info.result_hash = TResult().hash();
 
-    msg::mediator::Status status;
+    sys_msgs::Status status;
     status.error = should_fail ? -1 : 0;
     status.id = act_info.id;
     // Registration socket
@@ -356,7 +356,7 @@ public:
   }
 
   // Configure action deregistration
-  TestFixture& destroy_action(const msg::mediator::ActInfo& act_info) {
+  TestFixture& destroy_action(const sys_msgs::ActInfo& act_info) {
     auto socket = socket_manager_.create_socket();
     SocketBuilder(socket).connect(rixhub_endpoint_).send_message(OPCODE::ACT_DEREGISTER, act_info).close();
     return *this;
@@ -365,16 +365,16 @@ public:
   // Configure service client request
   template <typename TReq, typename TRes>
   TestFixture& create_service_client(const std::string& service,
-                                     const msg::mediator::NodeInfo& node_info,
+                                     const sys_msgs::NodeInfo& node_info,
                                      bool should_fail = false,
                                      const Endpoint& service_endpoint = Endpoint(DEFAULT_IP, 8000)) {
-    msg::mediator::SrvRequest srv_req;
+    sys_msgs::SrvRequest srv_req;
     srv_req.node_id = node_info.id;
     srv_req.name = service;
     srv_req.request_hash = TReq().hash();
     srv_req.response_hash = TRes().hash();
 
-    msg::mediator::SrvResponse srv_res;
+    sys_msgs::SrvResponse srv_res;
     srv_res.error = should_fail ? -1 : 0;
     if (!should_fail) {
       srv_res.srv_info.name = service;
@@ -397,17 +397,17 @@ public:
   // Configure action client request
   template <typename TGoal, typename TFeedback, typename TResult>
   TestFixture& create_action_client(const std::string& action,
-                                    const msg::mediator::NodeInfo& node_info,
+                                    const sys_msgs::NodeInfo& node_info,
                                     bool should_fail = false,
                                     const Endpoint& action_endpoint = Endpoint(DEFAULT_IP, 8000)) {
-    msg::mediator::ActRequest act_req;
+    sys_msgs::ActRequest act_req;
     act_req.node_id = node_info.id;
     act_req.name = action;
     act_req.goal_hash = TGoal().hash();
     act_req.feedback_hash = TFeedback().hash();
     act_req.result_hash = TResult().hash();
 
-    msg::mediator::ActResponse act_res;
+    sys_msgs::ActResponse act_res;
     act_res.error = should_fail ? -1 : 0;
     if (!should_fail) {
       act_res.act_info.name = action;
@@ -430,10 +430,10 @@ public:
 
   // Configure parameter set request
   TestFixture& set_parameter(const std::string& name,
-                             const msg::mediator::NodeInfo& node_info,
-                             const std::shared_ptr<msg::Message>& value,
+                             const sys_msgs::NodeInfo& node_info,
+                             const std::shared_ptr<Message>& value,
                              bool should_fail = false) {
-    msg::mediator::ParamInfo param_info;
+    sys_msgs::ParamInfo param_info;
     param_info.id = node_info.id;
     param_info.name = name;
     param_info.message_hash = value->hash();
@@ -441,7 +441,7 @@ public:
     size_t offset = 0;
     value->serialize(param_info.data.data(), offset);
 
-    msg::mediator::Status status;
+    sys_msgs::Status status;
     status.error = should_fail ? -1 : 0;
     status.id = param_info.id;
 
@@ -456,15 +456,15 @@ public:
 
   // Configure parameter get request
   TestFixture& get_parameter(const std::string& name,
-                             const msg::mediator::NodeInfo& node_info,
-                             const std::shared_ptr<msg::Message>& value,
+                             const sys_msgs::NodeInfo& node_info,
+                             const std::shared_ptr<Message>& value,
                              bool should_fail = false) {
-    msg::mediator::ParamInfo request;
+    sys_msgs::ParamInfo request;
     request.id = node_info.id;
     request.name = name;
     request.message_hash = value->hash();
 
-    msg::mediator::ParamInfo response;
+    sys_msgs::ParamInfo response;
     response.id = request.id;
     response.name = request.name;
     response.message_hash = request.message_hash;
@@ -484,8 +484,8 @@ public:
   }
 
   // Configure system info get request
-  TestFixture& get_system_info(const msg::mediator::SystemInfo& info, const msg::mediator::NodeInfo& node_info) {
-    msg::standard::UInt64 id;
+  TestFixture& get_system_info(const sys_msgs::SystemInfo& info, const sys_msgs::NodeInfo& node_info) {
+    std_msgs::UInt64 id;
     id.data = node_info.id;
     const auto socket = socket_manager_.create_socket();
     SocketBuilder(socket)
@@ -501,7 +501,7 @@ public:
     if (enable_notifications_) {
       connection_sockets_.push_back(conn_socket);
     }
-    msg::mediator::Operation operation;
+    sys_msgs::Operation operation;
     operation.opcode = OPCODE::PING;
     operation.len = 0;
 
@@ -534,7 +534,7 @@ public:
   // Configure subscriber connections
   template <typename TMsg>
   TestFixture& accept_notification(const std::string& topic, const std::vector<Endpoint>& publisher_endpoints) {
-    msg::mediator::SubNotify sub_notify;
+    sys_msgs::SubNotify sub_notify;
     sub_notify.publishers.resize(publisher_endpoints.size());
     for (size_t i = 0; i < publisher_endpoints.size(); i++) {
       sub_notify.publishers[i].topic_info.name = topic;
@@ -608,11 +608,11 @@ public:
     if (enable_notifications_) {
       builder.enable_operation_notifications();
     }
-    msg::mediator::Operation operation;
+    sys_msgs::Operation operation;
     operation.opcode = OPCODE::ACT_GOAL_MESSAGE;
     operation.len = goal->size();
     builder.recv_message(operation, operation.size());
-    msg::mediator::Status status;
+    sys_msgs::Status status;
     if (should_fail) {
       // Immediately send result with error
       status.error = -1;
@@ -641,11 +641,11 @@ public:
     if (enable_notifications_) {
       builder.enable_operation_notifications();
     }
-    msg::mediator::Operation operation;
+    sys_msgs::Operation operation;
     operation.opcode = OPCODE::ACT_GOAL_MESSAGE;
     operation.len = goal->size();
     builder.recv_message(operation, operation.size());
-    msg::mediator::Status status;
+    sys_msgs::Status status;
     if (should_fail) {
       // Immediately send result with error
       status.error = -1;
@@ -683,11 +683,11 @@ public:
     if (enable_notifications_) {
       builder.enable_operation_notifications();
     }
-    msg::mediator::Operation operation;
+    sys_msgs::Operation operation;
     operation.opcode = OPCODE::ACT_GOAL_MESSAGE;
     operation.len = goals[0]->size();
     builder.recv_message(operation, operation.size());
-    msg::mediator::Status status;
+    sys_msgs::Status status;
     if (should_fail) {
       // Immediately send result with error
       status.error = -1;
@@ -753,7 +753,7 @@ public:
     }
     builder.connect(action_endpoint).send_message(OPCODE::ACT_GOAL_MESSAGE, *goal);
 
-    msg::mediator::Status status;
+    sys_msgs::Status status;
     if (should_fail) {
       status.error = -1;
       builder.recv_message(OPCODE::ACT_RESPONSE_MESSAGE, status).close();
@@ -774,9 +774,9 @@ public:
   // Configure action client
   template <typename TGoal, typename TFeedback>
   TestFixture& send_action_goal_with_cancel(std::shared_ptr<TGoal> goal,
-                                std::vector<std::shared_ptr<TFeedback>> feedback,
-                                bool should_fail = false,
-                                const Endpoint& action_endpoint = Endpoint(DEFAULT_IP, 8000)) {
+                                            std::vector<std::shared_ptr<TFeedback>> feedback,
+                                            bool should_fail = false,
+                                            const Endpoint& action_endpoint = Endpoint(DEFAULT_IP, 8000)) {
     auto socket = socket_manager_.create_socket();
     if (enable_notifications_) {
       client_sockets_.push_back(socket);
@@ -787,7 +787,7 @@ public:
     }
     builder.connect(action_endpoint).send_message(OPCODE::ACT_GOAL_MESSAGE, *goal);
 
-    msg::mediator::Status status;
+    sys_msgs::Status status;
     if (should_fail) {
       status.error = -1;
       builder.recv_message(OPCODE::ACT_RESPONSE_MESSAGE, status).close();
@@ -800,7 +800,7 @@ public:
     for (auto& fb : feedback) {
       builder.recv_message(OPCODE::ACT_FEEDBACK_MESSAGE, *fb);
     }
-    msg::standard::Void cancel_msg;
+    std_msgs::Void cancel_msg;
     builder.send_message(OPCODE::ACT_CANCEL_MESSAGE, cancel_msg).close();
     return *this;
   }
@@ -837,7 +837,7 @@ public:
         builder.send_message(OPCODE::ACT_PREEMPT_MESSAGE, *goals[i]);
       }
 
-      msg::mediator::Status status;
+      sys_msgs::Status status;
       if (should_fail) {
         status.error = -1;
         builder.recv_message(OPCODE::ACT_RESPONSE_MESSAGE, status).close();

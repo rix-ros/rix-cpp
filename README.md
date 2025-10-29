@@ -83,10 +83,10 @@ Create a publisher that sends `Header` messages at 1 Hz:
 
 ```cpp
 #include "rix/rix.hpp"
-#include "rix/msg/standard/Header.hpp"
+#include "rix/std_msgs/Header.hpp"
 
 using namespace rix;
-using rix::msg::standard::Header;
+using rix::std_msgs::Header;
 
 std::shared_ptr<Publisher> publisher;
 
@@ -114,10 +114,10 @@ Register a subscriber on the same topic:
 
 ```cpp
 #include "rix/rix.hpp"
-#include "rix/msg/standard/Header.hpp"
+#include "rix/std_msgs/Header.hpp"
 
 using namespace rix;
-using rix::msg::standard::Header;
+using rix::std_msgs::Header;
 
 void subscriber_callback(const Header &msg) {
   Log::info << msg.frame_id << ", " << msg.seq << std::endl;
@@ -136,12 +136,12 @@ Provide a request-response service:
 
 ```cpp
 #include "rix/rix.hpp"
-#include "rix/msg/standard/UInt32.hpp"
-#include "rix/msg/standard/Header.hpp"
+#include "rix/std_msgs/UInt32.hpp"
+#include "rix/std_msgs/Header.hpp"
 
 using namespace rix;
-using rix::msg::standard::UInt32;
-using rix::msg::standard::Header;
+using rix::std_msgs::UInt32;
+using rix::std_msgs::Header;
 
 void service_callback(const UInt32 &req, Header &res) {
   Log::info << "Received request!" << std::endl;
@@ -162,12 +162,12 @@ Call a service from another node:
 
 ```cpp
 #include "rix/rix.hpp"
-#include "rix/msg/standard/UInt32.hpp"
-#include "rix/msg/standard/Header.hpp"
+#include "rix/std_msgs/UInt32.hpp"
+#include "rix/std_msgs/Header.hpp"
 
 using namespace rix;
-using rix::msg::standard::UInt32;
-using rix::msg::standard::Header;
+using rix::std_msgs::UInt32;
+using rix::std_msgs::Header;
 
 std::shared_ptr<ServiceClient> service_client;
 
@@ -197,12 +197,12 @@ Provide a preemptible task via an action server:
 
 ```cpp
 #include "rix/rix.hpp"
-#include "rix/msg/standard/UInt32.hpp"
-#include "rix/msg/standard/Header.hpp"
+#include "rix/std_msgs/UInt32.hpp"
+#include "rix/std_msgs/Header.hpp"
 
 using namespace rix;
-using rix::msg::standard::UInt32;
-using rix::msg::standard::Header;
+using rix::std_msgs::UInt32;
+using rix::std_msgs::Header;
 
 bool action_callback(const UInt32 &goal, const Header &feedback, Header &result) {
   static int count = 0;
@@ -232,12 +232,12 @@ Dispatch an action goal from another node:
 
 ```cpp
 #include "rix/rix.hpp"
-#include "rix/msg/standard/UInt32.hpp"
-#include "rix/msg/standard/Header.hpp"
+#include "rix/std_msgs/UInt32.hpp"
+#include "rix/std_msgs/Header.hpp"
 
 using namespace rix;
-using rix::msg::standard::UInt32;
-using rix::msg::standard::Header;
+using rix::std_msgs::UInt32;
+using rix::std_msgs::Header;
 
 std::shared_ptr<ActionClient> action_client;
 

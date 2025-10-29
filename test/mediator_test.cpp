@@ -1,5 +1,5 @@
-#include "rix/msg/standard/String.hpp"
-#include "rix/msg/standard/UInt32.hpp"
+#include "rix/std_msgs/String.hpp"
+#include "rix/std_msgs/UInt32.hpp"
 #include "rix/test/mediator_test_fixture.hpp"
 #include <gtest/gtest.h>
 
@@ -73,8 +73,8 @@ TEST(MediatorTest, RegisterAndDeregisterPublisher) {
   auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
                      .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 4)
                      .register_node("test_node", 1234)
-                     .register_publisher(5678, 1234, "test_topic", msg::standard::UInt32().hash())
-                     .deregister_publisher(5678, 1234, "test_topic", msg::standard::UInt32().hash())
+                     .register_publisher(5678, 1234, "test_topic", std_msgs::UInt32().hash())
+                     .deregister_publisher(5678, 1234, "test_topic", std_msgs::UInt32().hash())
                      .deregister_node("test_node", 1234);
 
   auto med = fixture.build();
@@ -101,9 +101,9 @@ TEST(MediatorTest, RegisterPublisherFailureDuplicateID) {
   auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
                      .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 5)
                      .register_node("test_node", 1234)
-                     .register_publisher(5678, 1234, "test_topic", msg::standard::UInt32().hash())
-                     .register_publisher(5678, 1234, "test_topic", msg::standard::UInt32().hash(), true)
-                     .deregister_publisher(5678, 1234, "test_topic", msg::standard::UInt32().hash())
+                     .register_publisher(5678, 1234, "test_topic", std_msgs::UInt32().hash())
+                     .register_publisher(5678, 1234, "test_topic", std_msgs::UInt32().hash(), true)
+                     .deregister_publisher(5678, 1234, "test_topic", std_msgs::UInt32().hash())
                      .deregister_node("test_node", 1234);
 
   auto med = fixture.build();
@@ -134,9 +134,9 @@ TEST(MediatorTest, RegisterPublisherFailureInvalidMessageHash) {
   auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
                      .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 5)
                      .register_node("test_node", 1234)
-                     .register_publisher(5678, 1234, "test_topic", msg::standard::UInt32().hash())
-                     .register_publisher(8765, 1234, "test_topic", msg::standard::Time().hash(), true)
-                     .deregister_publisher(5678, 1234, "test_topic", msg::standard::UInt32().hash())
+                     .register_publisher(5678, 1234, "test_topic", std_msgs::UInt32().hash())
+                     .register_publisher(8765, 1234, "test_topic", std_msgs::Time().hash(), true)
+                     .deregister_publisher(5678, 1234, "test_topic", std_msgs::UInt32().hash())
                      .deregister_node("test_node", 1234);
 
   auto med = fixture.build();
@@ -167,9 +167,9 @@ TEST(MediatorTest, RegisterPublisherFailureInvalidNodeID) {
   auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
                      .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 5)
                      .register_node("test_node", 1234)
-                     .register_publisher(5678, 1234, "test_topic", msg::standard::UInt32().hash())
-                     .register_publisher(8765, 4321, "test_topic", msg::standard::UInt32().hash(), true)
-                     .deregister_publisher(5678, 1234, "test_topic", msg::standard::UInt32().hash())
+                     .register_publisher(5678, 1234, "test_topic", std_msgs::UInt32().hash())
+                     .register_publisher(8765, 4321, "test_topic", std_msgs::UInt32().hash(), true)
+                     .deregister_publisher(5678, 1234, "test_topic", std_msgs::UInt32().hash())
                      .deregister_node("test_node", 1234);
 
   auto med = fixture.build();
@@ -200,9 +200,9 @@ TEST(MediatorTest, DeregisterUnregisteredPublisher) {
   auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
                      .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 5)
                      .register_node("test_node", 1234)
-                     .register_publisher(5678, 1234, "test_topic", msg::standard::UInt32().hash())
-                     .deregister_publisher(9999, 1234, "other_topic", msg::standard::UInt32().hash())
-                     .deregister_publisher(5678, 1234, "test_topic", msg::standard::UInt32().hash())
+                     .register_publisher(5678, 1234, "test_topic", std_msgs::UInt32().hash())
+                     .deregister_publisher(9999, 1234, "other_topic", std_msgs::UInt32().hash())
+                     .deregister_publisher(5678, 1234, "test_topic", std_msgs::UInt32().hash())
                      .deregister_node("test_node", 1234);
 
   auto med = fixture.build();
@@ -233,8 +233,8 @@ TEST(MediatorTest, RegisterAndDeregisterSubscriber) {
   auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
                      .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 4)
                      .register_node("test_node", 1234)
-                     .register_subscriber(5678, 1234, "test_topic", msg::standard::UInt32().hash())
-                     .deregister_subscriber(5678, 1234, "test_topic", msg::standard::UInt32().hash())
+                     .register_subscriber(5678, 1234, "test_topic", std_msgs::UInt32().hash())
+                     .deregister_subscriber(5678, 1234, "test_topic", std_msgs::UInt32().hash())
                      .deregister_node("test_node", 1234);
 
   auto med = fixture.build();
@@ -261,9 +261,9 @@ TEST(MediatorTest, RegisterSubscriberFailureDuplicateID) {
   auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
                      .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 5)
                      .register_node("test_node", 1234)
-                     .register_subscriber(5678, 1234, "test_topic", msg::standard::UInt32().hash())
-                     .register_subscriber(5678, 1234, "test_topic", msg::standard::UInt32().hash(), true)
-                     .deregister_subscriber(5678, 1234, "test_topic", msg::standard::UInt32().hash())
+                     .register_subscriber(5678, 1234, "test_topic", std_msgs::UInt32().hash())
+                     .register_subscriber(5678, 1234, "test_topic", std_msgs::UInt32().hash(), true)
+                     .deregister_subscriber(5678, 1234, "test_topic", std_msgs::UInt32().hash())
                      .deregister_node("test_node", 1234);
 
   auto med = fixture.build();
@@ -294,9 +294,9 @@ TEST(MediatorTest, RegisterSubscriberFailureInvalidMessageHash) {
   auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
                      .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 5)
                      .register_node("test_node", 1234)
-                     .register_subscriber(5678, 1234, "test_topic", msg::standard::UInt32().hash())
-                     .register_subscriber(8765, 1234, "test_topic", msg::standard::Time().hash(), true)
-                     .deregister_subscriber(5678, 1234, "test_topic", msg::standard::UInt32().hash())
+                     .register_subscriber(5678, 1234, "test_topic", std_msgs::UInt32().hash())
+                     .register_subscriber(8765, 1234, "test_topic", std_msgs::Time().hash(), true)
+                     .deregister_subscriber(5678, 1234, "test_topic", std_msgs::UInt32().hash())
                      .deregister_node("test_node", 1234);
 
   auto med = fixture.build();
@@ -327,9 +327,9 @@ TEST(MediatorTest, RegisterSubscriberFailureInvalidNodeID) {
   auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
                      .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 5)
                      .register_node("test_node", 1234)
-                     .register_subscriber(5678, 1234, "test_topic", msg::standard::UInt32().hash())
-                     .register_subscriber(8765, 4321, "test_topic", msg::standard::UInt32().hash(), true)
-                     .deregister_subscriber(5678, 1234, "test_topic", msg::standard::UInt32().hash())
+                     .register_subscriber(5678, 1234, "test_topic", std_msgs::UInt32().hash())
+                     .register_subscriber(8765, 4321, "test_topic", std_msgs::UInt32().hash(), true)
+                     .deregister_subscriber(5678, 1234, "test_topic", std_msgs::UInt32().hash())
                      .deregister_node("test_node", 1234);
 
   auto med = fixture.build();
@@ -357,27 +357,27 @@ TEST(MediatorTest, RegisterSubscriberFailureInvalidNodeID) {
 }
 
 TEST(MediatorTest, NotifySubscribersFromSubRegister) {
-  msg::mediator::SubNotify notify;
+  sys_msgs::SubNotify notify;
   notify.id = 5678;
   notify.publishers.resize(3);
   notify.publishers[0].id = 123;
   notify.publishers[0].node_id = 1234;
   notify.publishers[0].topic_info.name = "test_topic";
-  notify.publishers[0].topic_info.message_hash = msg::standard::UInt32().hash();
+  notify.publishers[0].topic_info.message_hash = std_msgs::UInt32().hash();
   notify.publishers[0].endpoint.address = "127.0.0.1";
   notify.publishers[0].endpoint.port = 123;
 
   notify.publishers[1].id = 234;
   notify.publishers[1].node_id = 1234;
   notify.publishers[1].topic_info.name = "test_topic";
-  notify.publishers[1].topic_info.message_hash = msg::standard::UInt32().hash();
+  notify.publishers[1].topic_info.message_hash = std_msgs::UInt32().hash();
   notify.publishers[1].endpoint.address = "127.0.0.1";
   notify.publishers[1].endpoint.port = 234;
 
   notify.publishers[2].id = 456;
   notify.publishers[2].node_id = 1234;
   notify.publishers[2].topic_info.name = "test_topic";
-  notify.publishers[2].topic_info.message_hash = msg::standard::UInt32().hash();
+  notify.publishers[2].topic_info.message_hash = std_msgs::UInt32().hash();
   notify.publishers[2].endpoint.address = "127.0.0.1";
   notify.publishers[2].endpoint.port = 456;
 
@@ -386,15 +386,15 @@ TEST(MediatorTest, NotifySubscribersFromSubRegister) {
           .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 8)
           .register_node("test_node", 1234)
           .register_publisher(
-              123, 1234, "test_topic", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 123))
+              123, 1234, "test_topic", std_msgs::UInt32().hash(), false, Endpoint("127.0.0.1", 123))
           .register_publisher(
-              234, 1234, "test_topic", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 234))
+              234, 1234, "test_topic", std_msgs::UInt32().hash(), false, Endpoint("127.0.0.1", 234))
           .register_publisher(
-              456, 1234, "test_topic", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 456))
+              456, 1234, "test_topic", std_msgs::UInt32().hash(), false, Endpoint("127.0.0.1", 456))
           .register_node("other_node", 4321)
-          .register_subscriber(5678, 4321, "test_topic", msg::standard::UInt32().hash())
-          .notify_subscriber(5678, Endpoint("127.0.0.1", 8001), "test_topic", msg::standard::UInt32().hash(), notify)
-          .deregister_subscriber(5678, 4321, "test_topic", msg::standard::UInt32().hash())
+          .register_subscriber(5678, 4321, "test_topic", std_msgs::UInt32().hash())
+          .notify_subscriber(5678, Endpoint("127.0.0.1", 8001), "test_topic", std_msgs::UInt32().hash(), notify)
+          .deregister_subscriber(5678, 4321, "test_topic", std_msgs::UInt32().hash())
           .deregister_node("other_node", 4321);
 
   auto med = fixture.build();
@@ -442,33 +442,33 @@ TEST(MediatorTest, NotifySubscribersFromSubRegister) {
 }
 
 TEST(MediatorTest, NotifySubscribersFromPubRegister) {
-  msg::mediator::SubNotify notify1;
+  sys_msgs::SubNotify notify1;
   notify1.id = 5678;
   notify1.publishers.resize(1);
   notify1.publishers[0].id = 123;
   notify1.publishers[0].node_id = 1234;
   notify1.publishers[0].topic_info.name = "test_topic";
-  notify1.publishers[0].topic_info.message_hash = msg::standard::UInt32().hash();
+  notify1.publishers[0].topic_info.message_hash = std_msgs::UInt32().hash();
   notify1.publishers[0].endpoint.address = "127.0.0.1";
   notify1.publishers[0].endpoint.port = 123;
 
-  msg::mediator::SubNotify notify2;
+  sys_msgs::SubNotify notify2;
   notify2.id = 5678;
   notify2.publishers.resize(1);
   notify2.publishers[0].id = 234;
   notify2.publishers[0].node_id = 1234;
   notify2.publishers[0].topic_info.name = "test_topic";
-  notify2.publishers[0].topic_info.message_hash = msg::standard::UInt32().hash();
+  notify2.publishers[0].topic_info.message_hash = std_msgs::UInt32().hash();
   notify2.publishers[0].endpoint.address = "127.0.0.1";
   notify2.publishers[0].endpoint.port = 234;
 
-  msg::mediator::SubNotify notify3;
+  sys_msgs::SubNotify notify3;
   notify3.id = 5678;
   notify3.publishers.resize(1);
   notify3.publishers[0].id = 456;
   notify3.publishers[0].node_id = 1234;
   notify3.publishers[0].topic_info.name = "test_topic";
-  notify3.publishers[0].topic_info.message_hash = msg::standard::UInt32().hash();
+  notify3.publishers[0].topic_info.message_hash = std_msgs::UInt32().hash();
   notify3.publishers[0].endpoint.address = "127.0.0.1";
   notify3.publishers[0].endpoint.port = 456;
 
@@ -476,18 +476,18 @@ TEST(MediatorTest, NotifySubscribersFromPubRegister) {
       MediatorTestFixture(Endpoint("127.0.0.1", 0))
           .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 8)
           .register_node("other_node", 4321)
-          .register_subscriber(5678, 4321, "test_topic", msg::standard::UInt32().hash())
+          .register_subscriber(5678, 4321, "test_topic", std_msgs::UInt32().hash())
           .register_node("test_node", 1234)
           .register_publisher(
-              123, 1234, "test_topic", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 123))
-          .notify_subscriber(5678, Endpoint("127.0.0.1", 8001), "test_topic", msg::standard::UInt32().hash(), notify1)
+              123, 1234, "test_topic", std_msgs::UInt32().hash(), false, Endpoint("127.0.0.1", 123))
+          .notify_subscriber(5678, Endpoint("127.0.0.1", 8001), "test_topic", std_msgs::UInt32().hash(), notify1)
           .register_publisher(
-              234, 1234, "test_topic", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 234))
-          .notify_subscriber(5678, Endpoint("127.0.0.1", 8001), "test_topic", msg::standard::UInt32().hash(), notify2)
+              234, 1234, "test_topic", std_msgs::UInt32().hash(), false, Endpoint("127.0.0.1", 234))
+          .notify_subscriber(5678, Endpoint("127.0.0.1", 8001), "test_topic", std_msgs::UInt32().hash(), notify2)
           .register_publisher(
-              456, 1234, "test_topic", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 456))
-          .notify_subscriber(5678, Endpoint("127.0.0.1", 8001), "test_topic", msg::standard::UInt32().hash(), notify3)
-          .deregister_subscriber(5678, 4321, "test_topic", msg::standard::UInt32().hash())
+              456, 1234, "test_topic", std_msgs::UInt32().hash(), false, Endpoint("127.0.0.1", 456))
+          .notify_subscriber(5678, Endpoint("127.0.0.1", 8001), "test_topic", std_msgs::UInt32().hash(), notify3)
+          .deregister_subscriber(5678, 4321, "test_topic", std_msgs::UInt32().hash())
           .deregister_node("other_node", 4321);
 
   auto med = fixture.build();
@@ -538,9 +538,9 @@ TEST(MediatorTest, DeregisterUnregisteredSubscriber) {
   auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
                      .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 5)
                      .register_node("test_node", 1234)
-                     .register_subscriber(5678, 1234, "test_topic", msg::standard::UInt32().hash())
-                     .deregister_subscriber(9999, 1234, "other_topic", msg::standard::UInt32().hash())
-                     .deregister_subscriber(5678, 1234, "test_topic", msg::standard::UInt32().hash())
+                     .register_subscriber(5678, 1234, "test_topic", std_msgs::UInt32().hash())
+                     .deregister_subscriber(9999, 1234, "other_topic", std_msgs::UInt32().hash())
+                     .deregister_subscriber(5678, 1234, "test_topic", std_msgs::UInt32().hash())
                      .deregister_node("test_node", 1234);
 
   auto med = fixture.build();
@@ -572,8 +572,8 @@ TEST(MediatorTest, RegisterAndDeregisterService) {
       MediatorTestFixture(Endpoint("127.0.0.1", 0))
           .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 4)
           .register_node("test_node", 1234)
-          .register_service(5678, 1234, "test_service", msg::standard::UInt32().hash(), msg::standard::Time().hash())
-          .deregister_service(5678, 1234, "test_service", msg::standard::UInt32().hash(), msg::standard::Time().hash())
+          .register_service(5678, 1234, "test_service", std_msgs::UInt32().hash(), std_msgs::Time().hash())
+          .deregister_service(5678, 1234, "test_service", std_msgs::UInt32().hash(), std_msgs::Time().hash())
           .deregister_node("test_node", 1234);
 
   auto med = fixture.build();
@@ -601,10 +601,10 @@ TEST(MediatorTest, RegisterServiceFailureDuplicateID) {
       MediatorTestFixture(Endpoint("127.0.0.1", 0))
           .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 5)
           .register_node("test_node", 1234)
-          .register_service(5678, 1234, "test_service", msg::standard::UInt32().hash(), msg::standard::Time().hash())
+          .register_service(5678, 1234, "test_service", std_msgs::UInt32().hash(), std_msgs::Time().hash())
           .register_service(
-              5678, 1234, "test_service", msg::standard::UInt32().hash(), msg::standard::Time().hash(), true)
-          .deregister_service(5678, 1234, "test_service", msg::standard::UInt32().hash(), msg::standard::Time().hash())
+              5678, 1234, "test_service", std_msgs::UInt32().hash(), std_msgs::Time().hash(), true)
+          .deregister_service(5678, 1234, "test_service", std_msgs::UInt32().hash(), std_msgs::Time().hash())
           .deregister_node("test_node", 1234);
 
   auto med = fixture.build();
@@ -636,10 +636,10 @@ TEST(MediatorTest, RegisterServiceFailureInvalidRequestHash) {
       MediatorTestFixture(Endpoint("127.0.0.1", 0))
           .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 5)
           .register_node("test_node", 1234)
-          .register_service(5678, 1234, "test_service", msg::standard::UInt32().hash(), msg::standard::Time().hash())
+          .register_service(5678, 1234, "test_service", std_msgs::UInt32().hash(), std_msgs::Time().hash())
           .register_service(
-              8765, 1234, "test_service", msg::standard::String().hash(), msg::standard::Time().hash(), true)
-          .deregister_service(5678, 1234, "test_service", msg::standard::UInt32().hash(), msg::standard::Time().hash())
+              8765, 1234, "test_service", std_msgs::String().hash(), std_msgs::Time().hash(), true)
+          .deregister_service(5678, 1234, "test_service", std_msgs::UInt32().hash(), std_msgs::Time().hash())
           .deregister_node("test_node", 1234);
 
   auto med = fixture.build();
@@ -671,10 +671,10 @@ TEST(MediatorTest, RegisterServiceFailureInvalidResponseHash) {
       MediatorTestFixture(Endpoint("127.0.0.1", 0))
           .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 5)
           .register_node("test_node", 1234)
-          .register_service(5678, 1234, "test_service", msg::standard::UInt32().hash(), msg::standard::Time().hash())
+          .register_service(5678, 1234, "test_service", std_msgs::UInt32().hash(), std_msgs::Time().hash())
           .register_service(
-              8765, 1234, "test_service", msg::standard::UInt32().hash(), msg::standard::String().hash(), true)
-          .deregister_service(5678, 1234, "test_service", msg::standard::UInt32().hash(), msg::standard::Time().hash())
+              8765, 1234, "test_service", std_msgs::UInt32().hash(), std_msgs::String().hash(), true)
+          .deregister_service(5678, 1234, "test_service", std_msgs::UInt32().hash(), std_msgs::Time().hash())
           .deregister_node("test_node", 1234);
 
   auto med = fixture.build();
@@ -706,10 +706,10 @@ TEST(MediatorTest, RegisterServiceFailureInvalidNodeID) {
       MediatorTestFixture(Endpoint("127.0.0.1", 0))
           .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 5)
           .register_node("test_node", 1234)
-          .register_service(5678, 1234, "test_service", msg::standard::UInt32().hash(), msg::standard::Time().hash())
+          .register_service(5678, 1234, "test_service", std_msgs::UInt32().hash(), std_msgs::Time().hash())
           .register_service(
-              8765, 4321, "test_service", msg::standard::UInt32().hash(), msg::standard::Time().hash(), true)
-          .deregister_service(5678, 1234, "test_service", msg::standard::UInt32().hash(), msg::standard::Time().hash())
+              8765, 4321, "test_service", std_msgs::UInt32().hash(), std_msgs::Time().hash(), true)
+          .deregister_service(5678, 1234, "test_service", std_msgs::UInt32().hash(), std_msgs::Time().hash())
           .deregister_node("test_node", 1234);
 
   auto med = fixture.build();
@@ -741,9 +741,9 @@ TEST(MediatorTest, DeregisterUnregisteredService) {
       MediatorTestFixture(Endpoint("127.0.0.1", 0))
           .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 5)
           .register_node("test_node", 1234)
-          .register_service(5678, 1234, "test_service", msg::standard::UInt32().hash(), msg::standard::Time().hash())
-          .deregister_service(9999, 1234, "other_service", msg::standard::UInt32().hash(), msg::standard::Time().hash())
-          .deregister_service(5678, 1234, "test_service", msg::standard::UInt32().hash(), msg::standard::Time().hash())
+          .register_service(5678, 1234, "test_service", std_msgs::UInt32().hash(), std_msgs::Time().hash())
+          .deregister_service(9999, 1234, "other_service", std_msgs::UInt32().hash(), std_msgs::Time().hash())
+          .deregister_service(5678, 1234, "test_service", std_msgs::UInt32().hash(), std_msgs::Time().hash())
           .deregister_node("test_node", 1234);
 
   auto med = fixture.build();
@@ -775,10 +775,10 @@ TEST(MediatorTest, RequestServiceClient) {
       MediatorTestFixture(Endpoint("127.0.0.1", 0))
           .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 5)
           .register_node("test_node", 1234)
-          .register_service(5678, 1234, "test_service", msg::standard::UInt32().hash(), msg::standard::Time().hash())
+          .register_service(5678, 1234, "test_service", std_msgs::UInt32().hash(), std_msgs::Time().hash())
           .request_service_client(
-              1234, "test_service", msg::standard::UInt32().hash(), msg::standard::Time().hash(), 5678)
-          .deregister_service(5678, 1234, "test_service", msg::standard::UInt32().hash(), msg::standard::Time().hash())
+              1234, "test_service", std_msgs::UInt32().hash(), std_msgs::Time().hash(), 5678)
+          .deregister_service(5678, 1234, "test_service", std_msgs::UInt32().hash(), std_msgs::Time().hash())
           .deregister_node("test_node", 1234);
 
   auto med = fixture.build();
@@ -806,7 +806,7 @@ TEST(MediatorTest, RequestServiceClientFailure) {
           .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 3)
           .register_node("test_node", 1234)
           .request_service_client(
-              1234, "nonexistent_service", msg::standard::UInt32().hash(), msg::standard::Time().hash(), 0, true)
+              1234, "nonexistent_service", std_msgs::UInt32().hash(), std_msgs::Time().hash(), 0, true)
           .deregister_node("test_node", 1234);
 
   auto med = fixture.build();
@@ -830,9 +830,9 @@ TEST(MediatorTest, RegisterAndDeregisterAction) {
                      .register_action(5678,
                                       1234,
                                       "test_action",
-                                      msg::standard::UInt32().hash(),
-                                      msg::standard::String().hash(),
-                                      msg::standard::Time().hash())
+                                      std_msgs::UInt32().hash(),
+                                      std_msgs::String().hash(),
+                                      std_msgs::Time().hash())
                      .deregister_action(5678, 1234, "test_action")
                      .deregister_node("test_node", 1234);
 
@@ -863,15 +863,15 @@ TEST(MediatorTest, RegisterActionFailureDuplicateID) {
                      .register_action(5678,
                                       1234,
                                       "test_action",
-                                      msg::standard::UInt32().hash(),
-                                      msg::standard::String().hash(),
-                                      msg::standard::Time().hash())
+                                      std_msgs::UInt32().hash(),
+                                      std_msgs::String().hash(),
+                                      std_msgs::Time().hash())
                      .register_action(5678,
                                       1234,
                                       "test_action",
-                                      msg::standard::UInt32().hash(),
-                                      msg::standard::String().hash(),
-                                      msg::standard::Time().hash(),
+                                      std_msgs::UInt32().hash(),
+                                      std_msgs::String().hash(),
+                                      std_msgs::Time().hash(),
                                       true)
                      .deregister_action(5678, 1234, "test_action")
                      .deregister_node("test_node", 1234);
@@ -907,15 +907,15 @@ TEST(MediatorTest, RegisterActionFailureDuplicateName) {
                      .register_action(5678,
                                       1234,
                                       "test_action",
-                                      msg::standard::UInt32().hash(),
-                                      msg::standard::String().hash(),
-                                      msg::standard::Time().hash())
+                                      std_msgs::UInt32().hash(),
+                                      std_msgs::String().hash(),
+                                      std_msgs::Time().hash())
                      .register_action(8765,
                                       1234,
                                       "test_action",
-                                      msg::standard::UInt32().hash(),
-                                      msg::standard::String().hash(),
-                                      msg::standard::Time().hash(),
+                                      std_msgs::UInt32().hash(),
+                                      std_msgs::String().hash(),
+                                      std_msgs::Time().hash(),
                                       true)
                      .deregister_action(5678, 1234, "test_action")
                      .deregister_node("test_node", 1234);
@@ -951,15 +951,15 @@ TEST(MediatorTest, RegisterActionFailureInvalidNodeID) {
                      .register_action(5678,
                                       1234,
                                       "test_action",
-                                      msg::standard::UInt32().hash(),
-                                      msg::standard::String().hash(),
-                                      msg::standard::Time().hash())
+                                      std_msgs::UInt32().hash(),
+                                      std_msgs::String().hash(),
+                                      std_msgs::Time().hash())
                      .register_action(8765,
                                       4321,
                                       "other_action",
-                                      msg::standard::UInt32().hash(),
-                                      msg::standard::String().hash(),
-                                      msg::standard::Time().hash(),
+                                      std_msgs::UInt32().hash(),
+                                      std_msgs::String().hash(),
+                                      std_msgs::Time().hash(),
                                       true)
                      .deregister_action(5678, 1234, "test_action")
                      .deregister_node("test_node", 1234);
@@ -995,9 +995,9 @@ TEST(MediatorTest, DeregisterUnregisteredAction) {
                      .register_action(5678,
                                       1234,
                                       "test_action",
-                                      msg::standard::UInt32().hash(),
-                                      msg::standard::String().hash(),
-                                      msg::standard::Time().hash())
+                                      std_msgs::UInt32().hash(),
+                                      std_msgs::String().hash(),
+                                      std_msgs::Time().hash())
                      .deregister_action(9999, 1234, "other_action")
                      .deregister_action(5678, 1234, "test_action")
                      .deregister_node("test_node", 1234);
@@ -1033,14 +1033,14 @@ TEST(MediatorTest, RequestActionClient) {
                      .register_action(5678,
                                       1234,
                                       "test_action",
-                                      msg::standard::UInt32().hash(),
-                                      msg::standard::String().hash(),
-                                      msg::standard::Time().hash())
+                                      std_msgs::UInt32().hash(),
+                                      std_msgs::String().hash(),
+                                      std_msgs::Time().hash())
                      .request_action_client(1234,
                                             "test_action",
-                                            msg::standard::UInt32().hash(),
-                                            msg::standard::String().hash(),
-                                            msg::standard::Time().hash(),
+                                            std_msgs::UInt32().hash(),
+                                            std_msgs::String().hash(),
+                                            std_msgs::Time().hash(),
                                             5678)
                      .deregister_action(5678, 1234, "test_action")
                      .deregister_node("test_node", 1234);
@@ -1070,9 +1070,9 @@ TEST(MediatorTest, RequestActionClientFailure) {
                      .register_node("test_node", 1234)
                      .request_action_client(1234,
                                             "nonexistent_action",
-                                            msg::standard::UInt32().hash(),
-                                            msg::standard::String().hash(),
-                                            msg::standard::Time().hash(),
+                                            std_msgs::UInt32().hash(),
+                                            std_msgs::String().hash(),
+                                            std_msgs::Time().hash(),
                                             0,
                                             true)
                      .deregister_node("test_node", 1234);
@@ -1092,7 +1092,7 @@ TEST(MediatorTest, RequestActionClientFailure) {
 }
 
 TEST(MediatorTest, ParameterSetRequest) {
-  auto param = std::make_shared<msg::standard::String>();
+  auto param = std::make_shared<std_msgs::String>();
   param->data = "test_value";
 
   auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
@@ -1115,10 +1115,10 @@ TEST(MediatorTest, ParameterSetRequest) {
 }
 
 TEST(MediatorTest, ParameterSetRequestFailureInvalidMessageHash) {
-  auto param = std::make_shared<msg::standard::String>();
+  auto param = std::make_shared<std_msgs::String>();
   param->data = "test_value";
 
-  auto wrong_param = std::make_shared<msg::standard::Time>();
+  auto wrong_param = std::make_shared<std_msgs::Time>();
   wrong_param->sec = 123456789;
   wrong_param->nsec = 987654321;
 
@@ -1146,10 +1146,10 @@ TEST(MediatorTest, ParameterSetRequestFailureInvalidMessageHash) {
 }
 
 TEST(MediatorTest, ParameterSetRequestFailureInvalidNodeID) {
-  auto param = std::make_shared<msg::standard::String>();
+  auto param = std::make_shared<std_msgs::String>();
   param->data = "test_value";
 
-  auto wrong_param = std::make_shared<msg::standard::Time>();
+  auto wrong_param = std::make_shared<std_msgs::Time>();
   wrong_param->sec = 123456789;
   wrong_param->nsec = 987654321;
 
@@ -1165,7 +1165,7 @@ TEST(MediatorTest, ParameterSetRequestFailureInvalidNodeID) {
 }
 
 TEST(MediatorTest, ParameterGetRequest) {
-  auto param = std::make_shared<msg::standard::String>();
+  auto param = std::make_shared<std_msgs::String>();
   param->data = "test_value";
 
   auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
@@ -1192,7 +1192,7 @@ TEST(MediatorTest, ParameterGetRequest) {
 }
 
 TEST(MediatorTest, ParameterGetRequestFailureNonexistent) {
-  auto param = std::make_shared<msg::standard::String>();
+  auto param = std::make_shared<std_msgs::String>();
   param->data = "test_value";
 
   auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
@@ -1215,7 +1215,7 @@ TEST(MediatorTest, ParameterGetRequestFailureNonexistent) {
 }
 
 TEST(MediatorTest, ParameterGetRequestFailureInvalidNodeID) {
-  auto param = std::make_shared<msg::standard::String>();
+  auto param = std::make_shared<std_msgs::String>();
   param->data = "test_value";
 
   auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
@@ -1230,7 +1230,7 @@ TEST(MediatorTest, ParameterGetRequestFailureInvalidNodeID) {
 }
 
 TEST(MediatorTest, SystemInfoGetRequest) {
-  msg::mediator::SystemInfo sys_info;
+  sys_msgs::SystemInfo sys_info;
   sys_info.nodes.resize(1);
   sys_info.nodes[0].name = "test_node";
   sys_info.nodes[0].id = 1234;
@@ -1238,43 +1238,43 @@ TEST(MediatorTest, SystemInfoGetRequest) {
   sys_info.publishers[0].id = 5678;
   sys_info.publishers[0].node_id = 1234;
   sys_info.publishers[0].topic_info.name = "test_topic";
-  sys_info.publishers[0].topic_info.message_hash = msg::standard::UInt32().hash();
+  sys_info.publishers[0].topic_info.message_hash = std_msgs::UInt32().hash();
   sys_info.publishers[0].endpoint.address = "127.0.0.1";
   sys_info.publishers[0].endpoint.port = 1234;
   sys_info.subscribers.resize(1);
   sys_info.subscribers[0].id = 9012;
   sys_info.subscribers[0].node_id = 1234;
   sys_info.subscribers[0].topic_info.name = "other_topic";
-  sys_info.subscribers[0].topic_info.message_hash = msg::standard::Time().hash();
+  sys_info.subscribers[0].topic_info.message_hash = std_msgs::Time().hash();
   sys_info.subscribers[0].endpoint.address = "127.0.0.1";
   sys_info.subscribers[0].endpoint.port = 5678;
   sys_info.services.resize(1);
   sys_info.services[0].id = 3456;
   sys_info.services[0].node_id = 1234;
   sys_info.services[0].name = "test_service";
-  sys_info.services[0].request_hash = msg::standard::UInt32().hash();
-  sys_info.services[0].response_hash = msg::standard::Time().hash();
+  sys_info.services[0].request_hash = std_msgs::UInt32().hash();
+  sys_info.services[0].response_hash = std_msgs::Time().hash();
   sys_info.services[0].endpoint.address = "127.0.0.1";
   sys_info.services[0].endpoint.port = 9012;
   sys_info.topics.resize(2);
   // Topics are listed in alphabetical order
   sys_info.topics[0].name = "other_topic";
-  sys_info.topics[0].message_hash = msg::standard::Time().hash();
+  sys_info.topics[0].message_hash = std_msgs::Time().hash();
   sys_info.topics[1].name = "test_topic";
-  sys_info.topics[1].message_hash = msg::standard::UInt32().hash();
+  sys_info.topics[1].message_hash = std_msgs::UInt32().hash();
 
   auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
                      .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 6)
                      .register_node("test_node", 1234)
                      .register_publisher(
-                         5678, 1234, "test_topic", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 1234))
+                         5678, 1234, "test_topic", std_msgs::UInt32().hash(), false, Endpoint("127.0.0.1", 1234))
                      .register_subscriber(
-                         9012, 1234, "other_topic", msg::standard::Time().hash(), false, Endpoint("127.0.0.1", 5678))
+                         9012, 1234, "other_topic", std_msgs::Time().hash(), false, Endpoint("127.0.0.1", 5678))
                      .register_service(3456,
                                        1234,
                                        "test_service",
-                                       msg::standard::UInt32().hash(),
-                                       msg::standard::Time().hash(),
+                                       std_msgs::UInt32().hash(),
+                                       std_msgs::Time().hash(),
                                        false,
                                        Endpoint("127.0.0.1", 9012))
                      .request_system_info(1234, sys_info)
@@ -1303,7 +1303,7 @@ TEST(MediatorTest, SystemInfoGetRequest) {
 }
 
 TEST(MediatorTest, SystemInfoGetRequestFailureInvalidNodeID) {
-  msg::mediator::SystemInfo sys_info;
+  sys_msgs::SystemInfo sys_info;
   sys_info.nodes.resize(1);
   sys_info.nodes[0].name = "test_node";
   sys_info.nodes[0].id = 1234;
@@ -1311,44 +1311,44 @@ TEST(MediatorTest, SystemInfoGetRequestFailureInvalidNodeID) {
   sys_info.publishers[0].id = 5678;
   sys_info.publishers[0].node_id = 1234;
   sys_info.publishers[0].topic_info.name = "test_topic";
-  sys_info.publishers[0].topic_info.message_hash = msg::standard::UInt32().hash();
+  sys_info.publishers[0].topic_info.message_hash = std_msgs::UInt32().hash();
   sys_info.publishers[0].endpoint.address = "127.0.0.1";
   sys_info.publishers[0].endpoint.port = 1234;
   sys_info.subscribers.resize(1);
   sys_info.subscribers[0].id = 9012;
   sys_info.subscribers[0].node_id = 1234;
   sys_info.subscribers[0].topic_info.name = "other_topic";
-  sys_info.subscribers[0].topic_info.message_hash = msg::standard::Time().hash();
+  sys_info.subscribers[0].topic_info.message_hash = std_msgs::Time().hash();
   sys_info.subscribers[0].endpoint.address = "127.0.0.1";
   sys_info.subscribers[0].endpoint.port = 5678;
   sys_info.services.resize(1);
   sys_info.services[0].id = 3456;
   sys_info.services[0].node_id = 1234;
   sys_info.services[0].name = "test_service";
-  sys_info.services[0].request_hash = msg::standard::UInt32().hash();
-  sys_info.services[0].response_hash = msg::standard::Time().hash();
+  sys_info.services[0].request_hash = std_msgs::UInt32().hash();
+  sys_info.services[0].response_hash = std_msgs::Time().hash();
   sys_info.services[0].endpoint.address = "127.0.0.1";
   sys_info.services[0].endpoint.port = 9012;
   sys_info.topics.resize(2);
   sys_info.topics[0].name = "test_topic";
-  sys_info.topics[0].message_hash = msg::standard::UInt32().hash();
+  sys_info.topics[0].message_hash = std_msgs::UInt32().hash();
   sys_info.topics[1].name = "other_topic";
-  sys_info.topics[1].message_hash = msg::standard::Time().hash();
+  sys_info.topics[1].message_hash = std_msgs::Time().hash();
 
-  msg::mediator::SystemInfo empty_sys_info;
+  sys_msgs::SystemInfo empty_sys_info;
 
   auto fixture = MediatorTestFixture(Endpoint("127.0.0.1", 0))
                      .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 6)
                      .register_node("test_node", 1234)
                      .register_publisher(
-                         5678, 1234, "test_topic", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 1234))
+                         5678, 1234, "test_topic", std_msgs::UInt32().hash(), false, Endpoint("127.0.0.1", 1234))
                      .register_subscriber(
-                         9012, 1234, "other_topic", msg::standard::Time().hash(), false, Endpoint("127.0.0.1", 5678))
+                         9012, 1234, "other_topic", std_msgs::Time().hash(), false, Endpoint("127.0.0.1", 5678))
                      .register_service(3456,
                                        1234,
                                        "test_service",
-                                       msg::standard::UInt32().hash(),
-                                       msg::standard::Time().hash(),
+                                       std_msgs::UInt32().hash(),
+                                       std_msgs::Time().hash(),
                                        false,
                                        Endpoint("127.0.0.1", 9012))
                      .request_system_info(4321, empty_sys_info) // Expect failure (empty info)
@@ -1382,12 +1382,12 @@ TEST(MediatorTest, SubscriberRegisteredAfterPublisherDeregistered) {
                      .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 8)
                      .register_node("pub_node", 1234)
                      .register_publisher(
-                         5678, 1234, "test_topic", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 8001))
-                     .deregister_publisher(5678, 1234, "test_topic", msg::standard::UInt32().hash())
+                         5678, 1234, "test_topic", std_msgs::UInt32().hash(), false, Endpoint("127.0.0.1", 8001))
+                     .deregister_publisher(5678, 1234, "test_topic", std_msgs::UInt32().hash())
                      .register_node("sub_node", 4321)
                      .register_subscriber(
-                         9012, 4321, "test_topic", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 8002))
-                     .deregister_subscriber(9012, 4321, "test_topic", msg::standard::UInt32().hash())
+                         9012, 4321, "test_topic", std_msgs::UInt32().hash(), false, Endpoint("127.0.0.1", 8002))
+                     .deregister_subscriber(9012, 4321, "test_topic", std_msgs::UInt32().hash())
                      .deregister_node("sub_node", 4321)
                      .deregister_node("pub_node", 1234);
 
@@ -1421,13 +1421,13 @@ TEST(MediatorTest, SubscriberRegisteredAfterPublisherDeregistered) {
 
 TEST(MediatorTest, PublisherRegisteredAfterSubscriberReceivesNotification) {
   // Test that existing subscriber IS notified when new publisher registers
-  msg::mediator::SubNotify notify;
+  sys_msgs::SubNotify notify;
   notify.id = 9012;
   notify.publishers.resize(1);
   notify.publishers[0].id = 5678;
   notify.publishers[0].node_id = 1234;
   notify.publishers[0].topic_info.name = "test_topic";
-  notify.publishers[0].topic_info.message_hash = msg::standard::UInt32().hash();
+  notify.publishers[0].topic_info.message_hash = std_msgs::UInt32().hash();
   notify.publishers[0].endpoint.address = "127.0.0.1";
   notify.publishers[0].endpoint.port = 8001;
 
@@ -1436,13 +1436,13 @@ TEST(MediatorTest, PublisherRegisteredAfterSubscriberReceivesNotification) {
           .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 8)
           .register_node("sub_node", 4321)
           .register_subscriber(
-              9012, 4321, "test_topic", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 8002))
+              9012, 4321, "test_topic", std_msgs::UInt32().hash(), false, Endpoint("127.0.0.1", 8002))
           .register_node("pub_node", 1234)
           .register_publisher(
-              5678, 1234, "test_topic", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 8001))
-          .notify_subscriber(9012, Endpoint("127.0.0.1", 8002), "test_topic", msg::standard::UInt32().hash(), notify)
-          .deregister_publisher(5678, 1234, "test_topic", msg::standard::UInt32().hash())
-          .deregister_subscriber(9012, 4321, "test_topic", msg::standard::UInt32().hash())
+              5678, 1234, "test_topic", std_msgs::UInt32().hash(), false, Endpoint("127.0.0.1", 8001))
+          .notify_subscriber(9012, Endpoint("127.0.0.1", 8002), "test_topic", std_msgs::UInt32().hash(), notify)
+          .deregister_publisher(5678, 1234, "test_topic", std_msgs::UInt32().hash())
+          .deregister_subscriber(9012, 4321, "test_topic", std_msgs::UInt32().hash())
           .deregister_node("pub_node", 1234)
           .deregister_node("sub_node", 4321);
 
@@ -1476,35 +1476,35 @@ TEST(MediatorTest, PublisherRegisteredAfterSubscriberReceivesNotification) {
 
 TEST(MediatorTest, MultipleNodesOnSameTopic) {
   // Test multiple publishers and subscribers from different nodes on same topic
-  msg::mediator::SubNotify notify1;
+  sys_msgs::SubNotify notify1;
   notify1.id = 9012;
   notify1.publishers.resize(2);
   notify1.publishers[0].id = 5678;
   notify1.publishers[0].node_id = 1234;
   notify1.publishers[0].topic_info.name = "shared_topic";
-  notify1.publishers[0].topic_info.message_hash = msg::standard::UInt32().hash();
+  notify1.publishers[0].topic_info.message_hash = std_msgs::UInt32().hash();
   notify1.publishers[0].endpoint.address = "127.0.0.1";
   notify1.publishers[0].endpoint.port = 8001;
   notify1.publishers[1].id = 5679;
   notify1.publishers[1].node_id = 4321;
   notify1.publishers[1].topic_info.name = "shared_topic";
-  notify1.publishers[1].topic_info.message_hash = msg::standard::UInt32().hash();
+  notify1.publishers[1].topic_info.message_hash = std_msgs::UInt32().hash();
   notify1.publishers[1].endpoint.address = "127.0.0.1";
   notify1.publishers[1].endpoint.port = 8003;
 
-  msg::mediator::SubNotify notify2;
+  sys_msgs::SubNotify notify2;
   notify2.id = 9013;
   notify2.publishers.resize(2);
   notify2.publishers[0].id = 5678;
   notify2.publishers[0].node_id = 1234;
   notify2.publishers[0].topic_info.name = "shared_topic";
-  notify2.publishers[0].topic_info.message_hash = msg::standard::UInt32().hash();
+  notify2.publishers[0].topic_info.message_hash = std_msgs::UInt32().hash();
   notify2.publishers[0].endpoint.address = "127.0.0.1";
   notify2.publishers[0].endpoint.port = 8001;
   notify2.publishers[1].id = 5679;
   notify2.publishers[1].node_id = 4321;
   notify2.publishers[1].topic_info.name = "shared_topic";
-  notify2.publishers[1].topic_info.message_hash = msg::standard::UInt32().hash();
+  notify2.publishers[1].topic_info.message_hash = std_msgs::UInt32().hash();
   notify2.publishers[1].endpoint.address = "127.0.0.1";
   notify2.publishers[1].endpoint.port = 8003;
 
@@ -1515,16 +1515,16 @@ TEST(MediatorTest, MultipleNodesOnSameTopic) {
           .register_node("node2", 4321)
           .register_node("node3", 5555)
           .register_publisher(
-              5678, 1234, "shared_topic", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 8001))
+              5678, 1234, "shared_topic", std_msgs::UInt32().hash(), false, Endpoint("127.0.0.1", 8001))
           .register_publisher(
-              5679, 4321, "shared_topic", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 8003))
+              5679, 4321, "shared_topic", std_msgs::UInt32().hash(), false, Endpoint("127.0.0.1", 8003))
           .register_subscriber(
-              9012, 5555, "shared_topic", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 8002))
-          .notify_subscriber(9012, Endpoint("127.0.0.1", 8002), "shared_topic", msg::standard::UInt32().hash(), notify1)
+              9012, 5555, "shared_topic", std_msgs::UInt32().hash(), false, Endpoint("127.0.0.1", 8002))
+          .notify_subscriber(9012, Endpoint("127.0.0.1", 8002), "shared_topic", std_msgs::UInt32().hash(), notify1)
           .register_subscriber(
-              9013, 5555, "shared_topic", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 8004))
+              9013, 5555, "shared_topic", std_msgs::UInt32().hash(), false, Endpoint("127.0.0.1", 8004))
           .notify_subscriber(
-              9013, Endpoint("127.0.0.1", 8004), "shared_topic", msg::standard::UInt32().hash(), notify2);
+              9013, Endpoint("127.0.0.1", 8004), "shared_topic", std_msgs::UInt32().hash(), notify2);
 
   auto med = fixture.build();
   EXPECT_TRUE(med->ok());
@@ -1553,23 +1553,23 @@ TEST(MediatorTest, MultipleNodesOnSameTopic) {
 
 TEST(MediatorTest, MultipleNodesOnDifferentTopics) {
   // Test multiple publishers and subscribers from different nodes on different topics
-  msg::mediator::SubNotify notify1;
+  sys_msgs::SubNotify notify1;
   notify1.id = 9012;
   notify1.publishers.resize(1);
   notify1.publishers[0].id = 5679;
   notify1.publishers[0].node_id = 4321;
   notify1.publishers[0].topic_info.name = "topic_b";
-  notify1.publishers[0].topic_info.message_hash = msg::standard::String().hash();
+  notify1.publishers[0].topic_info.message_hash = std_msgs::String().hash();
   notify1.publishers[0].endpoint.address = "127.0.0.1";
   notify1.publishers[0].endpoint.port = 8003;
 
-  msg::mediator::SubNotify notify2;
+  sys_msgs::SubNotify notify2;
   notify2.id = 9013;
   notify2.publishers.resize(1);
   notify2.publishers[0].id = 5678;
   notify2.publishers[0].node_id = 1234;
   notify2.publishers[0].topic_info.name = "topic_a";
-  notify2.publishers[0].topic_info.message_hash = msg::standard::UInt32().hash();
+  notify2.publishers[0].topic_info.message_hash = std_msgs::UInt32().hash();
   notify2.publishers[0].endpoint.address = "127.0.0.1";
   notify2.publishers[0].endpoint.port = 8001;
 
@@ -1578,14 +1578,14 @@ TEST(MediatorTest, MultipleNodesOnDifferentTopics) {
           .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 6)
           .register_node("node1", 1234)
           .register_node("node2", 4321)
-          .register_publisher(5678, 1234, "topic_a", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 8001))
-          .register_publisher(5679, 4321, "topic_b", msg::standard::String().hash(), false, Endpoint("127.0.0.1", 8003))
+          .register_publisher(5678, 1234, "topic_a", std_msgs::UInt32().hash(), false, Endpoint("127.0.0.1", 8001))
+          .register_publisher(5679, 4321, "topic_b", std_msgs::String().hash(), false, Endpoint("127.0.0.1", 8003))
           .register_subscriber(
-              9012, 1234, "topic_b", msg::standard::String().hash(), false, Endpoint("127.0.0.1", 8002))
-          .notify_subscriber(9012, Endpoint("127.0.0.1", 8002), "topic_b", msg::standard::String().hash(), notify1)
+              9012, 1234, "topic_b", std_msgs::String().hash(), false, Endpoint("127.0.0.1", 8002))
+          .notify_subscriber(9012, Endpoint("127.0.0.1", 8002), "topic_b", std_msgs::String().hash(), notify1)
           .register_subscriber(
-              9013, 4321, "topic_a", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 8004))
-          .notify_subscriber(9013, Endpoint("127.0.0.1", 8004), "topic_a", msg::standard::UInt32().hash(), notify2);
+              9013, 4321, "topic_a", std_msgs::UInt32().hash(), false, Endpoint("127.0.0.1", 8004))
+          .notify_subscriber(9013, Endpoint("127.0.0.1", 8004), "topic_a", std_msgs::UInt32().hash(), notify2);
 
   auto med = fixture.build();
   EXPECT_TRUE(med->ok());
@@ -1621,15 +1621,15 @@ TEST(MediatorTest, SameTopicDifferentMessageHashesIsolated) {
           .create_server(Endpoint("127.0.0.1", 0), Endpoint("127.0.0.1", 48104), 4)
           .register_node("node1", 1234)
           .register_publisher(
-              5678, 1234, "test_topic", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 8001))
+              5678, 1234, "test_topic", std_msgs::UInt32().hash(), false, Endpoint("127.0.0.1", 8001))
           .register_publisher(5679,
                               1234,
                               "test_topic",
-                              msg::standard::String().hash(),
+                              std_msgs::String().hash(),
                               true,
                               Endpoint("127.0.0.1", 8002)) // Should fail
           .register_subscriber(
-              9012, 1234, "test_topic", msg::standard::Time().hash(), true, Endpoint("127.0.0.1", 8003)); // Should fail
+              9012, 1234, "test_topic", std_msgs::Time().hash(), true, Endpoint("127.0.0.1", 8003)); // Should fail
 
   auto med = fixture.build();
   EXPECT_TRUE(med->ok());
@@ -1654,14 +1654,14 @@ TEST(MediatorTest, MultiplePublishersDeregisteredBeforeSubscriber) {
                      .register_node("pub_node1", 1234)
                      .register_node("pub_node2", 4321)
                      .register_publisher(
-                         5678, 1234, "test_topic", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 8001))
+                         5678, 1234, "test_topic", std_msgs::UInt32().hash(), false, Endpoint("127.0.0.1", 8001))
                      .register_publisher(
-                         5679, 4321, "test_topic", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 8003))
-                     .deregister_publisher(5678, 1234, "test_topic", msg::standard::UInt32().hash())
-                     .deregister_publisher(5679, 4321, "test_topic", msg::standard::UInt32().hash())
+                         5679, 4321, "test_topic", std_msgs::UInt32().hash(), false, Endpoint("127.0.0.1", 8003))
+                     .deregister_publisher(5678, 1234, "test_topic", std_msgs::UInt32().hash())
+                     .deregister_publisher(5679, 4321, "test_topic", std_msgs::UInt32().hash())
                      .register_node("sub_node", 5555)
                      .register_subscriber(
-                         9012, 5555, "test_topic", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 8002));
+                         9012, 5555, "test_topic", std_msgs::UInt32().hash(), false, Endpoint("127.0.0.1", 8002));
 
   auto med = fixture.build();
   EXPECT_TRUE(med->ok());
@@ -1694,13 +1694,13 @@ TEST(MediatorTest, MultiplePublishersDeregisteredBeforeSubscriber) {
 
 TEST(MediatorTest, PartialPublisherDeregistrationBeforeSubscriber) {
   // Test subscriber notified only of remaining publishers
-  msg::mediator::SubNotify notify;
+  sys_msgs::SubNotify notify;
   notify.id = 9012;
   notify.publishers.resize(1);
   notify.publishers[0].id = 5679;
   notify.publishers[0].node_id = 4321;
   notify.publishers[0].topic_info.name = "test_topic";
-  notify.publishers[0].topic_info.message_hash = msg::standard::UInt32().hash();
+  notify.publishers[0].topic_info.message_hash = std_msgs::UInt32().hash();
   notify.publishers[0].endpoint.address = "127.0.0.1";
   notify.publishers[0].endpoint.port = 8003;
 
@@ -1710,14 +1710,14 @@ TEST(MediatorTest, PartialPublisherDeregistrationBeforeSubscriber) {
           .register_node("pub_node1", 1234)
           .register_node("pub_node2", 4321)
           .register_publisher(
-              5678, 1234, "test_topic", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 8001))
+              5678, 1234, "test_topic", std_msgs::UInt32().hash(), false, Endpoint("127.0.0.1", 8001))
           .register_publisher(
-              5679, 4321, "test_topic", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 8003))
-          .deregister_publisher(5678, 1234, "test_topic", msg::standard::UInt32().hash())
+              5679, 4321, "test_topic", std_msgs::UInt32().hash(), false, Endpoint("127.0.0.1", 8003))
+          .deregister_publisher(5678, 1234, "test_topic", std_msgs::UInt32().hash())
           .register_node("sub_node", 5555)
           .register_subscriber(
-              9012, 5555, "test_topic", msg::standard::UInt32().hash(), false, Endpoint("127.0.0.1", 8002))
-          .notify_subscriber(9012, Endpoint("127.0.0.1", 8002), "test_topic", msg::standard::UInt32().hash(), notify);
+              9012, 5555, "test_topic", std_msgs::UInt32().hash(), false, Endpoint("127.0.0.1", 8002))
+          .notify_subscriber(9012, Endpoint("127.0.0.1", 8002), "test_topic", std_msgs::UInt32().hash(), notify);
 
   auto med = fixture.build();
   EXPECT_TRUE(med->ok());
@@ -1754,15 +1754,15 @@ TEST(MediatorTest, CrossNodeServiceIsolation) {
                      .register_service(5678,
                                        1234,
                                        "test_service",
-                                       msg::standard::UInt32().hash(),
-                                       msg::standard::Time().hash(),
+                                       std_msgs::UInt32().hash(),
+                                       std_msgs::Time().hash(),
                                        false,
                                        Endpoint("127.0.0.1", 8001))
                      .register_service(5679,
                                        4321,
                                        "test_service",
-                                       msg::standard::String().hash(),
-                                       msg::standard::Time().hash(),
+                                       std_msgs::String().hash(),
+                                       std_msgs::Time().hash(),
                                        true,
                                        Endpoint("127.0.0.1", 8002)); // Should fail - name exists
 

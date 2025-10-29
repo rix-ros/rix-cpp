@@ -2,9 +2,9 @@
 
 #include <memory>
 
-#include "rix/msg/geometry/Inertia.hpp"
-#include "rix/msg/geometry/Transform.hpp"
-#include "rix/msg/standard/Color.hpp"
+#include "rix/geometry_msgs/Inertia.hpp"
+#include "rix/geometry_msgs/Transform.hpp"
+#include "rix/std_msgs/Color.hpp"
 
 namespace rix {
 
@@ -23,7 +23,7 @@ public:
 class Box final : public Geometry {
 public:
   Box() { type = BOX; };
-  msg::geometry::Vector3 dim{};
+  geometry_msgs::Vector3 dim{};
 };
 
 class Cylinder final : public Geometry {
@@ -37,7 +37,7 @@ class Mesh final : public Geometry {
 public:
   Mesh() { type = MESH; };
   std::string filename{};
-  msg::geometry::Vector3 scale{};
+  geometry_msgs::Vector3 scale{};
 };
 
 class Material {
@@ -45,13 +45,13 @@ public:
   Material() {};
   std::string name{};
   std::string texture_filename{};
-  msg::standard::Color color{};
+  std_msgs::Color color{};
 };
 
 class Inertial {
 public:
   Inertial() {};
-  msg::geometry::Transform origin{};
+  geometry_msgs::Transform origin{};
   double mass{};
   double ixx{}, ixy{}, ixz{}, iyy{}, iyz{}, izz{};
 };
@@ -59,7 +59,7 @@ public:
 class Visual {
 public:
   Visual() {};
-  msg::geometry::Transform origin{};
+  geometry_msgs::Transform origin{};
   std::shared_ptr<Geometry> geometry{};
   Material material{};
 };
@@ -67,7 +67,7 @@ public:
 class Collision {
 public:
   Collision() {};
-  msg::geometry::Transform origin{};
+  geometry_msgs::Transform origin{};
   std::shared_ptr<Geometry> geometry{};
 };
 
@@ -93,7 +93,7 @@ public:
   const Inertial& inertial() const;                 // Transform from link frame to center of mass frame
   const std::vector<Visual>& visuals() const;       // Transform from link frame to visual frame
   const std::vector<Collision>& collisions() const; // Transform from link frame to collision frame
-  msg::geometry::Inertia get_inertia() const;       // Get the inertia as a message type
+  geometry_msgs::Inertia get_inertia() const;       // Get the inertia as a message type
 
 private:
   std::vector<Visual> visuals_;       // The transform from the link frame to the visual frame

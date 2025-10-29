@@ -9,8 +9,8 @@
 
 #include "rix/core/common.hpp"
 #include "rix/core/spinner.hpp"
-#include "rix/msg/mediator/PubInfo.hpp"
-#include "rix/msg/mediator/SubInfo.hpp"
+#include "rix/sys_msgs/PubInfo.hpp"
+#include "rix/sys_msgs/SubInfo.hpp"
 #include "rix/util/log.hpp"
 
 namespace rix {
@@ -32,8 +32,8 @@ public:
   size_t get_publisher_count() const;
 
 private:
-  using CallbackUntyped = std::function<void(const msg::Message&)>;
-  msg::mediator::SubInfo info_;
+  using CallbackUntyped = std::function<void(const Message&)>;
+  sys_msgs::SubInfo info_;
   std::shared_ptr<GenericSocket> server_;
   SocketFactory socket_factory_;
   CallbackUntyped callback_;
@@ -41,13 +41,13 @@ private:
   std::set<std::shared_ptr<GenericSocket>> clients_;
   Endpoint rixhub_endpoint_;
   std::atomic<bool> registered_flag_;
-  std::shared_ptr<msg::Message> msg_instance_;
+  std::shared_ptr<Message> msg_instance_;
 
 #ifdef RIX_MULTITHREADED
   std::thread spin_thread_;
 #endif
 
-  Subscriber(const msg::mediator::SubInfo& info, SocketFactory factory, const Endpoint& rixhub_endpoint);
+  Subscriber(const sys_msgs::SubInfo& info, SocketFactory factory, const Endpoint& rixhub_endpoint);
 
   // Internal class to handle accepting new connections from rixhub
   class SubNotifyAcceptor : public Spinner {
@@ -76,7 +76,7 @@ private:
 };
 
 template <typename TMsg> void Subscriber::set_callback(Callback<TMsg> callback) {
-  static_assert(std::is_base_of_v<msg::Message, TMsg>, "TMsg must be a subclass of msg::Message.");
+  static_assert(std::is_base_of_v<Message, TMsg>, "TMsg must be a subclass of Message.");
 
   if (TMsg().hash() != info_.topic_info.message_hash) {
     Log::warn << "Message type mismatch in set_callback." << std::endl;
@@ -84,7 +84,7 @@ template <typename TMsg> void Subscriber::set_callback(Callback<TMsg> callback) 
   }
   std::lock_guard guard(callback_mutex_);
   msg_instance_ = std::make_shared<TMsg>();
-  callback_ = [callback](const msg::Message& msg) {
+  callback_ = [callback](const Message& msg) {
     // Safe to static cast because we checked the hash above
     const auto& typed_msg = static_cast<const TMsg&>(msg);
     callback(typed_msg);

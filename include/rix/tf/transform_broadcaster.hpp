@@ -2,8 +2,8 @@
 
 #include "rix/core/node.hpp"
 #include "rix/core/publisher.hpp"
-#include "rix/msg/geometry/TF.hpp"
-#include "rix/msg/geometry/TransformStamped.hpp"
+#include "rix/geometry_msgs/TF.hpp"
+#include "rix/geometry_msgs/TransformStamped.hpp"
 
 namespace rix {
 
@@ -18,8 +18,8 @@ public:
   TransformBroadcaster(const TransformBroadcaster& other);
   TransformBroadcaster& operator=(const TransformBroadcaster& other);
 
-  void send(const msg::geometry::TransformStamped& transform) const;
-  void send(const msg::geometry::TF& tf) const;
+  void send(const geometry_msgs::TransformStamped& transform) const;
+  void send(const geometry_msgs::TF& tf) const;
 
   bool ok() const;
 

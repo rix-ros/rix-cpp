@@ -8,7 +8,7 @@ Endpoint::Endpoint() : port(0) {}
 
 Endpoint::Endpoint(std::string address, int port) : address(std::move(address)), port(port) {}
 
-Endpoint::Endpoint(const msg::mediator::Endpoint& msg) : address(msg.address), port(msg.port) {}
+Endpoint::Endpoint(const sys_msgs::Endpoint& msg) : address(msg.address), port(msg.port) {}
 
 Endpoint::Endpoint(const std::string& str) : port(0) {
   auto pos = str.find(':');

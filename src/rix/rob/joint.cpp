@@ -8,8 +8,8 @@
 
 namespace rix {
 
-Joint::Joint(const msg::geometry::Vector3& axis,
-             const msg::geometry::Transform& origin,
+Joint::Joint(const geometry_msgs::Vector3& axis,
+             const geometry_msgs::Transform& origin,
              const Joint::Type& type,
              const JointLimits& limits,
              const JointDynamics& dynamics,
@@ -74,10 +74,10 @@ double Joint::effort() const {
   return velocity_;
 }
 
-const msg::geometry::Vector3& Joint::axis() const { return axis_; }
-const msg::geometry::Transform& Joint::origin() const { return origin_; }
+const geometry_msgs::Vector3& Joint::axis() const { return axis_; }
+const geometry_msgs::Transform& Joint::origin() const { return origin_; }
 
-msg::geometry::Transform Joint::transform() const {
+geometry_msgs::Transform Joint::transform() const {
   Eigen::Affine3d T = Eigen::Affine3d::Identity();
   Eigen::Vector3d axis = msg_to_eigen(axis_);
 
@@ -96,8 +96,8 @@ msg::geometry::Transform Joint::transform() const {
   return eigen_to_msg(T);
 }
 
-msg::sensor::JointState Joint::get_state() const {
-  msg::sensor::JointState js;
+sensor_msgs::JointState Joint::get_state() const {
+  sensor_msgs::JointState js;
   js.name = name_;
   if (is_mimic()) {
     auto parent_state = mimic_.joint->get_state();
@@ -122,7 +122,7 @@ void Joint::set_state(double position, double velocity, double effort) {
   effort_ = effort;
 }
 
-void Joint::set_state(const msg::sensor::JointState& joint_state) {
+void Joint::set_state(const sensor_msgs::JointState& joint_state) {
   if (is_mimic()) {
     Log::warn << "Cannot set state of mimic joint: \"" << name_ << "\"!";
     return;

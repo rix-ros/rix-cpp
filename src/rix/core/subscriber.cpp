@@ -1,19 +1,26 @@
 #include "rix/core/subscriber.hpp"
-#include "rix/msg/mediator/Status.hpp"
-#include "rix/msg/mediator/SubNotify.hpp"
+#include "rix/sys_msgs/Status.hpp"
+#include "rix/sys_msgs/SubNotify.hpp"
 
 namespace rix {
 
-Subscriber::Subscriber(const msg::mediator::SubInfo& info,
-                       SocketFactory socket_factory,
-                       const Endpoint& rixhub_endpoint)
+Subscriber::Subscriber(const sys_msgs::SubInfo& info, SocketFactory socket_factory, const Endpoint& rixhub_endpoint)
     : info_(info), socket_factory_(socket_factory), callback_(nullptr), rixhub_endpoint_(rixhub_endpoint),
       registered_flag_(false) {
 
   server_ = socket_factory_();
-  server_->set_reuse_address(true);
-  server_->bind(Endpoint(info_.endpoint.address, info_.endpoint.port));
-  server_->listen(MAX_CONN);
+  if (!server_->set_reuse_address(true)) {
+    shutdown();
+    return;
+  }
+  if (!server_->bind(Endpoint(info_.endpoint.address, info_.endpoint.port))) {
+    shutdown();
+    return;
+  }
+  if (!server_->listen(MAX_CONN)) {
+    shutdown();
+    return;
+  }
 
   // Ensure server was intitialized properly
   if (server_->is_exception()) {
@@ -37,8 +44,8 @@ Subscriber::Subscriber(const msg::mediator::SubInfo& info,
     return;
   }
 
-  msg::mediator::Operation operation;
-  msg::mediator::Status status;
+  sys_msgs::Operation operation;
+  sys_msgs::Status status;
   if (!client->recv_message(operation, status)) {
     shutdown();
     return;
@@ -134,7 +141,7 @@ void Subscriber::on_spin() {
     auto client = *it;
 
     // Read a message from the publisher
-    msg::mediator::Operation operation;
+    sys_msgs::Operation operation;
     if (!client->recv_message(operation, *msg_instance_)) {
       clients_.erase(client);
       it++;
@@ -176,8 +183,8 @@ void Subscriber::SubNotifyAcceptor::on_spin() {
     return;
   }
 
-  msg::mediator::Operation operation;
-  msg::mediator::SubNotify sub_notify;
+  sys_msgs::Operation operation;
+  sys_msgs::SubNotify sub_notify;
   if (!conn->recv_message(operation, sub_notify)) {
     return;
   }

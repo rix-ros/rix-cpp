@@ -6,7 +6,7 @@ SimpleServiceClient::SimpleServiceClient(int rate) : rix::Node(NAME) {
     return;
   }
 
-  srv_cli_ = create_service_client<rix::msg::standard::UInt32, rix::msg::standard::String>("/alphabet");
+  srv_cli_ = create_service_client<rix::std_msgs::UInt32, rix::std_msgs::String>("/alphabet");
   if (!srv_cli_->ok()) {
     shutdown();
     Log::error << "Failed to create service client." << std::endl;
@@ -23,9 +23,9 @@ SimpleServiceClient::SimpleServiceClient(int rate) : rix::Node(NAME) {
 }
 
 void SimpleServiceClient::timer_callback(const rix::TimerCallback::Event& event) {
-  rix::msg::standard::UInt32 req;
+  rix::std_msgs::UInt32 req;
   req.data = i_++;
-  rix::msg::standard::String res;
+  rix::std_msgs::String res;
   if (!srv_cli_->call(req, res)) {
     return;
   }

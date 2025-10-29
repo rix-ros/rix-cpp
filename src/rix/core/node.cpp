@@ -1,7 +1,7 @@
 #include "rix/core/node.hpp"
-#include "rix/msg/mediator/Operation.hpp"
-#include "rix/msg/mediator/Status.hpp"
-#include "rix/msg/standard/UInt64.hpp"
+#include "rix/std_msgs/UInt64.hpp"
+#include "rix/sys_msgs/Operation.hpp"
+#include "rix/sys_msgs/Status.hpp"
 
 namespace rix {
 
@@ -14,12 +14,15 @@ Node::Node(const std::string& name, const Endpoint& endpoint)
   }
 
   if (!server_->set_reuse_address(true)) {
+    shutdown();
     return;
   }
   if (!server_->bind(Endpoint(endpoint.address, endpoint.port))) {
+    shutdown();
     return;
   }
   if (!server_->listen(MAX_CONN)) {
+    shutdown();
     return;
   }
 
@@ -51,8 +54,8 @@ Node::Node(const std::string& name, const Endpoint& endpoint)
     return;
   }
 
-  msg::mediator::Operation operation;
-  msg::mediator::Status status;
+  sys_msgs::Operation operation;
+  sys_msgs::Status status;
   if (!client->recv_message(operation, status)) {
     shutdown();
     return;
@@ -71,10 +74,10 @@ Node::Node(const std::string& name, const Endpoint& endpoint)
     if (server_->is_readable()) {
       const auto conn = server_->accept();
       if (conn) {
-        msg::mediator::Operation operation;
+        sys_msgs::Operation operation;
         conn->recv_message(operation, operation.size());
         if (operation.opcode == OPCODE::PING) {
-          msg::mediator::Status status;
+          sys_msgs::Status status;
           status.id = info_.id;
           status.error = 0;
           conn->send_message(OPCODE::STATUS_RESPONSE, status);
@@ -120,10 +123,10 @@ void Node::on_spin() {
 #endif
 }
 
-std::shared_ptr<Publisher> Node::create_publisher(const msg::mediator::TopicInfo& topic_info,
+std::shared_ptr<Publisher> Node::create_publisher(const sys_msgs::TopicInfo& topic_info,
                                                   const Endpoint& rixhub_endpoint,
                                                   const Endpoint& endpoint) {
-  msg::mediator::PubInfo pub_info;
+  sys_msgs::PubInfo pub_info;
   pub_info.id = id_factory_();
   pub_info.node_id = info_.id;
   pub_info.topic_info = topic_info;
@@ -134,10 +137,10 @@ std::shared_ptr<Publisher> Node::create_publisher(const msg::mediator::TopicInfo
   return pub;
 }
 
-std::shared_ptr<Subscriber> Node::create_subscriber(const msg::mediator::TopicInfo& topic_info,
+std::shared_ptr<Subscriber> Node::create_subscriber(const sys_msgs::TopicInfo& topic_info,
                                                     const Endpoint& rixhub_endpoint,
                                                     const Endpoint& endpoint) {
-  msg::mediator::SubInfo sub_info;
+  sys_msgs::SubInfo sub_info;
   sub_info.id = id_factory_();
   sub_info.node_id = info_.id;
   sub_info.topic_info = topic_info;
@@ -149,7 +152,7 @@ std::shared_ptr<Subscriber> Node::create_subscriber(const msg::mediator::TopicIn
 }
 
 std::shared_ptr<Service>
-Node::create_service(msg::mediator::SrvInfo& service_info, const Endpoint& rixhub_endpoint, const Endpoint& endpoint) {
+Node::create_service(sys_msgs::SrvInfo& service_info, const Endpoint& rixhub_endpoint, const Endpoint& endpoint) {
   service_info.id = id_factory_();
   service_info.node_id = info_.id;
   service_info.endpoint.address = endpoint.address;
@@ -160,7 +163,7 @@ Node::create_service(msg::mediator::SrvInfo& service_info, const Endpoint& rixhu
 }
 
 std::shared_ptr<Action>
-Node::create_action(msg::mediator::ActInfo& action_info, const Endpoint& rixhub_endpoint, const Endpoint& endpoint) {
+Node::create_action(sys_msgs::ActInfo& action_info, const Endpoint& rixhub_endpoint, const Endpoint& endpoint) {
   action_info.id = id_factory_();
   action_info.node_id = info_.id;
   action_info.endpoint.address = endpoint.address;
@@ -170,18 +173,18 @@ Node::create_action(msg::mediator::ActInfo& action_info, const Endpoint& rixhub_
   return act;
 }
 
-bool Node::get_system_info(msg::mediator::SystemInfo& info) {
+bool Node::get_system_info(sys_msgs::SystemInfo& info) {
   auto client = socket_factory_();
   if (!client->connect(rixhub_endpoint_))
     return false;
 
-  msg::standard::UInt64 node_id;
+  std_msgs::UInt64 node_id;
   node_id.data = info_.id;
   if (!client->send_message(OPCODE::SYSTEM_GET_REQUEST, node_id)) {
     return false;
   }
 
-  msg::mediator::Operation operation;
+  sys_msgs::Operation operation;
   if (!client->recv_message(operation, info)) {
     return false;
   }
@@ -192,14 +195,14 @@ bool Node::get_system_info(msg::mediator::SystemInfo& info) {
   return true;
 }
 
-std::shared_ptr<ServiceClient> Node::create_service_client(const msg::mediator::SrvRequest& service_request,
+std::shared_ptr<ServiceClient> Node::create_service_client(const sys_msgs::SrvRequest& service_request,
                                                            const Endpoint& rixhub_endpoint) {
   auto srv_cli = std::shared_ptr<ServiceClient>(new ServiceClient(service_request, socket_factory_, rixhub_endpoint));
   components_.push_back(srv_cli);
   return srv_cli;
 }
 
-std::shared_ptr<ActionClient> Node::create_action_client(const msg::mediator::ActRequest& action_request,
+std::shared_ptr<ActionClient> Node::create_action_client(const sys_msgs::ActRequest& action_request,
                                                          const Endpoint& rixhub_endpoint) {
   auto act_cli = std::shared_ptr<ActionClient>(new ActionClient(action_request, socket_factory_, rixhub_endpoint));
   components_.push_back(act_cli);

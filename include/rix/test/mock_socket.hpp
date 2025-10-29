@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "rix/ipc/generic_socket.hpp"
-#include "rix/msg/mediator/Operation.hpp"
+#include "rix/sys_msgs/Operation.hpp"
 #include <gmock/gmock.h>
 
 namespace rix {
@@ -23,8 +23,8 @@ public:
     ON_CALL(*this, send).WillByDefault([](const void* buf, size_t len, int flags) -> ssize_t { return -1; });
     ON_CALL(*this, recv).WillByDefault([](void* buf, size_t len, int flags) -> ssize_t { return -1; });
 
-    ON_CALL(*this, send_message).WillByDefault([](uint8_t opcode, const msg::Message& msg) -> bool { return false; });
-    ON_CALL(*this, recv_message).WillByDefault([](msg::Message& msg, size_t len) -> bool { return false; });
+    ON_CALL(*this, send_message).WillByDefault([](uint8_t opcode, const Message& msg) -> bool { return false; });
+    ON_CALL(*this, recv_message).WillByDefault([](Message& msg, size_t len) -> bool { return false; });
 
     ON_CALL(*this, wait_readable).WillByDefault([](const Duration& timeout) -> bool { return false; });
     ON_CALL(*this, wait_writable).WillByDefault([](const Duration& timeout) -> bool { return false; });
@@ -54,8 +54,8 @@ public:
   MOCK_METHOD(ssize_t, send, (const void* buf, size_t len, int flags), (const, override));
   MOCK_METHOD(ssize_t, recv, (void* buf, size_t len, int flags), (const, override));
 
-  MOCK_METHOD(bool, send_message, (uint8_t opcode, const msg::Message& msg), (const, override));
-  MOCK_METHOD(bool, recv_message, (msg::Message & msg, size_t len), (const, override));
+  MOCK_METHOD(bool, send_message, (uint8_t opcode, const Message& msg), (const, override));
+  MOCK_METHOD(bool, recv_message, (Message & msg, size_t len), (const, override));
 
   MOCK_METHOD(bool, wait_readable, (const Duration& timeout), (const, override));
   MOCK_METHOD(bool, wait_writable, (const Duration& timeout), (const, override));

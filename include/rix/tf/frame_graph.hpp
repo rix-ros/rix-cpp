@@ -5,8 +5,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "rix/msg/geometry/TF.hpp"
-#include "rix/msg/geometry/TransformStamped.hpp"
+#include "rix/geometry_msgs/TF.hpp"
+#include "rix/geometry_msgs/TransformStamped.hpp"
 #include "rix/tf/frame.hpp"
 #include "rix/util/time.hpp"
 
@@ -60,7 +60,7 @@ public:
    * @return true if all transforms were successfully update, false if at
    * least one transform failed
    */
-  bool update(const msg::geometry::TF& tf);
+  bool update(const geometry_msgs::TF& tf);
 
   /**
    * @brief Updates the FrameGraph with the transform
@@ -68,12 +68,12 @@ public:
    * @param transform The transform to update the FrameGraph with
    * @return true if the transform was successfully updated
    */
-  bool update(const msg::geometry::TransformStamped& transform);
+  bool update(const geometry_msgs::TransformStamped& transform);
 
   bool get_transform(const std::string& target_frame,
                      const std::string& source_frame,
                      const Time& time,
-                     msg::geometry::TransformStamped& transform) const;
+                     geometry_msgs::TransformStamped& transform) const;
 
 private:
   std::vector<std::vector<int>> graph_;

@@ -8,8 +8,8 @@
 #include "rix/rob/robot_model.hpp"
 #include "robots.hpp"
 
-using rix::msg::geometry::Transform;
-using rix::msg::sensor::JS;
+using rix::geometry_msgs::Transform;
+using rix::sensor_msgs::JS;
 using namespace rix;
 
 // Helper functions for property-based testing
@@ -49,7 +49,7 @@ JS generate_random_joint_states(std::shared_ptr<RobotModel> robot, const std::ve
       continue; // Skip fixed joints
     }
 
-    rix::msg::sensor::JointState joint_state;
+    rix::sensor_msgs::JointState joint_state;
     joint_state.name = joint->name();
     joint_state.velocity = 0.0;
     joint_state.effort = 0.0;
@@ -206,7 +206,7 @@ void test_jacobian_accuracy(const std::shared_ptr<RobotModel>& robot,
         continue; // Skip fixed joints
       }
 
-      rix::msg::sensor::JointState joint_state;
+      rix::sensor_msgs::JointState joint_state;
       joint_state.name = joint->name();
       joint_state.velocity = 0.0;
       joint_state.effort = 0.0;
@@ -834,7 +834,7 @@ TEST(KinematicsSolver, FK_ExactOutput_SimpleBot_ZeroConfig) {
   auto chain = robot->get_joints_in_chain("tool");
   for (const auto& joint : chain) {
     if (joint->type() != Joint::Type::FIXED) {
-      rix::msg::sensor::JointState js;
+      rix::sensor_msgs::JointState js;
       js.name = joint->name();
       js.position = 0.0;
       js.velocity = 0.0;
@@ -901,7 +901,7 @@ TEST(KinematicsSolver, FK_ExactOutput_RX200_ZeroConfig) {
   auto chain = robot->get_joints_in_chain("/gripper_link");
   for (const auto& joint : chain) {
     if (joint->type() != Joint::Type::FIXED) {
-      rix::msg::sensor::JointState js;
+      rix::sensor_msgs::JointState js;
       js.name = joint->name();
       js.position = 0.0;
       js.velocity = 0.0;
@@ -968,7 +968,7 @@ TEST(KinematicsSolver, FK_ExactOutput_Fetch_ZeroConfig) {
   auto chain = robot->get_joints_in_chain("gripper_link");
   for (const auto& joint : chain) {
     if (joint->type() != Joint::Type::FIXED) {
-      rix::msg::sensor::JointState js;
+      rix::sensor_msgs::JointState js;
       js.name = joint->name();
       js.position = 0.0;
       js.velocity = 0.0;
@@ -1036,7 +1036,7 @@ TEST(KinematicsSolver, FK_ExactOutput_SimpleBot_IncrementalChanges) {
   auto chain = robot->get_joints_in_chain("tool");
   for (const auto& joint : chain) {
     if (joint->type() != Joint::Type::FIXED) {
-      rix::msg::sensor::JointState js;
+      rix::sensor_msgs::JointState js;
       js.name = joint->name();
       js.position = 0.0;
       js.velocity = 0.0;
@@ -1131,7 +1131,7 @@ TEST(KinematicsSolver, FK_ExactOutput_JointTypes) {
 
     for (const auto& joint : chain) {
       if (joint->type() != Joint::Type::FIXED) {
-        rix::msg::sensor::JointState js_zero, js_p;
+        rix::sensor_msgs::JointState js_zero, js_p;
         js_zero.name = joint->name();
         js_zero.position = 0.0;
         js_p.name = joint->name();

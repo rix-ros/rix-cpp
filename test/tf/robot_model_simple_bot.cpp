@@ -52,7 +52,7 @@ TEST(RobotModel, GetJointStatesTestSimpleBot) {
   robot.set_state("eye_lens_left", M_PI / 4, 1.1, 0.9);
   robot.set_state("eye_lens_right", -M_PI / 3, 1.2, 0.8);
 
-  std::map<std::string, rix::msg::sensor::JointState> correct;
+  std::map<std::string, rix::sensor_msgs::JointState> correct;
   auto joint_names = robot.get_joint_names();
   for (auto j : joint_names) {
     if (robot.get_joint(j)->type() == Joint::Type::FIXED) {

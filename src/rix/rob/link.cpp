@@ -22,8 +22,8 @@ const Inertial& Link::inertial() const { return inertial_; }
 const std::vector<Visual>& Link::visuals() const { return visuals_; }
 const std::vector<Collision>& Link::collisions() const { return collisions_; }
 
-msg::geometry::Inertia Link::get_inertia() const {
-  msg::geometry::Inertia inertia;
+geometry_msgs::Inertia Link::get_inertia() const {
+  geometry_msgs::Inertia inertia;
   inertia.mass = inertial_.mass;
   inertia.center_of_mass = inertial_.origin.translation;
   inertia.ixx = inertial_.ixx;

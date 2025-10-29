@@ -5,11 +5,11 @@
 using namespace rix;
 
 TEST(SimpleServiceTest, Create) {
-  msg::mediator::NodeInfo node_info;
-  msg::mediator::SrvInfo srv_info;
+  sys_msgs::NodeInfo node_info;
+  sys_msgs::SrvInfo srv_info;
   TestFixture()
       .create_node("simple_service", node_info)
-      .create_service<msg::standard::UInt32, msg::standard::String>("/alphabet", srv_info, node_info)
+      .create_service<std_msgs::UInt32, std_msgs::String>("/alphabet", srv_info, node_info)
       .destroy_node(node_info)
       .destroy_service(srv_info)
       .build<SimpleService>([](TestFixture& fixture) {
@@ -19,7 +19,7 @@ TEST(SimpleServiceTest, Create) {
 }
 
 TEST(SimpleServiceTest, CreateNodeRegisterFailure) {
-  msg::mediator::NodeInfo node_info;
+  sys_msgs::NodeInfo node_info;
   TestFixture()
       .create_node("simple_service", node_info, true) // Simulate failure
       .build<SimpleService>([](TestFixture& fixture) {
@@ -29,11 +29,11 @@ TEST(SimpleServiceTest, CreateNodeRegisterFailure) {
 }
 
 TEST(SimpleServiceTest, CreatePublisherRegisterFailure) {
-  msg::mediator::NodeInfo node_info;
-  msg::mediator::SrvInfo srv_info;
+  sys_msgs::NodeInfo node_info;
+  sys_msgs::SrvInfo srv_info;
   TestFixture()
       .create_node("simple_service", node_info)
-      .create_service<msg::standard::UInt32, msg::standard::String>(
+      .create_service<std_msgs::UInt32, std_msgs::String>(
           "/alphabet", srv_info, node_info, true) // Simulate failure
       .destroy_node(node_info)
       .build<SimpleService>([](TestFixture& fixture) {
@@ -44,23 +44,23 @@ TEST(SimpleServiceTest, CreatePublisherRegisterFailure) {
 
 // Recommended way to run tests for single-threaded nodes that do not use poller
 TEST(SimpleServiceTest, SpinWithOperationNotifications) {
-  std::vector<std::shared_ptr<msg::standard::UInt32>> requests;
-  std::vector<std::shared_ptr<msg::standard::String>> responses;
+  std::vector<std::shared_ptr<std_msgs::UInt32>> requests;
+  std::vector<std::shared_ptr<std_msgs::String>> responses;
   for (int i = 0; i < 5; i++) {
-    auto req = std::make_shared<msg::standard::UInt32>();
+    auto req = std::make_shared<std_msgs::UInt32>();
     req->data = i;
     requests.push_back(req);
-    auto res = std::make_shared<msg::standard::String>();
+    auto res = std::make_shared<std_msgs::String>();
     res->data = std::string(1, 'a' + (i % 26));
     responses.push_back(res);
   }
 
-  msg::mediator::NodeInfo node_info;
-  msg::mediator::SrvInfo srv_info;
+  sys_msgs::NodeInfo node_info;
+  sys_msgs::SrvInfo srv_info;
   TestFixture()
       .create_node("simple_service", node_info)
       .enable_operation_notifications()
-      .create_service<msg::standard::UInt32, msg::standard::String>("/alphabet", srv_info, node_info, false, 5)
+      .create_service<std_msgs::UInt32, std_msgs::String>("/alphabet", srv_info, node_info, false, 5)
       .accept_service_client(requests[0], responses[0])
       .accept_service_client(requests[1], responses[1])
       .accept_service_client(requests[2], responses[2])

@@ -21,7 +21,7 @@ SimpleSubscriber::SimpleSubscriber(int port) : Node(NAME) {
   }
 }
 
-void SimpleSubscriber::callback(const rix::msg::standard::Header& msg) {
+void SimpleSubscriber::callback(const rix::std_msgs::Header& msg) {
   std::stringstream ss;
   ss << "Received message: \n"
      << "seq: " << msg.seq << "\n"

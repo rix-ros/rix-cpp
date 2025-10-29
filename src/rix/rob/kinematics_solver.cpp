@@ -22,9 +22,9 @@ KinematicsSolver::KinematicsSolver(std::shared_ptr<RobotModel> robot,
     : robot_(std::move(robot)), step_scale_(step_scale), tolerance_(tolerance), max_iterations_(max_iterations) {}
 
 bool KinematicsSolver::solve_ik(const std::string& link_name,
-                                const msg::geometry::Transform& goal,
-                                msg::sensor::JS initial_guess,
-                                msg::sensor::JS& solution) const {
+                                const geometry_msgs::Transform& goal,
+                                sensor_msgs::JS initial_guess,
+                                sensor_msgs::JS& solution) const {
   auto chain = robot_->get_joints_in_chain(link_name);
   if (initial_guess.joint_states.empty()) {
     for (const auto& j : chain) {
@@ -37,7 +37,7 @@ bool KinematicsSolver::solve_ik(const std::string& link_name,
         p = get_random(j->limits().lower, j->limits().upper);
       }
 
-      msg::sensor::JointState joint_state;
+      sensor_msgs::JointState joint_state;
       joint_state.name = j->name();
       joint_state.position = p;
       joint_state.velocity = 0;
@@ -68,9 +68,9 @@ bool KinematicsSolver::solve_ik(const std::string& link_name,
 }
 
 bool KinematicsSolver::solve_ik(const std::string& link_name,
-                                const msg::geometry::Transform& goal,
-                                msg::sensor::JS initial_guess,
-                                std::vector<msg::sensor::JS>& solution) const {
+                                const geometry_msgs::Transform& goal,
+                                sensor_msgs::JS initial_guess,
+                                std::vector<sensor_msgs::JS>& solution) const {
   auto chain = robot_->get_joints_in_chain(link_name);
   if (initial_guess.joint_states.empty()) {
     for (const auto& j : chain) {
@@ -83,7 +83,7 @@ bool KinematicsSolver::solve_ik(const std::string& link_name,
         p = get_random(j->limits().lower, j->limits().upper);
       }
 
-      msg::sensor::JointState joint_state;
+      sensor_msgs::JointState joint_state;
       joint_state.name = j->name();
       joint_state.position = p;
       joint_state.velocity = 0;
@@ -100,7 +100,7 @@ bool KinematicsSolver::solve_ik(const std::string& link_name,
   for (size_t i = 0; i < max_iterations_; i++) {
     converged = iterate_ik(chain, link_name, goal_eigen);
 
-    msg::sensor::JS intermediate_solution;
+    sensor_msgs::JS intermediate_solution;
     intermediate_solution.joint_states.reserve(chain.size());
     for (auto& j : chain) {
       intermediate_solution.joint_states.push_back(j->get_state());
@@ -112,7 +112,7 @@ bool KinematicsSolver::solve_ik(const std::string& link_name,
   return converged;
 }
 
-msg::geometry::Transform KinematicsSolver::solve_fk(const std::string& link) const {
+geometry_msgs::Transform KinematicsSolver::solve_fk(const std::string& link) const {
   auto chain = robot_->get_joints_in_chain(link);
   Eigen::Affine3d transform = Eigen::Affine3d::Identity();
   for (const auto& j : chain) {

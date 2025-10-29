@@ -5,7 +5,7 @@
 
 #include "rix/core/common.hpp"
 #include "rix/core/spinner.hpp"
-#include "rix/msg/mediator/SrvRequest.hpp"
+#include "rix/sys_msgs/SrvRequest.hpp"
 
 namespace rix {
 
@@ -22,10 +22,10 @@ public:
 
   ~ServiceClient() override;
 
-  bool call(const msg::Message& request, msg::Message& response);
+  bool call(const Message& request, Message& response);
 
 private:
-  msg::mediator::SrvRequest request_;
+  sys_msgs::SrvRequest request_;
   SocketFactory socket_factory_;
   Endpoint endpoint_;
 
@@ -37,7 +37,7 @@ private:
   using Spinner::spin_once;
   void on_spin() override;
 
-  ServiceClient(const msg::mediator::SrvRequest& request, SocketFactory factory, const Endpoint& rixhub_endpoint);
+  ServiceClient(const sys_msgs::SrvRequest& request, SocketFactory factory, const Endpoint& rixhub_endpoint);
 };
 
 } // namespace rix

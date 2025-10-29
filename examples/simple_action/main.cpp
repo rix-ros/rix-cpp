@@ -6,7 +6,7 @@ int main(int argc, char** argv) {
 
   auto parser = ArgumentParser(NAME, "A simple subscriber example.");
   parser.add<int>("max_iters", "The maximum number of iterations.", 'i', 100);
-  parser.add<int>("port", "The port for the subscriber server.", 'p', 8000);
+  parser.add<int>("port", "The port for the subscriber server.", 'p', 8003);
 
   if (!parser.parse(argc, argv)) {
     Log::error << "Failed to parse arguments." << std::endl;

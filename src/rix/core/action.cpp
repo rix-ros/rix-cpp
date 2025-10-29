@@ -1,5 +1,5 @@
 #include "rix/core/action.hpp"
-#include "rix/msg/mediator/Status.hpp"
+#include "rix/sys_msgs/Status.hpp"
 
 namespace rix {
 
@@ -35,7 +35,7 @@ void Action::set_preempt_callback(std::function<void()> callback) {
   preempt_callback_ = callback;
 }
 
-Action::Action(const msg::mediator::ActInfo& info, SocketFactory socket_factory, const Endpoint& rixhub_endpoint)
+Action::Action(const sys_msgs::ActInfo& info, SocketFactory socket_factory, const Endpoint& rixhub_endpoint)
     : info_(info), socket_factory_(socket_factory), rixhub_endpoint_(rixhub_endpoint) {
   server_ = socket_factory_();
   if (!server_) {
@@ -43,9 +43,18 @@ Action::Action(const msg::mediator::ActInfo& info, SocketFactory socket_factory,
     return;
   }
 
-  server_->set_reuse_address(true);
-  server_->bind(Endpoint(info_.endpoint.address, info_.endpoint.port));
-  server_->listen(MAX_CONN);
+  if (!server_->set_reuse_address(true)) {
+    shutdown();
+    return;
+  }
+  if (!server_->bind(Endpoint(info_.endpoint.address, info_.endpoint.port))) {
+    shutdown();
+    return;
+  }
+  if (!server_->listen(MAX_CONN)) {
+    shutdown();
+    return;
+  }
 
   // Ensure server was intitialized properly
   if (server_->is_exception()) {
@@ -69,8 +78,8 @@ Action::Action(const msg::mediator::ActInfo& info, SocketFactory socket_factory,
     return;
   }
 
-  msg::mediator::Operation operation;
-  msg::mediator::Status status;
+  sys_msgs::Operation operation;
+  sys_msgs::Status status;
   if (!client->recv_message(operation, status)) {
     shutdown();
     return;
@@ -108,12 +117,12 @@ void Action::ActAcceptor::on_spin() {
     return;
   }
 
-  msg::mediator::Operation operation;
+  sys_msgs::Operation operation;
   if (!conn->recv_message(operation, operation.size())) {
     return;
   }
 
-  msg::mediator::Status status;
+  sys_msgs::Status status;
   // Reject if already connected
   if (parent.connection_) {
     status.error = -1;
@@ -166,13 +175,13 @@ void Action::on_spin() {
 
   // Check for incoming messages from ActionClient
   if (connection_->wait_readable(Duration(0.0))) {
-    msg::mediator::Operation operation;
+    sys_msgs::Operation operation;
     if (!connection_->recv_message(operation, operation.size())) {
       connection_ = nullptr;
       return;
     }
 
-    msg::mediator::Status status;
+    sys_msgs::Status status;
     switch (operation.opcode) {
     case OPCODE::ACT_CANCEL_MESSAGE: {
       // Handle cancel message

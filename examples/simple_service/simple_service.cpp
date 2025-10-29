@@ -15,6 +15,6 @@ SimpleService::SimpleService(int port) : Node(NAME) {
   }
 }
 
-void SimpleService::callback(const rix::msg::standard::UInt32& request, rix::msg::standard::String& response) {
+void SimpleService::callback(const rix::std_msgs::UInt32& request, rix::std_msgs::String& response) {
   response.data = std::string(1, 'a' + (request.data % 26));
 }

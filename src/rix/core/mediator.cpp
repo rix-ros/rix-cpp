@@ -1,11 +1,11 @@
 #include "rix/core/mediator.hpp"
-#include "rix/msg/mediator/ActRequest.hpp"
-#include "rix/msg/mediator/ActResponse.hpp"
-#include "rix/msg/mediator/SrvRequest.hpp"
-#include "rix/msg/mediator/SrvResponse.hpp"
-#include "rix/msg/mediator/Status.hpp"
-#include "rix/msg/mediator/SubNotify.hpp"
-#include "rix/msg/standard/UInt64.hpp"
+#include "rix/std_msgs/UInt64.hpp"
+#include "rix/sys_msgs/ActRequest.hpp"
+#include "rix/sys_msgs/ActResponse.hpp"
+#include "rix/sys_msgs/SrvRequest.hpp"
+#include "rix/sys_msgs/SrvResponse.hpp"
+#include "rix/sys_msgs/Status.hpp"
+#include "rix/sys_msgs/SubNotify.hpp"
 
 namespace rix {
 
@@ -35,7 +35,7 @@ void Mediator::on_spin() {
     return;
   }
 
-  msg::mediator::Operation operation;
+  sys_msgs::Operation operation;
   if (!conn->recv_message(operation, operation.size())) {
     return;
   }
@@ -114,16 +114,16 @@ void Mediator::on_spin() {
   }
 }
 
-void Mediator::handle_ping(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn) {
-  msg::mediator::Status status;
+void Mediator::handle_ping(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+  sys_msgs::Status status;
   status.error = 0;
   conn->send_message(OPCODE::STATUS_RESPONSE, status);
 }
 
-void Mediator::handle_node_register(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn) {
-  msg::mediator::Status status;
+void Mediator::handle_node_register(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+  sys_msgs::Status status;
   status.error = 0;
-  msg::mediator::NodeInfo info;
+  sys_msgs::NodeInfo info;
   if (!conn->recv_message(info, operation.len)) {
     status.error = -1;
     conn->send_message(OPCODE::STATUS_RESPONSE, status);
@@ -145,10 +145,10 @@ void Mediator::handle_node_register(const msg::mediator::Operation& operation, s
   conn->send_message(OPCODE::STATUS_RESPONSE, status);
 }
 
-void Mediator::handle_pub_register(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn) {
-  msg::mediator::Status status;
+void Mediator::handle_pub_register(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+  sys_msgs::Status status;
   status.error = 0;
-  msg::mediator::PubInfo info;
+  sys_msgs::PubInfo info;
   if (!conn->recv_message(info, operation.len)) {
     status.error = -1;
     conn->send_message(OPCODE::STATUS_RESPONSE, status);
@@ -182,7 +182,7 @@ void Mediator::handle_pub_register(const msg::mediator::Operation& operation, st
 
   // Notify all subscribers of the new publisher on the
   // same topic
-  std::vector<msg::mediator::SubInfo> subs_to_notify;
+  std::vector<sys_msgs::SubInfo> subs_to_notify;
   for (const auto& [id, sub_info] : subscribers_) {
     if (sub_info.topic_info.name == info.topic_info.name) {
       subs_to_notify.push_back(sub_info);
@@ -193,10 +193,10 @@ void Mediator::handle_pub_register(const msg::mediator::Operation& operation, st
   notify_subscribers(subs_to_notify, info);
 }
 
-void Mediator::handle_sub_register(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn) {
-  msg::mediator::Status status;
+void Mediator::handle_sub_register(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+  sys_msgs::Status status;
   status.error = 0;
-  msg::mediator::SubInfo info;
+  sys_msgs::SubInfo info;
   if (!conn->recv_message(info, operation.len)) {
     status.error = -1;
     conn->send_message(OPCODE::STATUS_RESPONSE, status);
@@ -230,7 +230,7 @@ void Mediator::handle_sub_register(const msg::mediator::Operation& operation, st
 
   // Notify the new subscriber of all publishers on the
   // same topic
-  std::vector<msg::mediator::PubInfo> pubs_on_topic;
+  std::vector<sys_msgs::PubInfo> pubs_on_topic;
   for (const auto& [id, pub_info] : publishers_) {
     if (pub_info.topic_info.name == info.topic_info.name) {
       pubs_on_topic.push_back(pub_info);
@@ -240,10 +240,10 @@ void Mediator::handle_sub_register(const msg::mediator::Operation& operation, st
   notify_subscribers(info, pubs_on_topic);
 }
 
-void Mediator::handle_srv_register(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn) {
-  msg::mediator::Status status;
+void Mediator::handle_srv_register(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+  sys_msgs::Status status;
   status.error = 0;
-  msg::mediator::SrvInfo info;
+  sys_msgs::SrvInfo info;
   if (!conn->recv_message(info, operation.len)) {
     status.error = -1;
     conn->send_message(OPCODE::STATUS_RESPONSE, status);
@@ -277,10 +277,10 @@ void Mediator::handle_srv_register(const msg::mediator::Operation& operation, st
   conn->send_message(OPCODE::STATUS_RESPONSE, status);
 }
 
-void Mediator::handle_act_register(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn) {
-  msg::mediator::Status status;
+void Mediator::handle_act_register(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+  sys_msgs::Status status;
   status.error = 0;
-  msg::mediator::ActInfo info;
+  sys_msgs::ActInfo info;
   if (!conn->recv_message(info, operation.len)) {
     status.error = -1;
     conn->send_message(OPCODE::STATUS_RESPONSE, status);
@@ -314,8 +314,8 @@ void Mediator::handle_act_register(const msg::mediator::Operation& operation, st
   conn->send_message(OPCODE::STATUS_RESPONSE, status);
 }
 
-void Mediator::handle_node_deregister(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn) {
-  msg::mediator::NodeInfo info;
+void Mediator::handle_node_deregister(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+  sys_msgs::NodeInfo info;
   if (!conn->recv_message(info, operation.len)) {
     return;
   }
@@ -326,8 +326,8 @@ void Mediator::handle_node_deregister(const msg::mediator::Operation& operation,
   Log::info << "Deregistered node \"" << info.name << "\"." << std::endl;
 }
 
-void Mediator::handle_pub_deregister(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn) {
-  msg::mediator::PubInfo info;
+void Mediator::handle_pub_deregister(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+  sys_msgs::PubInfo info;
   if (!conn->recv_message(info, operation.len)) {
     return;
   }
@@ -338,8 +338,8 @@ void Mediator::handle_pub_deregister(const msg::mediator::Operation& operation, 
   Log::info << "Deregistered publisher on \"" << info.topic_info.name << "\"." << std::endl;
 }
 
-void Mediator::handle_sub_deregister(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn) {
-  msg::mediator::SubInfo info;
+void Mediator::handle_sub_deregister(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+  sys_msgs::SubInfo info;
   if (!conn->recv_message(info, operation.len)) {
     return;
   }
@@ -350,8 +350,8 @@ void Mediator::handle_sub_deregister(const msg::mediator::Operation& operation, 
   Log::info << "Deregistered subscriber on \"" << info.topic_info.name << "\"." << std::endl;
 }
 
-void Mediator::handle_srv_deregister(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn) {
-  msg::mediator::SrvInfo info;
+void Mediator::handle_srv_deregister(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+  sys_msgs::SrvInfo info;
   if (!conn->recv_message(info, operation.len)) {
     return;
   }
@@ -362,8 +362,8 @@ void Mediator::handle_srv_deregister(const msg::mediator::Operation& operation, 
   Log::info << "Deregistered service \"" << info.name << "\"." << std::endl;
 }
 
-void Mediator::handle_act_deregister(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn) {
-  msg::mediator::ActInfo info;
+void Mediator::handle_act_deregister(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+  sys_msgs::ActInfo info;
   if (!conn->recv_message(info, operation.len)) {
     return;
   }
@@ -374,12 +374,12 @@ void Mediator::handle_act_deregister(const msg::mediator::Operation& operation, 
   Log::info << "Deregistered action \"" << info.name << "\"." << std::endl;
 }
 
-void Mediator::handle_srv_request(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+void Mediator::handle_srv_request(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
 
-  msg::mediator::SrvResponse response;
+  sys_msgs::SrvResponse response;
   response.error = 0;
 
-  msg::mediator::SrvRequest request;
+  sys_msgs::SrvRequest request;
   if (!conn->recv_message(request, operation.len)) {
     response.error = -1;
     conn->send_message(OPCODE::SRV_RESPONSE, response);
@@ -407,11 +407,11 @@ void Mediator::handle_srv_request(const msg::mediator::Operation& operation, std
   conn->send_message(OPCODE::SRV_RESPONSE, response);
 }
 
-void Mediator::handle_act_request(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn) {
-  msg::mediator::ActResponse response;
+void Mediator::handle_act_request(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+  sys_msgs::ActResponse response;
   response.error = 0;
 
-  msg::mediator::ActRequest request;
+  sys_msgs::ActRequest request;
   if (!conn->recv_message(request, operation.len)) {
     response.error = -1;
     conn->send_message(OPCODE::ACT_RESPONSE, response);
@@ -439,13 +439,12 @@ void Mediator::handle_act_request(const msg::mediator::Operation& operation, std
   conn->send_message(OPCODE::ACT_RESPONSE, response);
 }
 
-void Mediator::handle_param_set_request(const msg::mediator::Operation& operation,
-                                        std::shared_ptr<GenericSocket> conn) {
+void Mediator::handle_param_set_request(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
 
-  msg::mediator::Status status;
+  sys_msgs::Status status;
   status.error = 0;
 
-  msg::mediator::ParamInfo info;
+  sys_msgs::ParamInfo info;
 
   if (!conn->recv_message(info, operation.len)) {
     status.error = -1;
@@ -471,10 +470,9 @@ void Mediator::handle_param_set_request(const msg::mediator::Operation& operatio
   conn->send_message(OPCODE::STATUS_RESPONSE, status);
 }
 
-void Mediator::handle_param_get_request(const msg::mediator::Operation& operation,
-                                        std::shared_ptr<GenericSocket> conn) {
+void Mediator::handle_param_get_request(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
 
-  msg::mediator::ParamInfo info;
+  sys_msgs::ParamInfo info;
 
   if (!conn->recv_message(info, operation.len)) {
     conn->send_message(OPCODE::PARAM_GET_RESPONSE, info);
@@ -495,11 +493,10 @@ void Mediator::handle_param_get_request(const msg::mediator::Operation& operatio
   conn->send_message(OPCODE::PARAM_GET_RESPONSE, info);
 }
 
-void Mediator::handle_system_get_request(const msg::mediator::Operation& operation,
-                                         std::shared_ptr<GenericSocket> conn) {
+void Mediator::handle_system_get_request(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
 
-  msg::mediator::SystemInfo info;
-  msg::standard::UInt64 node_id;
+  sys_msgs::SystemInfo info;
+  std_msgs::UInt64 node_id;
   if (!conn->recv_message(node_id, operation.len)) {
     conn->send_message(OPCODE::SYSTEM_GET_RESPONSE, info);
     return;
@@ -524,7 +521,7 @@ void Mediator::handle_system_get_request(const msg::mediator::Operation& operati
     info.services.push_back(service.second);
   }
   for (const auto& topic : topic_hashes_) {
-    msg::mediator::TopicInfo topic_info;
+    sys_msgs::TopicInfo topic_info;
     topic_info.name = topic.first;
     topic_info.message_hash = topic.second;
     info.topics.push_back(topic_info);
@@ -533,12 +530,12 @@ void Mediator::handle_system_get_request(const msg::mediator::Operation& operati
   conn->send_message(OPCODE::SYSTEM_GET_RESPONSE, info);
 }
 
-void Mediator::notify_subscribers(const std::vector<msg::mediator::SubInfo>& subscribers,
-                                  const msg::mediator::PubInfo& publisher) {
+void Mediator::notify_subscribers(const std::vector<sys_msgs::SubInfo>& subscribers,
+                                  const sys_msgs::PubInfo& publisher) {
   if (subscribers.empty()) {
     return;
   }
-  msg::mediator::SubNotify notify;
+  sys_msgs::SubNotify notify;
   notify.publishers.push_back(publisher);
   for (const auto& sub : subscribers) {
     Endpoint endpoint(sub.endpoint.address, sub.endpoint.port);
@@ -549,12 +546,12 @@ void Mediator::notify_subscribers(const std::vector<msg::mediator::SubInfo>& sub
   }
 }
 
-void Mediator::notify_subscribers(const msg::mediator::SubInfo& subscriber,
-                                  const std::vector<msg::mediator::PubInfo>& publishers) {
+void Mediator::notify_subscribers(const sys_msgs::SubInfo& subscriber,
+                                  const std::vector<sys_msgs::PubInfo>& publishers) {
   if (publishers.empty()) {
     return;
   }
-  msg::mediator::SubNotify notify;
+  sys_msgs::SubNotify notify;
   notify.publishers = publishers;
   Endpoint endpoint(subscriber.endpoint.address, subscriber.endpoint.port);
   notify.id = subscriber.id;
@@ -563,7 +560,7 @@ void Mediator::notify_subscribers(const msg::mediator::SubInfo& subscriber,
   client->send_message(OPCODE::SUB_NOTIFY, notify);
 }
 
-bool Mediator::validate_topic_info(const msg::mediator::TopicInfo& info) {
+bool Mediator::validate_topic_info(const sys_msgs::TopicInfo& info) {
   const auto& topic_hash = info.message_hash;
   const auto& topic_name = info.name;
   auto it = topic_hashes_.find(topic_name);
@@ -576,7 +573,7 @@ bool Mediator::validate_topic_info(const msg::mediator::TopicInfo& info) {
   return true;
 }
 
-bool Mediator::validate_service_info(const msg::mediator::SrvInfo& info) {
+bool Mediator::validate_service_info(const sys_msgs::SrvInfo& info) {
   // return true if the service name does not exist
   const auto& service_name = info.name;
   auto it = std::find_if(
@@ -584,7 +581,7 @@ bool Mediator::validate_service_info(const msg::mediator::SrvInfo& info) {
   return it == services_.end();
 }
 
-bool Mediator::validate_action_info(const msg::mediator::ActInfo& info) {
+bool Mediator::validate_action_info(const sys_msgs::ActInfo& info) {
   // return true if the action name does not exist
   const auto& action_name = info.name;
   auto it =
@@ -592,7 +589,7 @@ bool Mediator::validate_action_info(const msg::mediator::ActInfo& info) {
   return it == actions_.end();
 }
 
-bool Mediator::set_parameter(const msg::mediator::ParamInfo& info) {
+bool Mediator::set_parameter(const sys_msgs::ParamInfo& info) {
   const auto& param_hash = info.message_hash;
   const auto& param_name = info.name;
   auto it = parameters_.find(param_name);
@@ -613,7 +610,7 @@ bool Mediator::set_parameter(const msg::mediator::ParamInfo& info) {
   return false;
 }
 
-bool Mediator::get_parameter(msg::mediator::ParamInfo& info) {
+bool Mediator::get_parameter(sys_msgs::ParamInfo& info) {
   const auto& param_hash = info.message_hash;
   const auto& param_name = info.name;
   auto it = parameters_.find(param_name);

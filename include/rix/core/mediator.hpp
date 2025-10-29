@@ -2,17 +2,18 @@
 
 #include <memory>
 #include <mutex>
+#include <map> 
 
 #include "rix/core/common.hpp"
 #include "rix/core/spinner.hpp"
 #include "rix/ipc/socket.hpp"
-#include "rix/msg/mediator/NodeInfo.hpp"
-#include "rix/msg/mediator/Operation.hpp"
-#include "rix/msg/mediator/ParamInfo.hpp"
-#include "rix/msg/mediator/PubInfo.hpp"
-#include "rix/msg/mediator/SrvInfo.hpp"
-#include "rix/msg/mediator/SubInfo.hpp"
-#include "rix/msg/mediator/SystemInfo.hpp"
+#include "rix/sys_msgs/NodeInfo.hpp"
+#include "rix/sys_msgs/Operation.hpp"
+#include "rix/sys_msgs/ParamInfo.hpp"
+#include "rix/sys_msgs/PubInfo.hpp"
+#include "rix/sys_msgs/SrvInfo.hpp"
+#include "rix/sys_msgs/SubInfo.hpp"
+#include "rix/sys_msgs/SystemInfo.hpp"
 
 namespace rix {
 
@@ -38,41 +39,41 @@ public:
 private:
   std::shared_ptr<GenericSocket> server_{};
   SocketFactory socket_factory_{};
-  std::map<uint64_t, msg::mediator::NodeInfo> nodes_{};
-  std::map<uint64_t, msg::mediator::PubInfo> publishers_{};
-  std::map<uint64_t, msg::mediator::SubInfo> subscribers_{};
-  std::map<uint64_t, msg::mediator::SrvInfo> services_{};
-  std::map<uint64_t, msg::mediator::ActInfo> actions_{};
+  std::map<uint64_t, sys_msgs::NodeInfo> nodes_{};
+  std::map<uint64_t, sys_msgs::PubInfo> publishers_{};
+  std::map<uint64_t, sys_msgs::SubInfo> subscribers_{};
+  std::map<uint64_t, sys_msgs::SrvInfo> services_{};
+  std::map<uint64_t, sys_msgs::ActInfo> actions_{};
   std::map<std::string, std::array<uint64_t, 2>> topic_hashes_{};
   std::map<std::string, std::pair<std::array<uint64_t, 2>, std::vector<uint8_t>>> parameters_{};
 
-  void handle_ping(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_node_register(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_pub_register(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_sub_register(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_srv_register(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_act_register(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_node_deregister(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_pub_deregister(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_sub_deregister(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_srv_deregister(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_act_deregister(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_srv_request(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_act_request(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_param_set_request(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_param_get_request(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_system_get_request(const msg::mediator::Operation& operation, std::shared_ptr<GenericSocket> conn);
+  void handle_ping(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
+  void handle_node_register(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
+  void handle_pub_register(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
+  void handle_sub_register(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
+  void handle_srv_register(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
+  void handle_act_register(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
+  void handle_node_deregister(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
+  void handle_pub_deregister(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
+  void handle_sub_deregister(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
+  void handle_srv_deregister(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
+  void handle_act_deregister(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
+  void handle_srv_request(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
+  void handle_act_request(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
+  void handle_param_set_request(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
+  void handle_param_get_request(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
+  void handle_system_get_request(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
 
-  void notify_subscribers(const std::vector<msg::mediator::SubInfo>& subscribers,
-                          const msg::mediator::PubInfo& publisher);
-  void notify_subscribers(const msg::mediator::SubInfo& subscriber,
-                          const std::vector<msg::mediator::PubInfo>& publishers);
+  void notify_subscribers(const std::vector<sys_msgs::SubInfo>& subscribers,
+                          const sys_msgs::PubInfo& publisher);
+  void notify_subscribers(const sys_msgs::SubInfo& subscriber,
+                          const std::vector<sys_msgs::PubInfo>& publishers);
 
-  bool validate_topic_info(const msg::mediator::TopicInfo& info);
-  bool validate_service_info(const msg::mediator::SrvInfo& info);
-  bool validate_action_info(const msg::mediator::ActInfo& info);
-  bool set_parameter(const msg::mediator::ParamInfo& info);
-  bool get_parameter(msg::mediator::ParamInfo& info);
+  bool validate_topic_info(const sys_msgs::TopicInfo& info);
+  bool validate_service_info(const sys_msgs::SrvInfo& info);
+  bool validate_action_info(const sys_msgs::ActInfo& info);
+  bool set_parameter(const sys_msgs::ParamInfo& info);
+  bool get_parameter(sys_msgs::ParamInfo& info);
 };
 
 } // namespace rix

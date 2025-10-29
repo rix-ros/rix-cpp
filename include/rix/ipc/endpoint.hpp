@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "rix/msg/mediator/Endpoint.hpp"
+#include "rix/sys_msgs/Endpoint.hpp"
 
 namespace rix {
 
@@ -26,7 +26,7 @@ public:
    * @param port The port number.
    */
   Endpoint(std::string address, int port);
-  explicit Endpoint(const msg::mediator::Endpoint& msg);
+  explicit Endpoint(const sys_msgs::Endpoint& msg);
 
   /**
    * @brief Constructs a Endpoint from a string representation.

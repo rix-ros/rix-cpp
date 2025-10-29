@@ -90,7 +90,7 @@ public:
   }
 
   template <typename TMsg> SocketBuilder& send_message(uint8_t opcode, const TMsg& msg) {
-    static_assert(std::is_base_of_v<msg::Message, TMsg>, "TMsg must be derived from msg::Message");
+    static_assert(std::is_base_of_v<Message, TMsg>, "TMsg must be derived from Message");
 
     // Setup wait_writable on first call
     if (*expected_send_count_ == 0) {
@@ -109,7 +109,7 @@ public:
         .Times(1)
         .InSequence(seq_)
         .WillOnce(::testing::Invoke(
-            [opcode, msg, socket, notify, send_count = send_count_](uint8_t operation, const msg::Message& message) {
+            [opcode, msg, socket, notify, send_count = send_count_](uint8_t operation, const Message& message) {
               EXPECT_EQ(operation, opcode);
               auto _msg = dynamic_cast<const TMsg*>(&message);
               EXPECT_NE(_msg, nullptr);
@@ -129,7 +129,7 @@ public:
   }
 
   template <typename TMsg> SocketBuilder& recv_message(const TMsg& msg, size_t len) {
-    static_assert(std::is_base_of_v<msg::Message, TMsg>, "TMsg must be derived from msg::Message");
+    static_assert(std::is_base_of_v<Message, TMsg>, "TMsg must be derived from Message");
 
     // Setup wait_readable on first call
     if (*expected_recv_count_ == 0) {
@@ -148,7 +148,7 @@ public:
         .Times(1)
         .InSequence(seq_)
         .WillOnce(
-            ::testing::Invoke([msg, len, socket, notify, recv_count = recv_count_](msg::Message& message, size_t size) {
+            ::testing::Invoke([msg, len, socket, notify, recv_count = recv_count_](Message& message, size_t size) {
               EXPECT_EQ(size, len);
               auto _msg = dynamic_cast<TMsg*>(&message);
               EXPECT_NE(_msg, nullptr);
@@ -168,7 +168,7 @@ public:
   }
 
   template <typename TMsg> SocketBuilder& recv_message(uint8_t opcode, const TMsg& msg) {
-    static_assert(std::is_base_of_v<msg::Message, TMsg>, "TMsg must be derived from msg::Message");
+    static_assert(std::is_base_of_v<Message, TMsg>, "TMsg must be derived from Message");
 
     // Setup wait_readable on first call (each recv_message with opcode needs 2 recv calls)
     if (*expected_recv_count_ == 0) {
@@ -187,9 +187,9 @@ public:
     EXPECT_CALL(*socket_, recv_message(::testing::_, ::testing::_))
         .Times(1)
         .InSequence(seq_)
-        .WillOnce(::testing::Invoke([opcode, msg, recv_count = recv_count_](msg::Message& message, size_t size) {
-          EXPECT_EQ(size, msg::mediator::Operation().size());
-          auto operation = dynamic_cast<msg::mediator::Operation*>(&message);
+        .WillOnce(::testing::Invoke([opcode, msg, recv_count = recv_count_](Message& message, size_t size) {
+          EXPECT_EQ(size, sys_msgs::Operation().size());
+          auto operation = dynamic_cast<sys_msgs::Operation*>(&message);
           EXPECT_NE(operation, nullptr);
           (*recv_count)++;
           if (operation) {
@@ -205,7 +205,7 @@ public:
         .Times(1)
         .InSequence(seq_)
         .WillOnce(
-            ::testing::Invoke([msg, socket, notify, recv_count = recv_count_](msg::Message& message, size_t size) {
+            ::testing::Invoke([msg, socket, notify, recv_count = recv_count_](Message& message, size_t size) {
               EXPECT_EQ(size, msg.size());
               auto _msg = dynamic_cast<TMsg*>(&message);
               EXPECT_NE(_msg, nullptr);

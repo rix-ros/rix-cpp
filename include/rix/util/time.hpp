@@ -3,8 +3,8 @@
 #include <chrono>
 #include <string>
 
-#include "rix/msg/standard/Duration.hpp"
-#include "rix/msg/standard/Time.hpp"
+#include "rix/std_msgs/Duration.hpp"
+#include "rix/std_msgs/Time.hpp"
 
 namespace rix {
 
@@ -62,7 +62,7 @@ public:
   explicit Time(const Type& time_point);
   explicit Time(double seconds);
   Time(uint32_t seconds, uint32_t nanoseconds);
-  explicit Time(const msg::standard::Time& msg);
+  explicit Time(const std_msgs::Time& msg);
 
   Time(const Time& other);
   Time& operator=(const Time& other);
@@ -81,7 +81,7 @@ public:
   bool operator>=(const Time& other) const;
 
   std::string to_string(bool local_time = false) const;
-  msg::standard::Time to_msg() const;
+  std_msgs::Time to_msg() const;
 
   enum RoundType { FLOOR = 0, CEIL, NEAREST };
 
@@ -116,7 +116,7 @@ public:
   explicit Duration(const Type& duration);
   explicit Duration(double seconds);
   Duration(int32_t seconds, int32_t nanoseconds);
-  explicit Duration(const msg::standard::Duration& msg);
+  explicit Duration(const std_msgs::Duration& msg);
 
   Duration(const Duration& other);
   Duration& operator=(const Duration& other);
@@ -142,7 +142,7 @@ public:
   bool operator>(const Duration& other) const;
   bool operator>=(const Duration& other) const;
 
-  msg::standard::Duration to_msg() const;
+  std_msgs::Duration to_msg() const;
 
   int64_t to_seconds(Time::RoundType type = Time::RoundType::FLOOR) const;
   int64_t to_milliseconds(Time::RoundType type = Time::RoundType::FLOOR) const;

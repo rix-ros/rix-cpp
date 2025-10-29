@@ -1,16 +1,25 @@
 #include "rix/core/service.hpp"
-#include "rix/msg/mediator/Status.hpp"
+#include "rix/sys_msgs/Status.hpp"
 
 namespace rix {
 
-Service::Service(const msg::mediator::SrvInfo& info, SocketFactory socket_factory, const Endpoint& rixhub_endpoint)
+Service::Service(const sys_msgs::SrvInfo& info, SocketFactory socket_factory, const Endpoint& rixhub_endpoint)
     : info_(info), socket_factory_(socket_factory), rixhub_endpoint_(rixhub_endpoint), registered_flag_(false),
       request_instance_(nullptr), response_instance_(nullptr) {
 
   server_ = socket_factory_();
-  server_->set_reuse_address(true);
-  server_->bind(Endpoint(info_.endpoint.address, info_.endpoint.port));
-  server_->listen(MAX_CONN);
+  if (!server_->set_reuse_address(true)) {
+    shutdown();
+    return;
+  }
+  if (!server_->bind(Endpoint(info_.endpoint.address, info_.endpoint.port))) {
+    shutdown();
+    return;
+  }
+  if (!server_->listen(MAX_CONN)) {
+    shutdown();
+    return;
+  }
 
   // Ensure server was intitialized properly
   if (server_->is_exception()) {
@@ -35,8 +44,8 @@ Service::Service(const msg::mediator::SrvInfo& info, SocketFactory socket_factor
     return;
   }
 
-  msg::mediator::Operation operation;
-  msg::mediator::Status status;
+  sys_msgs::Operation operation;
+  sys_msgs::Status status;
   if (!client->recv_message(operation, status)) {
     shutdown();
     return;
@@ -93,7 +102,7 @@ void Service::on_spin() {
   }
 
   // Read the request message
-  msg::mediator::Operation operation;
+  sys_msgs::Operation operation;
   if (!conn->recv_message(operation, *request_instance_))
     return;
 
