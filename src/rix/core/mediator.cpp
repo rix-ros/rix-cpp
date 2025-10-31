@@ -36,7 +36,7 @@ void Mediator::on_spin() {
   }
 
   sys_msgs::Operation operation;
-  if (!conn->recv_message(operation, operation.size())) {
+  if (!conn->recv_message(operation, operation.get_prefix_len())) {
     return;
   }
 

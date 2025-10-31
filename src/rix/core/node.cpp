@@ -75,7 +75,7 @@ Node::Node(const std::string& name, const Endpoint& endpoint)
       const auto conn = server_->accept();
       if (conn) {
         sys_msgs::Operation operation;
-        conn->recv_message(operation, operation.size());
+        conn->recv_message(operation, operation.get_prefix_len());
         if (operation.opcode == OPCODE::PING) {
           sys_msgs::Status status;
           status.id = info_.id;

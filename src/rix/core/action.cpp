@@ -118,7 +118,7 @@ void Action::ActAcceptor::on_spin() {
   }
 
   sys_msgs::Operation operation;
-  if (!conn->recv_message(operation, operation.size())) {
+  if (!conn->recv_message(operation, operation.get_prefix_len())) {
     return;
   }
 
@@ -176,7 +176,7 @@ void Action::on_spin() {
   // Check for incoming messages from ActionClient
   if (connection_->wait_readable(Duration(0.0))) {
     sys_msgs::Operation operation;
-    if (!connection_->recv_message(operation, operation.size())) {
+    if (!connection_->recv_message(operation, operation.get_prefix_len())) {
       connection_ = nullptr;
       return;
     }

@@ -2,8 +2,8 @@
 
 #include "rix/ipc/endpoint.hpp"
 #include "rix/ipc/poll.hpp"
-#include "rix/sys_msgs/Operation.hpp"
 #include "rix/msg/message.hpp"
+#include "rix/sys_msgs/Operation.hpp"
 #include "rix/util/time.hpp"
 
 #include <memory>
@@ -58,50 +58,56 @@ public:
 
   // Write operation and message
   virtual bool send_message(uint8_t opcode, const Message& msg) const {
+    // Get the message prefix
+    const size_t prefix_len = msg.get_prefix_len();
+    uint8_t* prefix_buffer = new uint8_t[prefix_len];
+    size_t offset = 0;
+    msg.get_prefix(prefix_buffer, offset);
+
     // Serialize the message
     sys_msgs::Operation operation;
-    operation.len = msg.size();
+    operation.len = msg.get_prefix_len();
     operation.opcode = opcode;
-    size_t op_size = operation.size();
-    std::vector<uint8_t> buffer(op_size + msg.size());
-    size_t offset = 0;
-    operation.serialize(buffer.data(), offset);
-    msg.serialize(buffer.data(), offset);
+    const int segment_count = operation.get_segment_count() + msg.get_segment_count() + 1;
+    std::vector<ConstMessageSegment> segments(segment_count);
+    offset = 0;
+    operation.get_segments(segments.data(), segments.size(), offset);
+    segments[offset++] = ConstMessageSegment(prefix_buffer, prefix_len);
+    msg.get_segments(segments.data(), segments.size(), offset);
 
-    size_t bytes = 0;
-    while (bytes < buffer.size()) {
-      ssize_t result = send(buffer.data() + bytes, buffer.size() - bytes, 0);
-      if (result <= 0) {
-        return false;
-      }
-      bytes += result;
-    }
-    return bytes == buffer.size();
+    // Send the serialized message
+    ssize_t bytes_sent = writev(segments.data(), static_cast<int>(segments.size()));
+    delete[] prefix_buffer;
+    return bytes_sent > 0;
   }
 
   // Read message only
-  virtual bool recv_message(Message& msg, size_t len) const {
-    // Read the message body only
-    std::vector<uint8_t> buffer(len);
-    size_t bytes = 0;
-    while (bytes < buffer.size()) {
-      ssize_t result = recv(buffer.data() + bytes, buffer.size() - bytes, 0);
-      if (result <= 0) {
+  virtual bool recv_message(Message& msg, size_t prefix_len) const {
+    ssize_t bytes = 0;
+    if (prefix_len > 0) {
+      // Read the prefix first
+      uint8_t* prefix_buffer = new uint8_t[prefix_len];
+      bytes = recv(prefix_buffer, prefix_len, 0);
+
+      // Resize the message
+      size_t offset = 0;
+      if (!msg.resize(prefix_buffer, bytes, offset)) {
+        delete[] prefix_buffer;
         return false;
       }
-      bytes += result;
+      delete[] prefix_buffer;
     }
-    size_t offset = 0;
-    if (!msg.deserialize(buffer.data(), buffer.size(), offset)) {
-      return false;
-    }
-    return true;
+
+    // Read the segments
+    std::vector<MessageSegment> segments(msg.get_segments());
+    bytes = readv(segments.data(), segments.size());
+    return bytes > 0;
   }
 
   // Read both operation and message (useful if message type is known)
   bool recv_message(sys_msgs::Operation& operation, Message& msg) const {
     // Read the operation header first
-    if (!recv_message(operation, operation.size())) {
+    if (!recv_message(operation, operation.get_prefix_len())) {
       return false;
     }
     // Then read the message body
@@ -139,6 +145,8 @@ public:
 
 private:
   // Low-level I/O operations to be implemented by derived classes
+  virtual ssize_t writev(const ConstMessageSegment* segments, size_t segment_count) const = 0;
+  virtual ssize_t readv(MessageSegment* segments, size_t segment_count) const = 0;
   virtual ssize_t send(const void* buf, size_t len, int flags) const = 0;
   virtual ssize_t recv(void* buf, size_t len, int flags) const = 0;
   static inline std::shared_ptr<GenericPoller> poller_{std::make_shared<Poller>()};

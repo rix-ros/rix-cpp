@@ -188,13 +188,13 @@ public:
         .Times(1)
         .InSequence(seq_)
         .WillOnce(::testing::Invoke([opcode, msg, recv_count = recv_count_](Message& message, size_t size) {
-          EXPECT_EQ(size, sys_msgs::Operation().size());
+          EXPECT_EQ(size, sys_msgs::Operation().get_prefix_len());
           auto operation = dynamic_cast<sys_msgs::Operation*>(&message);
           EXPECT_NE(operation, nullptr);
           (*recv_count)++;
           if (operation) {
             operation->opcode = opcode;
-            operation->len = msg.size();
+            operation->len = msg.get_prefix_len();
             return true;
           }
           return false;
@@ -206,7 +206,7 @@ public:
         .InSequence(seq_)
         .WillOnce(
             ::testing::Invoke([msg, socket, notify, recv_count = recv_count_](Message& message, size_t size) {
-              EXPECT_EQ(size, msg.size());
+              EXPECT_EQ(size, msg.get_prefix_len());
               auto _msg = dynamic_cast<TMsg*>(&message);
               EXPECT_NE(_msg, nullptr);
               (*recv_count)++;

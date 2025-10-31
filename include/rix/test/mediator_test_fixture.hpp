@@ -29,7 +29,7 @@ public:
 
     auto socket = socket_manager_.create_socket();
     SocketBuilder(socket)
-        .recv_message(operation, operation.size())
+        .recv_message(operation, operation.get_prefix_len())
         .send_message(OPCODE::STATUS_RESPONSE, status)
         .close();
     return *this;

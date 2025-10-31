@@ -42,7 +42,7 @@ bool ActionClient::dispatch(const Message& goal) {
   // Clear the recv buffer to avoid stale messages (look for response)
   sys_msgs::Operation operation;
   while (true) {
-    client_->recv_message(operation, operation.size());
+    client_->recv_message(operation, operation.get_prefix_len());
     if (operation.opcode == OPCODE::ACT_RESPONSE_MESSAGE) {
       // Stop if we reach a response message
       break;
@@ -145,7 +145,7 @@ void ActionClient::on_spin() {
   }
   if (client_->is_readable()) {
     sys_msgs::Operation operation;
-    if (!client_->recv_message(operation, operation.size())) {
+    if (!client_->recv_message(operation, operation.get_prefix_len())) {
       client_ = nullptr;
       return;
     }

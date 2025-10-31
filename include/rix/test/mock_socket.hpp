@@ -51,6 +51,8 @@ public:
   MOCK_METHOD(bool, connect, (const Endpoint& endpoint), (const, override));
   MOCK_METHOD(void, close, (), (const, override));
 
+  MOCK_METHOD(ssize_t, writev, (const ConstMessageSegment* segments, size_t segment_count), (const, override));
+  MOCK_METHOD(ssize_t, readv, (MessageSegment* segments, size_t segment_count), (const, override));
   MOCK_METHOD(ssize_t, send, (const void* buf, size_t len, int flags), (const, override));
   MOCK_METHOD(ssize_t, recv, (void* buf, size_t len, int flags), (const, override));
 

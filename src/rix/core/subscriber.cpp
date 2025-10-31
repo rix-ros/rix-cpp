@@ -202,6 +202,7 @@ void Subscriber::SubNotifyAcceptor::on_spin() {
     }
     client->set_blocking(false);
     client->connect(Endpoint(pub.endpoint.address, pub.endpoint.port));
+    client->set_blocking(true);
     parent.clients_.insert(client);
     Log::debug << "Connected to publisher at \"" << pub.endpoint.address << ":" << pub.endpoint.port << "\" on topic \""
                << pub.topic_info.name << "\"." << std::endl;

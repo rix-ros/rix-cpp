@@ -509,7 +509,7 @@ public:
     if (enable_notifications_) {
       builder.enable_operation_notifications();
     }
-    builder.recv_message(operation, operation.size()).close();
+    builder.recv_message(operation, operation.get_prefix_len()).close();
     return *this;
   }
 
@@ -569,7 +569,7 @@ public:
     if (enable_notifications_) {
       builder.enable_operation_notifications();
     }
-    builder.set_blocking(false).connect(publisher_endpoint);
+    builder.set_blocking(false).connect(publisher_endpoint).set_blocking(true);
     for (auto& msg : messages) {
       builder.recv_message(OPCODE::PUB_MESSAGE, *msg);
     }
@@ -611,7 +611,7 @@ public:
     sys_msgs::Operation operation;
     operation.opcode = OPCODE::ACT_GOAL_MESSAGE;
     operation.len = goal->size();
-    builder.recv_message(operation, operation.size());
+    builder.recv_message(operation, operation.get_prefix_len());
     sys_msgs::Status status;
     if (should_fail) {
       // Immediately send result with error
@@ -644,7 +644,7 @@ public:
     sys_msgs::Operation operation;
     operation.opcode = OPCODE::ACT_GOAL_MESSAGE;
     operation.len = goal->size();
-    builder.recv_message(operation, operation.size());
+    builder.recv_message(operation, operation.get_prefix_len());
     sys_msgs::Status status;
     if (should_fail) {
       // Immediately send result with error
@@ -660,7 +660,7 @@ public:
     }
     operation.opcode = OPCODE::ACT_CANCEL_MESSAGE;
     operation.len = 0;
-    builder.recv_message(operation, operation.size()).close();
+    builder.recv_message(operation, operation.get_prefix_len()).close();
     return *this;
   }
 
@@ -686,7 +686,7 @@ public:
     sys_msgs::Operation operation;
     operation.opcode = OPCODE::ACT_GOAL_MESSAGE;
     operation.len = goals[0]->size();
-    builder.recv_message(operation, operation.size());
+    builder.recv_message(operation, operation.get_prefix_len());
     sys_msgs::Status status;
     if (should_fail) {
       // Immediately send result with error
@@ -706,7 +706,7 @@ public:
       // Preempt message
       operation.opcode = OPCODE::ACT_PREEMPT_MESSAGE;
       operation.len = goals[g]->size();
-      builder.recv_message(operation, operation.size());
+      builder.recv_message(operation, operation.get_prefix_len());
       builder.recv_message(*goals[g], goals[g]->size()).send_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
       for (size_t i = 0; i < feedbacks[g].size(); i++) {
         builder.send_message(OPCODE::ACT_FEEDBACK_MESSAGE, *feedbacks[g][i]);
