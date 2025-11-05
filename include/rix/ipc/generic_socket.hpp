@@ -116,7 +116,7 @@ public:
     }
     return true;
   }
-
+  
   void ignore_message(size_t len) const {
     // Read and discard 'len' bytes
     std::vector<uint8_t> buffer(len);
