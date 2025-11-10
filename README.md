@@ -24,6 +24,8 @@ RIX makes it easy to develop complex robotic systems, offering a clean API and p
 
 ### Installation
 
+Before installing, ensure that you have `wget` and `cmake` installed. `Python3.12` must be available in your `PATH`.
+
 Run the install script to set up RIX and its dependencies:
 
 ```bash

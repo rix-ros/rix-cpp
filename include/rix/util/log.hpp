@@ -148,9 +148,9 @@ public:
   inline static LogStream<Level::FATAL> fatal{};
 
 private:
-  inline static const std::string reset_color_ = "\033[0m";
-  inline static const std::string bold_ = "\x1b[1m";
-  inline static const std::string unbold_ = "\x1b[22m";
+  static constexpr const char* reset_color_{"\033[0m"};
+  static constexpr const char* bold_{"\x1b[1m"};
+  static constexpr const char* unbold_{"\x1b[22m"};
   inline static std::string name_{};
   inline static bool is_init_{false};
   inline static Level level_{Level::INFO};
@@ -176,7 +176,8 @@ template <Log::Level level> inline std::string Log::LogStream<level>::create_hea
   ss << "[" << t.to_string() << "] ";
 
   // Level field
-  std::string level_str = "[" + bold_ + get_color_code(level) + get_level_string(level) + reset_color_ + "] ";
+  std::string level_str =
+      "[" + std::string(bold_) + get_color_code(level) + get_level_string(level) + std::string(reset_color_) + "] ";
   ss << std::setw(21) << std::left << level_str;
 
   // Name field
