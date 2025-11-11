@@ -7,7 +7,14 @@ option(MULTITHREADED "Enable multi-threaded support" OFF)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -O3")
 
-add_library(rix
+# Set RPATH settings for proper dynamic library loading
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
+find_package(Threads REQUIRED)
+
+add_library(rix SHARED
     src/rix/core/action_client.cpp
     src/rix/core/action.cpp
     src/rix/core/mediator.cpp
@@ -30,13 +37,10 @@ target_include_directories(rix PUBLIC
     $<INSTALL_INTERFACE:include>
     $<INSTALL_INTERFACE:$ENV{HOME}/.rix/include>
 )
-if(MULTITHREADED)
-    add_compile_definitions(RIX_MULTITHREADED)
-    find_package(Threads REQUIRED)
-    target_link_libraries(rix PUBLIC Threads::Threads)
-endif()
+target_link_libraries(rix PUBLIC Threads::Threads)
 
-add_library(tf
+
+add_library(tf SHARED
     src/rix/rob/joint.cpp
     src/rix/rob/link.cpp
     src/rix/rob/robot_model.cpp
@@ -48,6 +52,7 @@ add_library(tf
     src/rix/tf/transform_buffer.cpp
     src/rix/tf/transform_listener.cpp
 )
+target_link_libraries(tf PUBLIC rix)
 target_include_directories(tf PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:$ENV{HOME}/.rix/include>
@@ -82,19 +87,6 @@ if(BUILD_TESTS)
         test/tf/transform_buffer.cpp)
     target_link_libraries(tf_tests GTest::Main tf rix)
 endif()
-
-# Configure rixConfig.cmake
-if(MULTITHREADED)
-    set(THREADS_FIND_PACKAGE "find_package(Threads REQUIRED)")
-else()
-    set(THREADS_FIND_PACKAGE "")
-endif()
-
-configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/rixConfig.cmake.in
-    ${CMAKE_CURRENT_BINARY_DIR}/rixConfig.cmake
-    @ONLY
-)
 
 # Install library and headers
 install(TARGETS rix DESTINATION lib)
