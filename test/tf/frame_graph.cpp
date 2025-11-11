@@ -14,7 +14,7 @@ TEST(FrameGraph, Test) {
   ASSERT_NE(it, graph.end());
   EXPECT_EQ(it->name, "world");
 
-  rix::msg::geometry::TransformStamped transform;
+  rix::geometry_msgs::TransformStamped transform;
   transform.header.frame_id = "world";
   transform.child_frame_id = "base";
   EXPECT_TRUE(graph.update(transform));
@@ -49,7 +49,7 @@ TEST(FrameGraph, Test) {
 TEST(FrameGraph, IteratorTest) {
   FrameGraph graph("world", rix::Duration(1.0));
 
-  rix::msg::geometry::TransformStamped transform;
+  rix::geometry_msgs::TransformStamped transform;
   transform.header.frame_id = "world";
   transform.child_frame_id = "base";
   graph.update(transform);
@@ -75,7 +75,7 @@ TEST(FrameGraph, IteratorTest) {
 TEST(FrameGraph, UpdateTest) {
   FrameGraph graph("world", rix::Duration(1.0));
 
-  rix::msg::geometry::TransformStamped transform;
+  rix::geometry_msgs::TransformStamped transform;
   transform.header.stamp = rix::Time(1.0).to_msg();
   transform.header.frame_id = "world";
   transform.child_frame_id = "base";
@@ -113,7 +113,7 @@ TEST(FrameGraph, UpdateTest) {
 TEST(FrameGraph, LeafTest) {
   FrameGraph graph("world", rix::Duration(1.0));
 
-  rix::msg::geometry::TransformStamped transform;
+  rix::geometry_msgs::TransformStamped transform;
   transform.header.frame_id = "world";
   transform.child_frame_id = "base";
   graph.update(transform);
@@ -135,7 +135,7 @@ TEST(FrameGraph, LeafTest) {
 TEST(FrameGraph, AncestorTest) {
   FrameGraph graph("world", rix::Duration(1.0));
 
-  rix::msg::geometry::TransformStamped tf;
+  rix::geometry_msgs::TransformStamped tf;
   tf.header.frame_id = "world";
   tf.child_frame_id = "base";
   graph.update(tf);
@@ -192,7 +192,7 @@ TEST(FrameGraph, AncestorTest) {
 TEST(FrameGraph, DuplicateTransformTest) {
   FrameGraph graph("world", rix::Duration(1.0));
 
-  rix::msg::geometry::TransformStamped tf;
+  rix::geometry_msgs::TransformStamped tf;
   tf.header.stamp = rix::Time(1.0).to_msg();
   tf.header.frame_id = "world";
   tf.child_frame_id = "base";
@@ -208,7 +208,7 @@ TEST(FrameGraph, DuplicateTransformTest) {
   EXPECT_EQ(it->buffer.size(), 1); // No duplicate entry
 
   // Transform should be most recent
-  rix::msg::geometry::Transform new_tf;
+  rix::geometry_msgs::Transform new_tf;
   EXPECT_EQ(it->buffer.get(rix::Time(1.0), new_tf), true);
   EXPECT_NEAR(new_tf.translation.x, 2.0, 1e-6);
 }
@@ -216,7 +216,7 @@ TEST(FrameGraph, DuplicateTransformTest) {
 TEST(FrameGraph, GetTransformTest) {
   FrameGraph graph("world", rix::Duration(10.0));
 
-  rix::msg::geometry::TransformStamped tf;
+  rix::geometry_msgs::TransformStamped tf;
   tf.header.stamp = rix::Time(5.0).to_msg();
   tf.header.frame_id = "world";
   tf.child_frame_id = "base";
@@ -233,7 +233,7 @@ TEST(FrameGraph, GetTransformTest) {
   tf.transform.translation.z = 0.0;
   graph.update(tf);
 
-  rix::msg::geometry::TransformStamped result;
+  rix::geometry_msgs::TransformStamped result;
   bool success = graph.get_transform("arm", "world", rix::Time(5.0), result);
   EXPECT_TRUE(success);
   EXPECT_EQ(result.header.frame_id, "world");
@@ -244,7 +244,7 @@ TEST(FrameGraph, GetTransformTest) {
 
 TEST(FrameGraph, IteratorComparisonTest) {
   FrameGraph graph("world", rix::Duration(1.0));
-  rix::msg::geometry::TransformStamped tf;
+  rix::geometry_msgs::TransformStamped tf;
 
   tf.header.frame_id = "world";
   tf.child_frame_id = "base";

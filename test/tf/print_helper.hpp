@@ -1,10 +1,10 @@
 #pragma once
 
-#include "rix/msg/geometry/TransformStamped.hpp"
-#include "rix/msg/sensor/JointState.hpp"
+#include "rix/geometry_msgs/TransformStamped.hpp"
+#include "rix/sensor_msgs/JointState.hpp"
 #include <iostream>
 
-static inline void print_transform(const rix::msg::geometry::TransformStamped& t) {
+static inline void print_transform(const rix::geometry_msgs::TransformStamped& t) {
   std::cout << t.header.frame_id << " -> " << t.child_frame_id << "\n";
   std::cout << "  Translation:\n";
   std::cout << "    x: " << t.transform.translation.x << "\n";
@@ -18,7 +18,7 @@ static inline void print_transform(const rix::msg::geometry::TransformStamped& t
   std::cout << std::endl;
 }
 
-static inline void print_joint_state(const rix::msg::sensor::JointState& j) {
+static inline void print_joint_state(const rix::sensor_msgs::JointState& j) {
   std::cout << j.name << "\n";
   std::cout << "  Position: " << j.position << "\n";
   std::cout << "  Velocity: " << j.velocity << "\n";

@@ -7,8 +7,8 @@
 #include <string>
 #include <vector>
 
-#include "rix/msg/geometry/TF.hpp"
-#include "rix/msg/sensor/JS.hpp"
+#include "rix/geometry_msgs/TF.hpp"
+#include "rix/sensor_msgs/JS.hpp"
 #include "rix/rob/joint.hpp"
 #include "rix/rob/link.hpp"
 #include "rix/util/log.hpp"
@@ -157,38 +157,38 @@ public:
    *      [A->B, B->C, C->D, E->F, B->E]
    * B->E must come before E->F because B is the parent of E.
    *
-   * @return msg::geometry::TF
+   * @return geometry_msgs::TF
    */
-  msg::geometry::TF get_transforms() const;
+  geometry_msgs::TF get_transforms() const;
 
   /**
    * @brief Create a JS message from the current state of the RobotModel.
    * There is no order to the joint states in the JS message.
    *
-   * @return msg::sensor::JS
+   * @return sensor_msgs::JS
    */
-  msg::sensor::JS get_joint_states() const;
+  sensor_msgs::JS get_joint_states() const;
 
   /**
    * @brief Get the static transforms from the RobotModel. This returns any
    * inertial, visual, or collision frames for each link.
    *
-   * @return msg::geometry::TF
+   * @return geometry_msgs::TF
    */
-  msg::geometry::TF get_static_transforms() const;
+  geometry_msgs::TF get_static_transforms() const;
 
-  void set_state(const msg::sensor::JS& js);
-  void set_state(const msg::sensor::JointState& js);
+  void set_state(const sensor_msgs::JS& js);
+  void set_state(const sensor_msgs::JointState& js);
   void set_state(const std::string& joint_name, double position, double velocity, double effort);
 
-  void set_world_to_root(const msg::geometry::Transform& world_to_root);
-  const msg::geometry::Transform& get_world_to_root() const;
+  void set_world_to_root(const geometry_msgs::Transform& world_to_root);
+  const geometry_msgs::Transform& get_world_to_root() const;
 
 private:
   std::string root;
   std::map<std::string, std::shared_ptr<Joint>> joints;
   std::map<std::string, std::shared_ptr<Link>> links;
-  msg::geometry::Transform world_to_root;
+  geometry_msgs::Transform world_to_root;
 
   RobotModel();
 };

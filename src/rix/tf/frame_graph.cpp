@@ -37,7 +37,7 @@ std::vector<std::string> FrameGraph::get_leaves() const {
   return leaves;
 }
 
-bool FrameGraph::update(const msg::geometry::TF& tf) {
+bool FrameGraph::update(const geometry_msgs::TF& tf) {
   for (const auto& transform : tf.transforms) {
     if (!update(transform))
       return false;
@@ -46,7 +46,7 @@ bool FrameGraph::update(const msg::geometry::TF& tf) {
 }
 
 /**< TODO: Implement the update method. */
-bool FrameGraph::update(const msg::geometry::TransformStamped& transform) {
+bool FrameGraph::update(const geometry_msgs::TransformStamped& transform) {
   // If the parent frame does not exist, return false because there is no connection to the graph
   auto parent_it = name_to_index_.find(transform.header.frame_id);
   if (parent_it == name_to_index_.end()) {
@@ -84,7 +84,7 @@ bool FrameGraph::update(const msg::geometry::TransformStamped& transform) {
 bool FrameGraph::get_transform(const std::string& target_frame,
                                const std::string& source_frame,
                                const Time& time,
-                               msg::geometry::TransformStamped& transform) const {
+                               geometry_msgs::TransformStamped& transform) const {
   // Assign information to output transform
   transform.header.frame_id = source_frame;
   transform.header.seq = 0;
@@ -116,7 +116,7 @@ bool FrameGraph::get_transform(const std::string& target_frame,
   }
 
   // Build transform from source to common ancestor
-  msg::geometry::Transform t;
+  geometry_msgs::Transform t;
   Eigen::Affine3d src_transform = Eigen::Affine3d::Identity();
   while (src_it != common_ancestor_it) {
     if (!src_it->buffer.get(time, t)) {

@@ -1,4 +1,4 @@
-#include "rix/msg/standard/Header.hpp"
+#include "rix/std_msgs/Header.hpp"
 #include "rix/rix.hpp"
 
 #include <sstream>
@@ -13,5 +13,5 @@ public:
   SimpleSubscriber(int port);
 
 private:
-  void callback(const rix::msg::standard::Header& msg);
+  void callback(const rix::std_msgs::Header& msg);
 };

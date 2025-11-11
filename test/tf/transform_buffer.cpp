@@ -10,14 +10,14 @@ TEST(TransformBuffer, Test) {
   EXPECT_EQ(buffer.size(), 0);
   EXPECT_EQ(buffer.empty(), true);
 
-  rix::msg::geometry::Transform transform;
+  rix::geometry_msgs::Transform transform;
   EXPECT_EQ(buffer.get(rix::Time(0.0), transform), false);
   EXPECT_EQ(buffer.get(rix::Time(1.0), transform), false);
 }
 
 TEST(TransformBuffer, InsertTest) {
   TransformBuffer buffer(rix::Duration(2.0));
-  rix::msg::geometry::Transform transform;
+  rix::geometry_msgs::Transform transform;
   transform.translation.x = 1.0;
   transform.translation.y = 2.0;
   transform.translation.z = 3.0;
@@ -36,7 +36,7 @@ TEST(TransformBuffer, InsertTest) {
 
 TEST(TransformBuffer, InsertDurationTest) {
   TransformBuffer buffer(rix::Duration(2.0));
-  rix::msg::geometry::Transform transform;
+  rix::geometry_msgs::Transform transform;
   transform.translation.x = 1.0;
   transform.translation.y = 0.0;
   transform.translation.z = 0.0;
@@ -58,7 +58,7 @@ TEST(TransformBuffer, InsertDurationTest) {
 
 TEST(TransformBuffer, GetTest) {
   TransformBuffer buffer(rix::Duration(2.0));
-  rix::msg::geometry::Transform transform;
+  rix::geometry_msgs::Transform transform;
   transform.translation.x = 1.0;
   transform.translation.y = 0.0;
   transform.translation.z = 0.0;
@@ -75,7 +75,7 @@ TEST(TransformBuffer, GetTest) {
   EXPECT_EQ(buffer.size(), 2);
   EXPECT_EQ(buffer.empty(), false);
 
-  rix::msg::geometry::Transform result_transform;
+  rix::geometry_msgs::Transform result_transform;
 
   // Test special case of time at 0 (get the last value)
   EXPECT_EQ(buffer.get(rix::Time(0.0), result_transform), true);
@@ -117,7 +117,7 @@ TEST(TransformBuffer, GetTest) {
 
 TEST(TransformBuffer, InterpolationTest) {
   TransformBuffer buffer(rix::Duration(2.0));
-  rix::msg::geometry::Transform transform1;
+  rix::geometry_msgs::Transform transform1;
   transform1.translation.x = 1.0;
   transform1.translation.y = 2.0;
   transform1.translation.z = 3.0;
@@ -126,7 +126,7 @@ TEST(TransformBuffer, InterpolationTest) {
   transform1.rotation.z = 0.0;
   transform1.rotation.w = 1.0;
 
-  rix::msg::geometry::Transform transform2;
+  rix::geometry_msgs::Transform transform2;
   transform2.translation.x = 2.0;
   transform2.translation.y = 4.0;
   transform2.translation.z = 6.0;
@@ -138,7 +138,7 @@ TEST(TransformBuffer, InterpolationTest) {
   buffer.insert(rix::Time(1.0), transform1);
   buffer.insert(rix::Time(2.0), transform2);
 
-  rix::msg::geometry::Transform result_transform;
+  rix::geometry_msgs::Transform result_transform;
   EXPECT_EQ(buffer.get(rix::Time(1.5), result_transform), true);
 
   EXPECT_EQ(result_transform.translation.x, 1.5);
@@ -152,7 +152,7 @@ TEST(TransformBuffer, InterpolationTest) {
 
 TEST(TransformBuffer, CopyConstructorAndAssignmentTest) {
   TransformBuffer buffer1(rix::Duration(3.0));
-  rix::msg::geometry::Transform transform;
+  rix::geometry_msgs::Transform transform;
   transform.translation.x = 1.0;
   buffer1.insert(rix::Time(1.0), transform);
 
@@ -163,14 +163,14 @@ TEST(TransformBuffer, CopyConstructorAndAssignmentTest) {
   buffer3 = buffer1; // Assignment operator
   EXPECT_EQ(buffer3.size(), 1);
 
-  rix::msg::geometry::Transform result_transform;
+  rix::geometry_msgs::Transform result_transform;
   EXPECT_TRUE(buffer2.get(rix::Time(1.0), result_transform));
   EXPECT_EQ(result_transform.translation.x, 1.0);
 }
 
 TEST(TransformBuffer, ClearTest) {
   TransformBuffer buffer(rix::Duration(2.0));
-  rix::msg::geometry::Transform transform;
+  rix::geometry_msgs::Transform transform;
   buffer.insert(rix::Time(1.0), transform);
   EXPECT_FALSE(buffer.empty());
 
@@ -181,7 +181,7 @@ TEST(TransformBuffer, ClearTest) {
 
 TEST(TransformBuffer, ChangeDurationTest) {
   TransformBuffer buffer(rix::Duration(5.0));
-  rix::msg::geometry::Transform transform;
+  rix::geometry_msgs::Transform transform;
   buffer.insert(rix::Time(1.0), transform);
   buffer.insert(rix::Time(6.0), transform);
   EXPECT_EQ(buffer.size(), 2);
@@ -194,7 +194,7 @@ TEST(TransformBuffer, ChangeDurationTest) {
 
 TEST(TransformBuffer, DuplicateTimestampInsertTest) {
   TransformBuffer buffer(rix::Duration(3.0));
-  rix::msg::geometry::Transform transform1, transform2;
+  rix::geometry_msgs::Transform transform1, transform2;
   transform1.translation.x = 1.0;
   transform2.translation.x = 2.0;
 
@@ -203,20 +203,20 @@ TEST(TransformBuffer, DuplicateTimestampInsertTest) {
 
   EXPECT_EQ(buffer.size(), 1); // Duplicate timestamps not allowed
 
-  rix::msg::geometry::Transform result_transform;
+  rix::geometry_msgs::Transform result_transform;
   EXPECT_TRUE(buffer.get(rix::Time(1.0), result_transform));
   EXPECT_EQ(result_transform.translation.x, 2.0); // Should match last inserted one
 }
 
 TEST(TransformBuffer, GetFromEmptyBufferTest) {
   TransformBuffer buffer(rix::Duration(2.0));
-  rix::msg::geometry::Transform result_transform;
+  rix::geometry_msgs::Transform result_transform;
   EXPECT_FALSE(buffer.get(rix::Time(1.0), result_transform));
 }
 
 TEST(TransformBuffer, InterpolationOutsideDurationTest) {
   TransformBuffer buffer(rix::Duration(2.0));
-  rix::msg::geometry::Transform transform;
+  rix::geometry_msgs::Transform transform;
 
   transform.translation.x = 1.0;
   buffer.insert(rix::Time(1.0), transform);
@@ -225,14 +225,14 @@ TEST(TransformBuffer, InterpolationOutsideDurationTest) {
   transform.translation.x = 3.0;
   buffer.insert(rix::Time(4.0), transform); // This will prune (1.0)
 
-  rix::msg::geometry::Transform result;
+  rix::geometry_msgs::Transform result;
   EXPECT_TRUE(buffer.get(rix::Time(1.5), result)); // Returns earliest transform
   EXPECT_EQ(result.translation.x, 2.0);
 }
 
 TEST(TransformBuffer, DataAccessorTest) {
   TransformBuffer buffer(rix::Duration(2.0));
-  rix::msg::geometry::Transform transform;
+  rix::geometry_msgs::Transform transform;
   transform.translation.x = 1.23;
 
   buffer.insert(rix::Time(1.0), transform);

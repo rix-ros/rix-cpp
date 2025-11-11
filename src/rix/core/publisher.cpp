@@ -1,9 +1,9 @@
 #include "rix/core/publisher.hpp"
-#include "rix/msg/mediator/Status.hpp"
+#include "rix/sys_msgs/Status.hpp"
 
 namespace rix {
 
-Publisher::Publisher(const msg::mediator::PubInfo& info, SocketFactory factory, Endpoint rixhub_endpoint)
+Publisher::Publisher(const sys_msgs::PubInfo& info, SocketFactory factory, Endpoint rixhub_endpoint)
     : info_(info), socket_factory_(factory), rixhub_endpoint_(rixhub_endpoint), registered_flag_(false) {
 
   server_ = socket_factory_();
@@ -12,9 +12,18 @@ Publisher::Publisher(const msg::mediator::PubInfo& info, SocketFactory factory, 
     return;
   }
 
-  server_->set_reuse_address(true);
-  server_->bind(Endpoint(info_.endpoint.address, info_.endpoint.port));
-  server_->listen(MAX_CONN);
+  if (!server_->set_reuse_address(true)) {
+    shutdown();
+    return;
+  }
+  if (!server_->bind(Endpoint(info_.endpoint.address, info_.endpoint.port))) {
+    shutdown();
+    return;
+  }
+  if (!server_->listen(MAX_CONN)) {
+    shutdown();
+    return;
+  }
 
   // Ensure server was intitialized properly
   if (server_->is_exception()) {
@@ -38,8 +47,8 @@ Publisher::Publisher(const msg::mediator::PubInfo& info, SocketFactory factory, 
     return;
   }
 
-  msg::mediator::Operation operation;
-  msg::mediator::Status status;
+  sys_msgs::Operation operation;
+  sys_msgs::Status status;
   if (!client->recv_message(operation, status)) {
     shutdown();
     return;
@@ -53,9 +62,9 @@ Publisher::Publisher(const msg::mediator::PubInfo& info, SocketFactory factory, 
 
   Log::debug << "Publisher created on topic \"" << info_.topic_info.name << "\"." << std::endl;
 
-#ifdef RIX_MULTITHREADED
-  spin_thread_ = std::thread([this]() { this->spin(); });
-#endif
+  if (MULTITHREADED) {
+    spin_thread_ = std::thread([this]() { this->spin(); });
+  }
 }
 
 Publisher::~Publisher() {
@@ -71,15 +80,15 @@ Publisher::~Publisher() {
   }
   Log::debug << "Publisher on topic \"" << info_.topic_info.name << "\" destroyed." << std::endl;
 
-#ifdef RIX_MULTITHREADED
-  shutdown();
-  if (spin_thread_.joinable()) {
-    spin_thread_.join();
+  if (MULTITHREADED) {
+    shutdown();
+    if (spin_thread_.joinable()) {
+      spin_thread_.join();
+    }
   }
-#endif
 }
 
-void Publisher::publish(const msg::Message& msg) {
+void Publisher::publish(const Message& msg) {
   if (!ok()) {
     return;
   }

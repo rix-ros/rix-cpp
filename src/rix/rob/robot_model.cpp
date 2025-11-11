@@ -18,7 +18,7 @@ bool convert_json_box(const Json& src, Box& dst);
 bool convert_json_cylinder(const Json& src, Cylinder& dst);
 bool convert_json_mesh(const Json& src, Mesh& dst);
 bool convert_json_material(const Json& src, Material& dst);
-bool convert_json_origin(const Json& src, msg::geometry::Transform& dst);
+bool convert_json_origin(const Json& src, geometry_msgs::Transform& dst);
 bool convert_json_inertial(const Json& src, Inertial& dst);
 bool convert_json_geometry(const Json& src, std::shared_ptr<Geometry>& dst);
 bool convert_json_visual(const Json& src, Visual& dst);
@@ -148,10 +148,10 @@ std::vector<std::shared_ptr<Joint>> RobotModel::get_joints_in_chain(const std::s
   return joint_list;
 }
 
-msg::geometry::TF RobotModel::get_transforms() const {
-  msg::geometry::TF tf;
+geometry_msgs::TF RobotModel::get_transforms() const {
+  geometry_msgs::TF tf;
 
-  msg::standard::Time stamp = Time::now().to_msg();
+  std_msgs::Time stamp = Time::now().to_msg();
 
   tf.transforms.resize(joints.size() + 1);
 
@@ -189,8 +189,8 @@ msg::geometry::TF RobotModel::get_transforms() const {
   return tf;
 }
 
-msg::sensor::JS RobotModel::get_joint_states() const {
-  msg::sensor::JS js;
+sensor_msgs::JS RobotModel::get_joint_states() const {
+  sensor_msgs::JS js;
   js.stamp = Time::now().to_msg();
   for (auto j : joints) {
     if (j.second->type() == Joint::Type::FIXED) {
@@ -201,9 +201,9 @@ msg::sensor::JS RobotModel::get_joint_states() const {
   return js;
 }
 
-msg::geometry::TF RobotModel::get_static_transforms() const {
-  msg::geometry::TF tf;
-  msg::geometry::TransformStamped transform;
+geometry_msgs::TF RobotModel::get_static_transforms() const {
+  geometry_msgs::TF tf;
+  geometry_msgs::TransformStamped transform;
   transform.header.stamp = Time::now().to_msg();
   transform.header.seq = 0;
 
@@ -238,13 +238,13 @@ msg::geometry::TF RobotModel::get_static_transforms() const {
   return tf;
 }
 
-void RobotModel::set_state(const msg::sensor::JS& js) {
+void RobotModel::set_state(const sensor_msgs::JS& js) {
   for (const auto& joint_state : js.joint_states) {
     set_state(joint_state);
   }
 }
 
-void RobotModel::set_state(const msg::sensor::JointState& js) {
+void RobotModel::set_state(const sensor_msgs::JointState& js) {
   set_state(js.name, js.position, js.velocity, js.effort);
 }
 
@@ -256,9 +256,9 @@ void RobotModel::set_state(const std::string& joint_name, double position, doubl
   it->second->set_state(position, velocity, effort);
 }
 
-void RobotModel::set_world_to_root(const msg::geometry::Transform& transform) { world_to_root = transform; }
+void RobotModel::set_world_to_root(const geometry_msgs::Transform& transform) { world_to_root = transform; }
 
-const msg::geometry::Transform& RobotModel::get_world_to_root() const { return world_to_root; }
+const geometry_msgs::Transform& RobotModel::get_world_to_root() const { return world_to_root; }
 
 namespace detail {
 
@@ -371,7 +371,7 @@ bool convert_json_material(const Json& src, Material& dst) {
   return true;
 }
 
-bool convert_json_origin(const Json& src, msg::geometry::Transform& dst) {
+bool convert_json_origin(const Json& src, geometry_msgs::Transform& dst) {
   if (!src.is_array())
     return false;
   if (src.size() != 6)
@@ -693,7 +693,7 @@ std::shared_ptr<Joint> convert_json_joint(const Json& src) {
     return nullptr;
   }
 
-  msg::geometry::Vector3 axis;
+  geometry_msgs::Vector3 axis;
   bool has_axis = src.contains("axis");
   if (!has_axis && type != Joint::Type::FIXED)
     return nullptr; // All joint must have axis besides fixed
@@ -713,7 +713,7 @@ std::shared_ptr<Joint> convert_json_joint(const Json& src) {
     axis.z = src.at("axis")[2].get<double>();
   }
 
-  msg::geometry::Transform origin = transform_identity();
+  geometry_msgs::Transform origin = transform_identity();
   if (src.contains("origin")) {
     if (!convert_json_origin(src.at("origin"), origin))
       return nullptr;

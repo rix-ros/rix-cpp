@@ -24,6 +24,8 @@ RIX makes it easy to develop complex robotic systems, offering a clean API and p
 
 ### Installation
 
+Before installing, ensure that you have `wget` and `cmake` installed. `Python3.12` must be available in your `PATH`.
+
 Run the install script to set up RIX and its dependencies:
 
 ```bash
@@ -40,10 +42,10 @@ This will:
 
 
 ### Multithreaded Support
-The default RIX install will use a single thread to manage all components of a Node. There are many cases where using multiple threads will result in a significant boost in performance. If you would like to install RIX with multithreading support, run the install script with the `--multithreaded` argument.
+By default, RIX will use a single thread to manage all components of a Node. There are many cases where using multiple threads will result in a significant boost in performance. If you would like to use RIX with multithreading support, set the `RIX_MULTITHREADED` environment variable to `1`.
 
 ```bash
-bash install.bash --multitheaded
+export RIX_MULTITHREADED=1
 ```
 
 ### Environment Setup
@@ -65,6 +67,7 @@ By default, RIX binds servers to the loopback address (`127.0.0.1`). You can con
 - `RIX_DEFAULT_IP`
 - `RIX_RIXHUB_IP`
 - `RIX_RIXHUB_PORT`
+- `RIX_MULTITHREADED`
 
 ---
 
@@ -83,10 +86,10 @@ Create a publisher that sends `Header` messages at 1 Hz:
 
 ```cpp
 #include "rix/rix.hpp"
-#include "rix/msg/standard/Header.hpp"
+#include "rix/std_msgs/Header.hpp"
 
 using namespace rix;
-using rix::msg::standard::Header;
+using rix::std_msgs::Header;
 
 std::shared_ptr<Publisher> publisher;
 
@@ -114,10 +117,10 @@ Register a subscriber on the same topic:
 
 ```cpp
 #include "rix/rix.hpp"
-#include "rix/msg/standard/Header.hpp"
+#include "rix/std_msgs/Header.hpp"
 
 using namespace rix;
-using rix::msg::standard::Header;
+using rix::std_msgs::Header;
 
 void subscriber_callback(const Header &msg) {
   Log::info << msg.frame_id << ", " << msg.seq << std::endl;
@@ -136,12 +139,12 @@ Provide a request-response service:
 
 ```cpp
 #include "rix/rix.hpp"
-#include "rix/msg/standard/UInt32.hpp"
-#include "rix/msg/standard/Header.hpp"
+#include "rix/std_msgs/UInt32.hpp"
+#include "rix/std_msgs/Header.hpp"
 
 using namespace rix;
-using rix::msg::standard::UInt32;
-using rix::msg::standard::Header;
+using rix::std_msgs::UInt32;
+using rix::std_msgs::Header;
 
 void service_callback(const UInt32 &req, Header &res) {
   Log::info << "Received request!" << std::endl;
@@ -162,12 +165,12 @@ Call a service from another node:
 
 ```cpp
 #include "rix/rix.hpp"
-#include "rix/msg/standard/UInt32.hpp"
-#include "rix/msg/standard/Header.hpp"
+#include "rix/std_msgs/UInt32.hpp"
+#include "rix/std_msgs/Header.hpp"
 
 using namespace rix;
-using rix::msg::standard::UInt32;
-using rix::msg::standard::Header;
+using rix::std_msgs::UInt32;
+using rix::std_msgs::Header;
 
 std::shared_ptr<ServiceClient> service_client;
 
@@ -197,12 +200,12 @@ Provide a preemptible task via an action server:
 
 ```cpp
 #include "rix/rix.hpp"
-#include "rix/msg/standard/UInt32.hpp"
-#include "rix/msg/standard/Header.hpp"
+#include "rix/std_msgs/UInt32.hpp"
+#include "rix/std_msgs/Header.hpp"
 
 using namespace rix;
-using rix::msg::standard::UInt32;
-using rix::msg::standard::Header;
+using rix::std_msgs::UInt32;
+using rix::std_msgs::Header;
 
 bool action_callback(const UInt32 &goal, const Header &feedback, Header &result) {
   static int count = 0;
@@ -232,12 +235,12 @@ Dispatch an action goal from another node:
 
 ```cpp
 #include "rix/rix.hpp"
-#include "rix/msg/standard/UInt32.hpp"
-#include "rix/msg/standard/Header.hpp"
+#include "rix/std_msgs/UInt32.hpp"
+#include "rix/std_msgs/Header.hpp"
 
 using namespace rix;
-using rix::msg::standard::UInt32;
-using rix::msg::standard::Header;
+using rix::std_msgs::UInt32;
+using rix::std_msgs::Header;
 
 std::shared_ptr<ActionClient> action_client;
 

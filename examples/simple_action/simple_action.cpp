@@ -27,9 +27,9 @@ SimpleAction::SimpleAction(int max_iters, int port) : Node(NAME), i_(0), max_ite
   });
 }
 
-bool SimpleAction::callback(const rix::msg::standard::Double& goal,
-                            rix::msg::standard::Float& feedback,
-                            rix::msg::standard::Double& result) {
+bool SimpleAction::callback(const rix::std_msgs::Double& goal,
+                            rix::std_msgs::Float& feedback,
+                            rix::std_msgs::Double& result) {
   // Perform a taylor series expansion to approximate e^(goal.data) store intermediate data in value_ and return the
   // percent complete in feedback
   if (new_goal_) {

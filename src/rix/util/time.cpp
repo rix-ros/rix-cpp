@@ -39,9 +39,9 @@ std::string Time::to_string(bool local_time) const {
   return ss.str();
 }
 
-msg::standard::Time Time::to_msg() const {
+std_msgs::Time Time::to_msg() const {
   const int64_t ns_ = std::chrono::duration_cast<std::chrono::nanoseconds>(tp.time_since_epoch()).count();
-  msg::standard::Time msg;
+  std_msgs::Time msg;
   msg.sec = ns_ / 1'000'000'000;
   msg.nsec = ns_ % 1'000'000'000;
   return msg;
@@ -64,7 +64,7 @@ Time::Time(const uint32_t seconds, const uint32_t nanoseconds)
     : tp(Time::Type() +
          Duration::Type(static_cast<int64_t>(seconds) * 1'000'000'000 + static_cast<int64_t>(nanoseconds))) {}
 
-Time::Time(const msg::standard::Time& msg) : Time(msg.sec, msg.nsec) {}
+Time::Time(const std_msgs::Time& msg) : Time(msg.sec, msg.nsec) {}
 
 Time::Time(const Time& other) : tp(other.tp) {}
 
@@ -149,7 +149,7 @@ Time::Type& Time::raw() { return tp; }
 
 Duration::Duration() : d{} {}
 
-Duration::Duration(const msg::standard::Duration& msg) : Duration(msg.sec, msg.nsec) {}
+Duration::Duration(const std_msgs::Duration& msg) : Duration(msg.sec, msg.nsec) {}
 
 Duration::Duration(const Type& duration) : d(duration) {}
 
@@ -231,9 +231,9 @@ bool Duration::operator>(const Duration& other) const { return d > other.d; }
 
 bool Duration::operator>=(const Duration& other) const { return d >= other.d; }
 
-msg::standard::Duration Duration::to_msg() const {
+std_msgs::Duration Duration::to_msg() const {
   const int64_t ns_ = d.count();
-  msg::standard::Duration msg;
+  std_msgs::Duration msg;
   msg.sec = static_cast<int32_t>(ns_ / 1'000'000'000);
   msg.nsec = static_cast<int32_t>(ns_ % 1'000'000'000);
   return msg;

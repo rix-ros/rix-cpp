@@ -1,19 +1,26 @@
 #include "rix/core/subscriber.hpp"
-#include "rix/msg/mediator/Status.hpp"
-#include "rix/msg/mediator/SubNotify.hpp"
+#include "rix/sys_msgs/Status.hpp"
+#include "rix/sys_msgs/SubNotify.hpp"
 
 namespace rix {
 
-Subscriber::Subscriber(const msg::mediator::SubInfo& info,
-                       SocketFactory socket_factory,
-                       const Endpoint& rixhub_endpoint)
+Subscriber::Subscriber(const sys_msgs::SubInfo& info, SocketFactory socket_factory, const Endpoint& rixhub_endpoint)
     : info_(info), socket_factory_(socket_factory), callback_(nullptr), rixhub_endpoint_(rixhub_endpoint),
       registered_flag_(false) {
 
   server_ = socket_factory_();
-  server_->set_reuse_address(true);
-  server_->bind(Endpoint(info_.endpoint.address, info_.endpoint.port));
-  server_->listen(MAX_CONN);
+  if (!server_->set_reuse_address(true)) {
+    shutdown();
+    return;
+  }
+  if (!server_->bind(Endpoint(info_.endpoint.address, info_.endpoint.port))) {
+    shutdown();
+    return;
+  }
+  if (!server_->listen(MAX_CONN)) {
+    shutdown();
+    return;
+  }
 
   // Ensure server was intitialized properly
   if (server_->is_exception()) {
@@ -37,8 +44,8 @@ Subscriber::Subscriber(const msg::mediator::SubInfo& info,
     return;
   }
 
-  msg::mediator::Operation operation;
-  msg::mediator::Status status;
+  sys_msgs::Operation operation;
+  sys_msgs::Status status;
   if (!client->recv_message(operation, status)) {
     shutdown();
     return;
@@ -52,10 +59,10 @@ Subscriber::Subscriber(const msg::mediator::SubInfo& info,
 
   Log::debug << "Subscriber created on topic \"" << info_.topic_info.name << "\"." << std::endl;
 
-#ifdef RIX_MULTITHREADED
-  sub_notify_acceptor_.spin_thread = std::thread([this]() { this->sub_notify_acceptor_.spin(); });
-  spin_thread_ = std::thread([this]() { this->spin(); });
-#endif
+  if (MULTITHREADED) {
+    sub_notify_acceptor_.spin_thread = std::thread([this]() { this->sub_notify_acceptor_.spin(); });
+    spin_thread_ = std::thread([this]() { this->spin(); });
+  }
 }
 
 Subscriber::~Subscriber() {
@@ -70,16 +77,16 @@ Subscriber::~Subscriber() {
   }
   Log::debug << "Subscriber on topic \"" << info_.topic_info.name << "\" destroyed." << std::endl;
 
-#ifdef RIX_MULTITHREADED
-  sub_notify_acceptor_.shutdown();
-  if (sub_notify_acceptor_.spin_thread.joinable()) {
-    sub_notify_acceptor_.spin_thread.join();
+  if (MULTITHREADED) {
+    sub_notify_acceptor_.shutdown();
+    if (sub_notify_acceptor_.spin_thread.joinable()) {
+      sub_notify_acceptor_.spin_thread.join();
+    }
+    shutdown();
+    if (spin_thread_.joinable()) {
+      spin_thread_.join();
+    }
   }
-  shutdown();
-  if (spin_thread_.joinable()) {
-    spin_thread_.join();
-  }
-#endif
 }
 
 size_t Subscriber::get_publisher_count() const {
@@ -90,10 +97,10 @@ size_t Subscriber::get_publisher_count() const {
 /**< TODO: Implement the spin_once method */
 void Subscriber::on_spin() {
 
-#ifndef RIX_MULTITHREADED
-  // In single-threaded mode, we need to also spin the acceptor
-  sub_notify_acceptor_.spin_once();
-#endif
+  if (!MULTITHREADED) {
+    // In single-threaded mode, we need to also spin the acceptor
+    sub_notify_acceptor_.spin_once();
+  }
 
   std::lock_guard<std::mutex> guard(callback_mutex_);
   if (clients_.empty() || !callback_) {
@@ -103,14 +110,9 @@ void Subscriber::on_spin() {
   std::vector<std::shared_ptr<GenericSocket>> readable;
 
   if (GenericSocket::get_poller()) {
-
     std::vector<std::shared_ptr<GenericSocket>> exceptional;
 
-#ifdef RIX_MULTITHREADED
-    Duration timeout(1.0);
-#else
-    Duration timeout(0.0);
-#endif
+    Duration timeout(MULTITHREADED ? 1.0 : 0.0);
 
     GenericSocket::poll(sockets, timeout, PollFlag::READ, readable, exceptional);
 
@@ -120,6 +122,7 @@ void Subscriber::on_spin() {
       Log::debug << "Removed exceptional publisher from topic \"" << info_.topic_info.name << "\"." << std::endl;
     }
     exceptional.clear();
+
   } else {
     // Fallback if poller is not available
     for (const auto& sock : sockets) {
@@ -134,7 +137,7 @@ void Subscriber::on_spin() {
     auto client = *it;
 
     // Read a message from the publisher
-    msg::mediator::Operation operation;
+    sys_msgs::Operation operation;
     if (!client->recv_message(operation, *msg_instance_)) {
       clients_.erase(client);
       it++;
@@ -160,11 +163,8 @@ void Subscriber::on_spin() {
 Subscriber::SubNotifyAcceptor::SubNotifyAcceptor(Subscriber& parent) : parent(parent) {}
 
 void Subscriber::SubNotifyAcceptor::on_spin() {
-#ifdef RIX_MULTITHREADED
-  Duration timeout(1.0);
-#else
-  Duration timeout(0.0);
-#endif
+  Duration timeout(MULTITHREADED ? 1.0 : 0.0);
+
   // Check to see if rixhub has made a connection
   if (!parent.server_->wait_readable(timeout)) {
     return;
@@ -176,8 +176,8 @@ void Subscriber::SubNotifyAcceptor::on_spin() {
     return;
   }
 
-  msg::mediator::Operation operation;
-  msg::mediator::SubNotify sub_notify;
+  sys_msgs::Operation operation;
+  sys_msgs::SubNotify sub_notify;
   if (!conn->recv_message(operation, sub_notify)) {
     return;
   }
@@ -195,6 +195,7 @@ void Subscriber::SubNotifyAcceptor::on_spin() {
     }
     client->set_blocking(false);
     client->connect(Endpoint(pub.endpoint.address, pub.endpoint.port));
+    client->set_blocking(true);
     parent.clients_.insert(client);
     Log::debug << "Connected to publisher at \"" << pub.endpoint.address << ":" << pub.endpoint.port << "\" on topic \""
                << pub.topic_info.name << "\"." << std::endl;

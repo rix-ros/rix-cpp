@@ -1,5 +1,5 @@
-#include "rix/msg/standard/String.hpp"
-#include "rix/msg/standard/UInt32.hpp"
+#include "rix/std_msgs/String.hpp"
+#include "rix/std_msgs/UInt32.hpp"
 #include "rix/rix.hpp"
 
 using namespace rix;
@@ -11,5 +11,5 @@ public:
   SimpleService(int port);
 
 private:
-  void callback(const rix::msg::standard::UInt32& request, rix::msg::standard::String& response);
+  void callback(const rix::std_msgs::UInt32& request, rix::std_msgs::String& response);
 };

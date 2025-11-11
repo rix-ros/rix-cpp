@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <sys/poll.h>
 #include <sys/socket.h>
+#include <sys/uio.h>
 #include <sys/un.h>
 
 namespace rix {
@@ -22,7 +23,7 @@ POSIXSocket::POSIXSocket(int fd) : fd_(fd) {}
 POSIXSocket::~POSIXSocket() { close(); }
 
 bool POSIXSocket::bind(const Endpoint& endpoint) const {
-  struct sockaddr_in addr{};
+  struct sockaddr_in addr {};
   addr.sin_family = AF_INET;
   addr.sin_port = htons(endpoint.port);
   inet_pton(AF_INET, endpoint.address.c_str(), &addr.sin_addr);
@@ -32,7 +33,7 @@ bool POSIXSocket::bind(const Endpoint& endpoint) const {
 bool POSIXSocket::listen(int backlog) const { return ::listen(fd_, backlog) == 0; }
 
 std::shared_ptr<GenericSocket> POSIXSocket::accept(Endpoint& remote_endpoint) const {
-  struct sockaddr_in addr{};
+  struct sockaddr_in addr {};
   socklen_t len = sizeof(addr);
   int sock_fd = ::accept(fd_, (struct sockaddr*)&addr, &len);
   if (sock_fd < 0) {
@@ -45,7 +46,7 @@ std::shared_ptr<GenericSocket> POSIXSocket::accept(Endpoint& remote_endpoint) co
 }
 
 bool POSIXSocket::connect(const Endpoint& endpoint) const {
-  struct sockaddr_in addr{};
+  struct sockaddr_in addr {};
   addr.sin_family = AF_INET;
   addr.sin_port = htons(endpoint.port);
   inet_pton(AF_INET, endpoint.address.c_str(), &addr.sin_addr);
@@ -54,13 +55,81 @@ bool POSIXSocket::connect(const Endpoint& endpoint) const {
 
 void POSIXSocket::close() const { ::close(fd_); }
 
+ssize_t POSIXSocket::writev(const ConstMessageSegment* segments, size_t segment_count) const {
+  struct iovec* iov = new struct iovec[segment_count];
+  ssize_t to_send = 0;
+  for (int i = 0; i < segment_count; ++i) {
+    iov[i].iov_base = const_cast<uint8_t*>(segments[i].ptr());
+    iov[i].iov_len = segments[i].len();
+    to_send += segments[i].len();
+  }
+  ssize_t bytes_sent = 0;
+  while (bytes_sent < to_send) {
+    ssize_t result = ::writev(fd_, iov, segment_count);
+    if (result <= 0) {
+      break;
+    }
+    bytes_sent += result;
+
+    // Adjust iov to account for bytes already sent
+    ssize_t offset = result;
+    for (int i = 0; i < segment_count; ++i) {
+      if (offset >= static_cast<ssize_t>(iov[i].iov_len)) {
+        offset -= iov[i].iov_len;
+        iov[i].iov_base = static_cast<uint8_t*>(iov[i].iov_base) + iov[i].iov_len;
+        iov[i].iov_len = 0;
+      } else {
+        iov[i].iov_base = static_cast<uint8_t*>(iov[i].iov_base) + offset;
+        iov[i].iov_len -= offset;
+        break;
+      }
+    }
+  }
+  delete[] iov;
+  return bytes_sent;
+}
+
+ssize_t POSIXSocket::readv(MessageSegment* segments, size_t segment_count) const {
+  struct iovec* iov = new struct iovec[segment_count];
+  ssize_t to_read = 0;
+  for (int i = 0; i < segment_count; ++i) {
+    iov[i].iov_base = segments[i].ptr();
+    iov[i].iov_len = segments[i].len();
+    to_read += segments[i].len();
+  }
+  ssize_t bytes_received = 0;
+  while (bytes_received < to_read) {
+    ssize_t result = ::readv(fd_, iov, segment_count);
+    if (result <= 0) {
+      break;
+    }
+    bytes_received += result;
+
+    // Adjust iov to account for bytes already received
+    ssize_t offset = result;
+    for (int i = 0; i < segment_count; ++i) {
+      if (offset >= static_cast<ssize_t>(iov[i].iov_len)) {
+        offset -= iov[i].iov_len;
+        iov[i].iov_base = static_cast<uint8_t*>(iov[i].iov_base) + iov[i].iov_len;
+        iov[i].iov_len = 0;
+      } else {
+        iov[i].iov_base = static_cast<uint8_t*>(iov[i].iov_base) + offset;
+        iov[i].iov_len -= offset;
+        break;
+      }
+    }
+  }
+  delete[] iov;
+  return bytes_received;
+}
+
 ssize_t POSIXSocket::send(const void* buf, size_t len, int flags) const { return ::send(fd_, buf, len, flags); }
 
 ssize_t POSIXSocket::recv(void* buf, size_t len, int flags) const { return ::recv(fd_, buf, len, flags); }
 
 bool POSIXSocket::wait_readable(const Duration& timeout) const {
   // Implement with poll
-  struct pollfd pfd{};
+  struct pollfd pfd {};
   pfd.fd = fd_;
   pfd.events = POLLIN;
   int timeout_ms = static_cast<int>(timeout.to_milliseconds());
@@ -69,7 +138,7 @@ bool POSIXSocket::wait_readable(const Duration& timeout) const {
 }
 
 bool POSIXSocket::wait_writable(const Duration& timeout) const {
-  struct pollfd pfd{};
+  struct pollfd pfd {};
   pfd.fd = fd_;
   pfd.events = POLLOUT;
 
@@ -79,7 +148,7 @@ bool POSIXSocket::wait_writable(const Duration& timeout) const {
 }
 
 bool POSIXSocket::wait_exception(const Duration& timeout) const {
-  struct pollfd pfd{};
+  struct pollfd pfd {};
   pfd.fd = fd_;
   pfd.events = 0;
 
@@ -126,7 +195,7 @@ bool POSIXSocket::get_reuse_address() const {
 }
 
 Endpoint POSIXSocket::local_endpoint() const {
-  struct sockaddr_in addr{};
+  struct sockaddr_in addr {};
   socklen_t addrlen = sizeof(addr);
   if (getsockname(fd_, (struct sockaddr*)&addr, &addrlen) < 0) {
     return {};
@@ -140,7 +209,7 @@ Endpoint POSIXSocket::local_endpoint() const {
 }
 
 Endpoint POSIXSocket::remote_endpoint() const {
-  struct sockaddr_in addr{};
+  struct sockaddr_in addr {};
   socklen_t addrlen = sizeof(addr);
   if (getpeername(fd_, reinterpret_cast<struct sockaddr*>(&addr), &addrlen) < 0) {
     return {};

@@ -1,20 +1,20 @@
 #include "rix/core/action_client.hpp"
-#include "rix/msg/mediator/ActResponse.hpp"
-#include "rix/msg/mediator/Status.hpp"
-#include "rix/msg/standard/Void.hpp"
+#include "rix/std_msgs/Void.hpp"
+#include "rix/sys_msgs/ActResponse.hpp"
+#include "rix/sys_msgs/Status.hpp"
 
 namespace rix {
 
 ActionClient::~ActionClient() {
-#ifdef RIX_MULTITHREADED
-  shutdown();
-  if (spin_thread_.joinable()) {
-    spin_thread_.join();
+  if (MULTITHREADED) {
+    shutdown();
+    if (spin_thread_.joinable()) {
+      spin_thread_.join();
+    }
   }
-#endif
 }
 
-bool ActionClient::dispatch(const msg::Message& goal) {
+bool ActionClient::dispatch(const Message& goal) {
   std::lock_guard<std::mutex> guard(mutex_);
   uint8_t opcode;
   if (client_) {
@@ -40,9 +40,9 @@ bool ActionClient::dispatch(const msg::Message& goal) {
   }
 
   // Clear the recv buffer to avoid stale messages (look for response)
-  msg::mediator::Operation operation;
+  sys_msgs::Operation operation;
   while (true) {
-    client_->recv_message(operation, operation.size());
+    client_->recv_message(operation, operation.get_prefix_len());
     if (operation.opcode == OPCODE::ACT_RESPONSE_MESSAGE) {
       // Stop if we reach a response message
       break;
@@ -51,7 +51,7 @@ bool ActionClient::dispatch(const msg::Message& goal) {
   }
 
   // Read the response message
-  msg::mediator::Status status;
+  sys_msgs::Status status;
   if (!client_->recv_message(status, operation.len)) {
     client_ = nullptr;
     return false;
@@ -77,7 +77,7 @@ bool ActionClient::cancel() {
     return false;
   }
   uint8_t opcode = OPCODE::ACT_CANCEL_MESSAGE;
-  msg::standard::Void void_msg;
+  std_msgs::Void void_msg;
   if (!client_->send_message(opcode, void_msg)) {
     client_ = nullptr;
     return false;
@@ -92,9 +92,7 @@ bool ActionClient::wait_for_result(const Duration& timeout) {
   return result_condition_.wait_for(lock, timeout.raw(), [this]() { return result_received_; });
 }
 
-ActionClient::ActionClient(const msg::mediator::ActRequest& request,
-                           SocketFactory factory,
-                           const Endpoint& rixhub_endpoint)
+ActionClient::ActionClient(const sys_msgs::ActRequest& request, SocketFactory factory, const Endpoint& rixhub_endpoint)
     : request_(request), socket_factory_(factory) {
   auto client = socket_factory_();
   if (!client) {
@@ -112,8 +110,8 @@ ActionClient::ActionClient(const msg::mediator::ActRequest& request,
     return;
   }
 
-  msg::mediator::ActResponse response;
-  msg::mediator::Operation operation;
+  sys_msgs::ActResponse response;
+  sys_msgs::Operation operation;
   if (!client->recv_message(operation, response)) {
     shutdown();
     return;
@@ -132,9 +130,9 @@ ActionClient::ActionClient(const msg::mediator::ActRequest& request,
   endpoint_.address = response.act_info.endpoint.address;
   endpoint_.port = response.act_info.endpoint.port;
 
-#ifdef RIX_MULTITHREADED
-  spin_thread_ = std::thread([this]() { this->spin(); });
-#endif
+  if (MULTITHREADED) {
+    spin_thread_ = std::thread([this]() { this->spin(); });
+  }
 }
 
 void ActionClient::on_spin() {
@@ -144,8 +142,8 @@ void ActionClient::on_spin() {
     return;
   }
   if (client_->is_readable()) {
-    msg::mediator::Operation operation;
-    if (!client_->recv_message(operation, operation.size())) {
+    sys_msgs::Operation operation;
+    if (!client_->recv_message(operation, operation.get_prefix_len())) {
       client_ = nullptr;
       return;
     }

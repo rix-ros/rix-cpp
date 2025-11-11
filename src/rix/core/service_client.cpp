@@ -1,9 +1,9 @@
 #include "rix/core/service_client.hpp"
-#include "rix/msg/mediator/SrvResponse.hpp"
+#include "rix/sys_msgs/SrvResponse.hpp"
 
 namespace rix {
 
-ServiceClient::ServiceClient(const msg::mediator::SrvRequest& request,
+ServiceClient::ServiceClient(const sys_msgs::SrvRequest& request,
                              SocketFactory socket_factory,
                              const Endpoint& rixhub_endpoint)
     : request_(request), socket_factory_(socket_factory) {
@@ -23,8 +23,8 @@ ServiceClient::ServiceClient(const msg::mediator::SrvRequest& request,
     return;
   }
 
-  msg::mediator::SrvResponse response;
-  msg::mediator::Operation operation;
+  sys_msgs::SrvResponse response;
+  sys_msgs::Operation operation;
   if (!client->recv_message(operation, response)) {
     shutdown();
     return;
@@ -43,23 +43,23 @@ ServiceClient::ServiceClient(const msg::mediator::SrvRequest& request,
   endpoint_.address = response.srv_info.endpoint.address;
   endpoint_.port = response.srv_info.endpoint.port;
 
-#ifdef RIX_MULTITHREADED
-  spin_thread_ = std::thread([this]() { this->spin(); });
-#endif
+  if (MULTITHREADED) {
+    spin_thread_ = std::thread([this]() { this->spin(); });
+  }
 }
 
 ServiceClient::~ServiceClient() {
-#ifdef RIX_MULTITHREADED
-  shutdown();
-  if (spin_thread_.joinable()) {
-    spin_thread_.join();
+  if (MULTITHREADED) {
+    shutdown();
+    if (spin_thread_.joinable()) {
+      spin_thread_.join();
+    }
   }
-#endif
 }
 
 void ServiceClient::on_spin() {}
 
-bool ServiceClient::call(const msg::Message& request, msg::Message& response) {
+bool ServiceClient::call(const Message& request, Message& response) {
   if (!ok()) {
     return false;
   }
@@ -77,7 +77,7 @@ bool ServiceClient::call(const msg::Message& request, msg::Message& response) {
     return false;
   }
 
-  msg::mediator::Operation operation;
+  sys_msgs::Operation operation;
   if (!client->recv_message(operation, response)) {
     return false;
   }

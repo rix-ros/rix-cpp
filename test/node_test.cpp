@@ -1,5 +1,5 @@
-#include "rix/msg/standard/String.hpp"
-#include "rix/msg/standard/UInt32.hpp"
+#include "rix/std_msgs/String.hpp"
+#include "rix/std_msgs/UInt32.hpp"
 #include "rix/test/test_fixture.hpp"
 #include <gtest/gtest.h>
 
@@ -7,7 +7,7 @@ using namespace rix;
 
 TEST(NodeTest, RegisterAndDeregisterNode) {
   // Clear, self-documenting test
-  msg::mediator::NodeInfo node_info;
+  sys_msgs::NodeInfo node_info;
   TestFixture().create_node("test_node", node_info).destroy_node(node_info).build<Node>([](TestFixture& fixture) {
     Node node("test_node");
     EXPECT_TRUE(node.ok()); // Node destructor triggers deregistration
@@ -16,7 +16,7 @@ TEST(NodeTest, RegisterAndDeregisterNode) {
 
 TEST(NodeTest, PingNode) {
   // Clear, self-documenting test
-  msg::mediator::NodeInfo node_info;
+  sys_msgs::NodeInfo node_info;
   TestFixture()
       .create_node("test_node", node_info, false, 1)
       .accept_ping()
@@ -30,7 +30,7 @@ TEST(NodeTest, PingNode) {
 }
 
 TEST(NodeTest, RegisterNodeFailure) {
-  msg::mediator::NodeInfo node_info;
+  sys_msgs::NodeInfo node_info;
   TestFixture().create_node("test_node", node_info, true).build<Node>([](TestFixture& fixture) {
     Node node("test_node");
     EXPECT_FALSE(node.ok());
@@ -38,37 +38,37 @@ TEST(NodeTest, RegisterNodeFailure) {
 }
 
 TEST(NodeTest, RegisterComponentsAfterNodeShutdown) {
-  msg::mediator::NodeInfo node_info;
+  sys_msgs::NodeInfo node_info;
   TestFixture().create_node("test_node", node_info, true).build<Node>([](TestFixture& fixture) {
     Node node("test_node");
     EXPECT_FALSE(node.ok());
 
-    auto pub = node.create_publisher<msg::standard::UInt32>("test_topic");
+    auto pub = node.create_publisher<std_msgs::UInt32>("test_topic");
     EXPECT_EQ(pub, nullptr);
 
-    auto sub = node.create_subscriber<msg::standard::UInt32>("test_topic", [](const msg::standard::UInt32&) {});
+    auto sub = node.create_subscriber<std_msgs::UInt32>("test_topic", [](const std_msgs::UInt32&) {});
     EXPECT_EQ(sub, nullptr);
 
-    auto srv = node.create_service<msg::standard::UInt32, msg::standard::Time>(
-        "test_service", [](const msg::standard::UInt32&, msg::standard::Time&) {});
+    auto srv = node.create_service<std_msgs::UInt32, std_msgs::Time>(
+        "test_service", [](const std_msgs::UInt32&, std_msgs::Time&) {});
     EXPECT_EQ(srv, nullptr);
 
-    auto srv_cli = node.create_service_client<msg::standard::UInt32, msg::standard::Time>("test_service");
+    auto srv_cli = node.create_service_client<std_msgs::UInt32, std_msgs::Time>("test_service");
     EXPECT_EQ(srv_cli, nullptr);
 
-    auto act = node.create_action<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>(
+    auto act = node.create_action<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
         "test_action",
-        [](const msg::standard::UInt32&, msg::standard::UInt32&, msg::standard::Time&) -> bool { return true; });
+        [](const std_msgs::UInt32&, std_msgs::UInt32&, std_msgs::Time&) -> bool { return true; });
     EXPECT_EQ(act, nullptr);
 
     auto act_cli =
-        node.create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("test_action");
+        node.create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>("test_action");
     EXPECT_EQ(act_cli, nullptr);
   });
 }
 
 TEST(NodeTest, RegisterComponentsAfterManualNodeShutdown) {
-  msg::mediator::NodeInfo node_info;
+  sys_msgs::NodeInfo node_info;
   TestFixture().create_node("test_node", node_info).destroy_node(node_info).build<Node>([](TestFixture& fixture) {
     Node node("test_node");
     EXPECT_TRUE(node.ok());
@@ -76,43 +76,43 @@ TEST(NodeTest, RegisterComponentsAfterManualNodeShutdown) {
     node.shutdown();
     EXPECT_FALSE(node.ok());
 
-    auto pub = node.create_publisher<msg::standard::UInt32>("test_topic");
+    auto pub = node.create_publisher<std_msgs::UInt32>("test_topic");
     EXPECT_EQ(pub, nullptr);
 
-    auto sub = node.create_subscriber<msg::standard::UInt32>("test_topic", [](const msg::standard::UInt32&) {});
+    auto sub = node.create_subscriber<std_msgs::UInt32>("test_topic", [](const std_msgs::UInt32&) {});
     EXPECT_EQ(sub, nullptr);
 
-    auto srv = node.create_service<msg::standard::UInt32, msg::standard::Time>(
-        "test_service", [](const msg::standard::UInt32&, msg::standard::Time&) {});
+    auto srv = node.create_service<std_msgs::UInt32, std_msgs::Time>(
+        "test_service", [](const std_msgs::UInt32&, std_msgs::Time&) {});
     EXPECT_EQ(srv, nullptr);
 
-    auto srv_cli = node.create_service_client<msg::standard::UInt32, msg::standard::Time>("test_service");
+    auto srv_cli = node.create_service_client<std_msgs::UInt32, std_msgs::Time>("test_service");
     EXPECT_EQ(srv_cli, nullptr);
 
-    auto act = node.create_action<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>(
+    auto act = node.create_action<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
         "test_action",
-        [](const msg::standard::UInt32&, msg::standard::UInt32&, msg::standard::Time&) -> bool { return true; });
+        [](const std_msgs::UInt32&, std_msgs::UInt32&, std_msgs::Time&) -> bool { return true; });
     EXPECT_EQ(act, nullptr);
 
     auto act_cli =
-        node.create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("test_action");
+        node.create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>("test_action");
     EXPECT_EQ(act_cli, nullptr);
   });
 }
 
 TEST(NodeTest, RegisterAndDeregisterPublisher) {
-  msg::mediator::NodeInfo node_info;
-  msg::mediator::PubInfo pub_info;
+  sys_msgs::NodeInfo node_info;
+  sys_msgs::PubInfo pub_info;
   TestFixture()
       .create_node("test_node", node_info)
-      .create_publisher<msg::standard::UInt32>("test_topic", pub_info, node_info)
+      .create_publisher<std_msgs::UInt32>("test_topic", pub_info, node_info)
       .destroy_node(node_info)
       .destroy_publisher(pub_info)
       .build<Node>([](TestFixture& fixture) {
         Node node("test_node");
         EXPECT_TRUE(node.ok());
 
-        auto pub = node.create_publisher<msg::standard::UInt32>("test_topic");
+        auto pub = node.create_publisher<std_msgs::UInt32>("test_topic");
 
         EXPECT_NE(pub, nullptr);
         EXPECT_TRUE(pub->ok());
@@ -120,17 +120,17 @@ TEST(NodeTest, RegisterAndDeregisterPublisher) {
 }
 
 TEST(NodeTest, RegisterPublisherFailure) {
-  msg::mediator::NodeInfo node_info;
-  msg::mediator::PubInfo pub_info;
+  sys_msgs::NodeInfo node_info;
+  sys_msgs::PubInfo pub_info;
   TestFixture()
       .create_node("test_node", node_info)
-      .create_publisher<msg::standard::UInt32>("test_topic", pub_info, node_info, true)
+      .create_publisher<std_msgs::UInt32>("test_topic", pub_info, node_info, true)
       .destroy_node(node_info)
       .build<Node>([](TestFixture& fixture) {
         Node node("test_node");
         EXPECT_TRUE(node.ok());
 
-        auto pub = node.create_publisher<msg::standard::UInt32>("test_topic");
+        auto pub = node.create_publisher<std_msgs::UInt32>("test_topic");
 
         EXPECT_NE(pub, nullptr);
         EXPECT_FALSE(pub->ok());
@@ -138,18 +138,18 @@ TEST(NodeTest, RegisterPublisherFailure) {
 }
 
 TEST(NodeTest, RegisterAndDeregisterPublisherFromShutdown) {
-  msg::mediator::NodeInfo node_info;
-  msg::mediator::PubInfo pub_info;
+  sys_msgs::NodeInfo node_info;
+  sys_msgs::PubInfo pub_info;
   TestFixture()
       .create_node("test_node", node_info)
-      .create_publisher<msg::standard::UInt32>("test_topic", pub_info, node_info)
+      .create_publisher<std_msgs::UInt32>("test_topic", pub_info, node_info)
       .destroy_publisher(pub_info)
       .destroy_node(node_info)
       .build<Node>([](TestFixture& fixture) {
         Node node("test_node");
         EXPECT_TRUE(node.ok());
 
-        auto pub = node.create_publisher<msg::standard::UInt32>("test_topic");
+        auto pub = node.create_publisher<std_msgs::UInt32>("test_topic");
 
         EXPECT_NE(pub, nullptr);
         EXPECT_TRUE(pub->ok());
@@ -163,17 +163,17 @@ TEST(NodeTest, RegisterAndDeregisterPublisherFromShutdown) {
 }
 
 TEST(NodeTest, RegisterSubscriberFailure) {
-  msg::mediator::NodeInfo node_info;
-  msg::mediator::SubInfo sub_info;
+  sys_msgs::NodeInfo node_info;
+  sys_msgs::SubInfo sub_info;
   TestFixture()
       .create_node("test_node", node_info)
-      .create_subscriber<msg::standard::UInt32>("test_topic", sub_info, node_info, true)
+      .create_subscriber<std_msgs::UInt32>("test_topic", sub_info, node_info, true)
       .destroy_node(node_info)
       .build<Node>([](TestFixture& fixture) {
         Node node("test_node");
         EXPECT_TRUE(node.ok());
 
-        auto sub = node.create_subscriber("test_topic", [](const msg::standard::UInt32&) {});
+        auto sub = node.create_subscriber("test_topic", [](const std_msgs::UInt32&) {});
 
         EXPECT_NE(sub, nullptr);
         EXPECT_FALSE(sub->ok());
@@ -181,18 +181,18 @@ TEST(NodeTest, RegisterSubscriberFailure) {
 }
 
 TEST(NodeTest, RegisterAndDeregisterSubscriber) {
-  msg::mediator::NodeInfo node_info;
-  msg::mediator::SubInfo sub_info;
+  sys_msgs::NodeInfo node_info;
+  sys_msgs::SubInfo sub_info;
   TestFixture()
       .create_node("test_node", node_info)
-      .create_subscriber<msg::standard::UInt32>("test_topic", sub_info, node_info)
+      .create_subscriber<std_msgs::UInt32>("test_topic", sub_info, node_info)
       .destroy_node(node_info)
       .destroy_subscriber(sub_info)
       .build<Node>([](TestFixture& fixture) {
         Node node("test_node");
         EXPECT_TRUE(node.ok());
 
-        auto sub = node.create_subscriber("test_topic", [](const msg::standard::UInt32&) {});
+        auto sub = node.create_subscriber("test_topic", [](const std_msgs::UInt32&) {});
 
         EXPECT_NE(sub, nullptr);
         EXPECT_TRUE(sub->ok());
@@ -200,18 +200,18 @@ TEST(NodeTest, RegisterAndDeregisterSubscriber) {
 }
 
 TEST(NodeTest, RegisterAndDeregisterSubscriberFromShutdown) {
-  msg::mediator::NodeInfo node_info;
-  msg::mediator::SubInfo sub_info;
+  sys_msgs::NodeInfo node_info;
+  sys_msgs::SubInfo sub_info;
   TestFixture()
       .create_node("test_node", node_info)
-      .create_subscriber<msg::standard::UInt32>("test_topic", sub_info, node_info)
+      .create_subscriber<std_msgs::UInt32>("test_topic", sub_info, node_info)
       .destroy_subscriber(sub_info)
       .destroy_node(node_info)
       .build<Node>([](TestFixture& fixture) {
         Node node("test_node");
         EXPECT_TRUE(node.ok());
 
-        auto sub = node.create_subscriber("test_topic", [](const msg::standard::UInt32&) {});
+        auto sub = node.create_subscriber("test_topic", [](const std_msgs::UInt32&) {});
 
         EXPECT_NE(sub, nullptr);
         EXPECT_TRUE(sub->ok());
@@ -224,17 +224,17 @@ TEST(NodeTest, RegisterAndDeregisterSubscriberFromShutdown) {
 }
 
 TEST(NodeTest, RegisterServiceFailure) {
-  msg::mediator::NodeInfo node_info;
-  msg::mediator::SrvInfo srv_info;
+  sys_msgs::NodeInfo node_info;
+  sys_msgs::SrvInfo srv_info;
   TestFixture()
       .create_node("test_node", node_info)
-      .create_service<msg::standard::UInt32, msg::standard::Time>("test_service", srv_info, node_info, true)
+      .create_service<std_msgs::UInt32, std_msgs::Time>("test_service", srv_info, node_info, true)
       .destroy_node(node_info)
       .build<Node>([](TestFixture& fixture) {
         Node node("test_node");
         EXPECT_TRUE(node.ok());
 
-        auto srv = node.create_service("test_service", [](const msg::standard::UInt32&, msg::standard::Time&) {});
+        auto srv = node.create_service("test_service", [](const std_msgs::UInt32&, std_msgs::Time&) {});
 
         EXPECT_NE(srv, nullptr);
         EXPECT_FALSE(srv->ok());
@@ -242,18 +242,18 @@ TEST(NodeTest, RegisterServiceFailure) {
 }
 
 TEST(NodeTest, RegisterAndDeregisterService) {
-  msg::mediator::NodeInfo node_info;
-  msg::mediator::SrvInfo srv_info;
+  sys_msgs::NodeInfo node_info;
+  sys_msgs::SrvInfo srv_info;
   TestFixture()
       .create_node("test_node", node_info)
-      .create_service<msg::standard::UInt32, msg::standard::Time>("test_service", srv_info, node_info)
+      .create_service<std_msgs::UInt32, std_msgs::Time>("test_service", srv_info, node_info)
       .destroy_node(node_info)
       .destroy_service(srv_info)
       .build<Node>([](TestFixture& fixture) {
         Node node("test_node");
         EXPECT_TRUE(node.ok());
 
-        auto srv = node.create_service("test_service", [](const msg::standard::UInt32&, msg::standard::Time&) {});
+        auto srv = node.create_service("test_service", [](const std_msgs::UInt32&, std_msgs::Time&) {});
 
         EXPECT_NE(srv, nullptr);
         EXPECT_TRUE(srv->ok());
@@ -261,18 +261,18 @@ TEST(NodeTest, RegisterAndDeregisterService) {
 }
 
 TEST(NodeTest, RegisterAndDeregisterServiceFromShutdown) {
-  msg::mediator::NodeInfo node_info;
-  msg::mediator::SrvInfo srv_info;
+  sys_msgs::NodeInfo node_info;
+  sys_msgs::SrvInfo srv_info;
   TestFixture()
       .create_node("test_node", node_info)
-      .create_service<msg::standard::UInt32, msg::standard::Time>("test_service", srv_info, node_info)
+      .create_service<std_msgs::UInt32, std_msgs::Time>("test_service", srv_info, node_info)
       .destroy_service(srv_info)
       .destroy_node(node_info)
       .build<Node>([](TestFixture& fixture) {
         Node node("test_node");
         EXPECT_TRUE(node.ok());
 
-        auto srv = node.create_service("test_service", [](const msg::standard::UInt32&, msg::standard::Time&) {});
+        auto srv = node.create_service("test_service", [](const std_msgs::UInt32&, std_msgs::Time&) {});
 
         EXPECT_NE(srv, nullptr);
         EXPECT_TRUE(srv->ok());
@@ -285,16 +285,16 @@ TEST(NodeTest, RegisterAndDeregisterServiceFromShutdown) {
 }
 
 TEST(NodeTest, RequestServiceClientFailure) {
-  msg::mediator::NodeInfo node_info;
+  sys_msgs::NodeInfo node_info;
   TestFixture()
       .create_node("test_node", node_info)
-      .create_service_client<msg::standard::UInt32, msg::standard::Time>("test_service", node_info, true)
+      .create_service_client<std_msgs::UInt32, std_msgs::Time>("test_service", node_info, true)
       .destroy_node(node_info)
       .build<Node>([](TestFixture& fixture) {
         Node node("test_node");
         EXPECT_TRUE(node.ok());
 
-        auto srv_cli = node.create_service_client<msg::standard::UInt32, msg::standard::Time>("test_service");
+        auto srv_cli = node.create_service_client<std_msgs::UInt32, std_msgs::Time>("test_service");
 
         EXPECT_NE(srv_cli, nullptr);
         EXPECT_FALSE(srv_cli->ok());
@@ -302,16 +302,16 @@ TEST(NodeTest, RequestServiceClientFailure) {
 }
 
 TEST(NodeTest, RequestServiceClient) {
-  msg::mediator::NodeInfo node_info;
+  sys_msgs::NodeInfo node_info;
   TestFixture()
       .create_node("test_node", node_info)
-      .create_service_client<msg::standard::UInt32, msg::standard::Time>("test_service", node_info)
+      .create_service_client<std_msgs::UInt32, std_msgs::Time>("test_service", node_info)
       .destroy_node(node_info)
       .build<Node>([](TestFixture& fixture) {
         Node node("test_node");
         EXPECT_TRUE(node.ok());
 
-        auto srv_cli = node.create_service_client<msg::standard::UInt32, msg::standard::Time>("test_service");
+        auto srv_cli = node.create_service_client<std_msgs::UInt32, std_msgs::Time>("test_service");
 
         EXPECT_NE(srv_cli, nullptr);
         EXPECT_TRUE(srv_cli->ok());
@@ -319,16 +319,16 @@ TEST(NodeTest, RequestServiceClient) {
 }
 
 TEST(NodeTest, RequestServiceClientShutdown) {
-  msg::mediator::NodeInfo node_info;
+  sys_msgs::NodeInfo node_info;
   TestFixture()
       .create_node("test_node", node_info)
-      .create_service_client<msg::standard::UInt32, msg::standard::Time>("test_service", node_info)
+      .create_service_client<std_msgs::UInt32, std_msgs::Time>("test_service", node_info)
       .destroy_node(node_info)
       .build<Node>([](TestFixture& fixture) {
         Node node("test_node");
         EXPECT_TRUE(node.ok());
 
-        auto srv_cli = node.create_service_client<msg::standard::UInt32, msg::standard::Time>("test_service");
+        auto srv_cli = node.create_service_client<std_msgs::UInt32, std_msgs::Time>("test_service");
 
         EXPECT_NE(srv_cli, nullptr);
         EXPECT_TRUE(srv_cli->ok());
@@ -341,11 +341,11 @@ TEST(NodeTest, RequestServiceClientShutdown) {
 }
 
 TEST(NodeTest, RegisterActionFailure) {
-  msg::mediator::NodeInfo node_info;
-  msg::mediator::ActInfo act_info;
+  sys_msgs::NodeInfo node_info;
+  sys_msgs::ActInfo act_info;
   TestFixture()
       .create_node("test_node", node_info)
-      .create_action<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>(
+      .create_action<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
           "test_action", act_info, node_info, 0, true)
       .destroy_node(node_info)
       .build<Node>([](TestFixture& fixture) {
@@ -354,7 +354,7 @@ TEST(NodeTest, RegisterActionFailure) {
 
         auto act = node.create_action(
             "test_action",
-            [](const msg::standard::UInt32&, msg::standard::UInt32&, msg::standard::Time&) -> bool { return true; });
+            [](const std_msgs::UInt32&, std_msgs::UInt32&, std_msgs::Time&) -> bool { return true; });
 
         EXPECT_NE(act, nullptr);
         EXPECT_FALSE(act->ok());
@@ -362,11 +362,11 @@ TEST(NodeTest, RegisterActionFailure) {
 }
 
 TEST(NodeTest, RegisterAndDeregisterAction) {
-  msg::mediator::NodeInfo node_info;
-  msg::mediator::ActInfo act_info;
+  sys_msgs::NodeInfo node_info;
+  sys_msgs::ActInfo act_info;
   TestFixture()
       .create_node("test_node", node_info)
-      .create_action<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>(
+      .create_action<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
           "test_action", act_info, node_info)
       .destroy_node(node_info)
       .destroy_action(act_info)
@@ -376,18 +376,18 @@ TEST(NodeTest, RegisterAndDeregisterAction) {
 
         auto act = node.create_action(
             "test_action",
-            [](const msg::standard::UInt32&, msg::standard::UInt32&, msg::standard::Time&) -> bool { return false; });
+            [](const std_msgs::UInt32&, std_msgs::UInt32&, std_msgs::Time&) -> bool { return false; });
         EXPECT_NE(act, nullptr);
         EXPECT_TRUE(act->ok());
       });
 }
 
 TEST(NodeTest, RegisterAndDeregisterActionFromShutdown) {
-  msg::mediator::NodeInfo node_info;
-  msg::mediator::ActInfo act_info;
+  sys_msgs::NodeInfo node_info;
+  sys_msgs::ActInfo act_info;
   TestFixture()
       .create_node("test_node", node_info)
-      .create_action<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>(
+      .create_action<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
           "test_action", act_info, node_info)
       .destroy_action(act_info)
       .destroy_node(node_info)
@@ -397,7 +397,7 @@ TEST(NodeTest, RegisterAndDeregisterActionFromShutdown) {
 
         auto act = node.create_action(
             "test_action",
-            [](const msg::standard::UInt32&, msg::standard::UInt32&, msg::standard::Time&) -> bool { return false; });
+            [](const std_msgs::UInt32&, std_msgs::UInt32&, std_msgs::Time&) -> bool { return false; });
 
         EXPECT_NE(act, nullptr);
         EXPECT_TRUE(act->ok());
@@ -410,10 +410,10 @@ TEST(NodeTest, RegisterAndDeregisterActionFromShutdown) {
 }
 
 TEST(NodeTest, RequestActionClientFailure) {
-  msg::mediator::NodeInfo node_info;
+  sys_msgs::NodeInfo node_info;
   TestFixture()
       .create_node("test_node", node_info)
-      .create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>(
+      .create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
           "test_action", node_info, true)
       .destroy_node(node_info)
       .build<Node>([](TestFixture& fixture) {
@@ -421,7 +421,7 @@ TEST(NodeTest, RequestActionClientFailure) {
         EXPECT_TRUE(node.ok());
 
         auto act_cli =
-            node.create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("test_action");
+            node.create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>("test_action");
 
         EXPECT_NE(act_cli, nullptr);
         EXPECT_FALSE(act_cli->ok());
@@ -429,17 +429,17 @@ TEST(NodeTest, RequestActionClientFailure) {
 }
 
 TEST(NodeTest, RequestActionClient) {
-  msg::mediator::NodeInfo node_info;
+  sys_msgs::NodeInfo node_info;
   TestFixture()
       .create_node("test_node", node_info)
-      .create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("test_action", node_info)
+      .create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>("test_action", node_info)
       .destroy_node(node_info)
       .build<Node>([](TestFixture& fixture) {
         Node node("test_node");
         EXPECT_TRUE(node.ok());
 
         auto act_cli =
-            node.create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("test_action");
+            node.create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>("test_action");
 
         EXPECT_NE(act_cli, nullptr);
         EXPECT_TRUE(act_cli->ok());
@@ -447,17 +447,17 @@ TEST(NodeTest, RequestActionClient) {
 }
 
 TEST(NodeTest, RequestActionClientShutdown) {
-  msg::mediator::NodeInfo node_info;
+  sys_msgs::NodeInfo node_info;
   TestFixture()
       .create_node("test_node", node_info)
-      .create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("test_action", node_info)
+      .create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>("test_action", node_info)
       .destroy_node(node_info)
       .build<Node>([](TestFixture& fixture) {
         Node node("test_node");
         EXPECT_TRUE(node.ok());
 
         auto act_cli =
-            node.create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("test_action");
+            node.create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>("test_action");
 
         EXPECT_NE(act_cli, nullptr);
         EXPECT_TRUE(act_cli->ok());
@@ -470,27 +470,27 @@ TEST(NodeTest, RequestActionClientShutdown) {
 }
 
 TEST(NodeTest, RegisterAndDeregisterMultipleOfAll) {
-  msg::mediator::NodeInfo node_info;
-  msg::mediator::PubInfo pub_info, pub_info2;
-  msg::mediator::SubInfo sub_info, sub_info2;
-  msg::mediator::SrvInfo srv_info, srv_info2;
-  msg::mediator::ActInfo act_info, act_info2;
+  sys_msgs::NodeInfo node_info;
+  sys_msgs::PubInfo pub_info, pub_info2;
+  sys_msgs::SubInfo sub_info, sub_info2;
+  sys_msgs::SrvInfo srv_info, srv_info2;
+  sys_msgs::ActInfo act_info, act_info2;
   TestFixture()
       .create_node("test_node", node_info)
-      .create_publisher<msg::standard::UInt32>("test_topic", pub_info, node_info)
-      .create_subscriber<msg::standard::UInt32>("test_topic", sub_info, node_info)
-      .create_service<msg::standard::UInt32, msg::standard::Time>("test_service", srv_info, node_info)
-      .create_service_client<msg::standard::UInt32, msg::standard::Time>("test_service", node_info)
-      .create_action<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>(
+      .create_publisher<std_msgs::UInt32>("test_topic", pub_info, node_info)
+      .create_subscriber<std_msgs::UInt32>("test_topic", sub_info, node_info)
+      .create_service<std_msgs::UInt32, std_msgs::Time>("test_service", srv_info, node_info)
+      .create_service_client<std_msgs::UInt32, std_msgs::Time>("test_service", node_info)
+      .create_action<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
           "test_action", act_info, node_info)
-      .create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("test_action", node_info)
-      .create_publisher<msg::standard::UInt32>("other_topic", pub_info2, node_info)
-      .create_subscriber<msg::standard::UInt32>("other_topic", sub_info2, node_info)
-      .create_service<msg::standard::UInt32, msg::standard::Time>("other_service", srv_info2, node_info)
-      .create_service_client<msg::standard::UInt32, msg::standard::Time>("other_service", node_info)
-      .create_action<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>(
+      .create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>("test_action", node_info)
+      .create_publisher<std_msgs::UInt32>("other_topic", pub_info2, node_info)
+      .create_subscriber<std_msgs::UInt32>("other_topic", sub_info2, node_info)
+      .create_service<std_msgs::UInt32, std_msgs::Time>("other_service", srv_info2, node_info)
+      .create_service_client<std_msgs::UInt32, std_msgs::Time>("other_service", node_info)
+      .create_action<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
           "other_action", act_info2, node_info)
-      .create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("other_action",
+      .create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>("other_action",
                                                                                                node_info)
       .destroy_publisher(pub_info)
       .destroy_subscriber(sub_info)
@@ -505,58 +505,58 @@ TEST(NodeTest, RegisterAndDeregisterMultipleOfAll) {
         Node node("test_node");
         EXPECT_TRUE(node.ok());
 
-        auto pub = node.create_publisher<msg::standard::UInt32>("test_topic");
+        auto pub = node.create_publisher<std_msgs::UInt32>("test_topic");
         EXPECT_NE(pub, nullptr);
         EXPECT_TRUE(pub->ok());
 
-        auto sub = node.create_subscriber("test_topic", [](const msg::standard::UInt32&) {});
+        auto sub = node.create_subscriber("test_topic", [](const std_msgs::UInt32&) {});
         EXPECT_NE(sub, nullptr);
         EXPECT_TRUE(sub->ok());
 
-        auto srv = node.create_service("test_service", [](const msg::standard::UInt32&, msg::standard::Time&) {});
+        auto srv = node.create_service("test_service", [](const std_msgs::UInt32&, std_msgs::Time&) {});
         EXPECT_NE(srv, nullptr);
         EXPECT_TRUE(srv->ok());
 
-        auto srv_cli = node.create_service_client<msg::standard::UInt32, msg::standard::Time>("test_service");
+        auto srv_cli = node.create_service_client<std_msgs::UInt32, std_msgs::Time>("test_service");
         EXPECT_NE(srv_cli, nullptr);
         EXPECT_TRUE(srv_cli->ok());
 
-        auto act = node.create_action<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>(
+        auto act = node.create_action<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
             "test_action",
-            [](const msg::standard::UInt32&, msg::standard::UInt32&, msg::standard::Time&) -> bool { return true; });
+            [](const std_msgs::UInt32&, std_msgs::UInt32&, std_msgs::Time&) -> bool { return true; });
         EXPECT_NE(act, nullptr);
         EXPECT_TRUE(act->ok());
 
         auto act_cli =
-            node.create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("test_action");
+            node.create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>("test_action");
         EXPECT_NE(act_cli, nullptr);
         EXPECT_TRUE(act_cli->ok());
 
-        auto other_pub = node.create_publisher<msg::standard::UInt32>("other_topic");
+        auto other_pub = node.create_publisher<std_msgs::UInt32>("other_topic");
         EXPECT_NE(other_pub, nullptr);
         EXPECT_TRUE(other_pub->ok());
 
-        auto other_sub = node.create_subscriber("other_topic", [](const msg::standard::UInt32&) {});
+        auto other_sub = node.create_subscriber("other_topic", [](const std_msgs::UInt32&) {});
         EXPECT_NE(other_sub, nullptr);
         EXPECT_TRUE(other_sub->ok());
 
         auto other_srv =
-            node.create_service("other_service", [](const msg::standard::UInt32&, msg::standard::Time&) {});
+            node.create_service("other_service", [](const std_msgs::UInt32&, std_msgs::Time&) {});
         EXPECT_NE(other_srv, nullptr);
         EXPECT_TRUE(other_srv->ok());
 
-        auto other_srv_cli = node.create_service_client<msg::standard::UInt32, msg::standard::Time>("other_service");
+        auto other_srv_cli = node.create_service_client<std_msgs::UInt32, std_msgs::Time>("other_service");
         EXPECT_NE(other_srv_cli, nullptr);
         EXPECT_TRUE(other_srv_cli->ok());
 
-        auto other_act = node.create_action<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>(
+        auto other_act = node.create_action<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
             "other_action",
-            [](const msg::standard::UInt32&, msg::standard::UInt32&, msg::standard::Time&) -> bool { return true; });
+            [](const std_msgs::UInt32&, std_msgs::UInt32&, std_msgs::Time&) -> bool { return true; });
         EXPECT_NE(other_act, nullptr);
         EXPECT_TRUE(other_act->ok());
 
         auto other_act_cli =
-            node.create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>(
+            node.create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
                 "other_action");
         EXPECT_NE(other_act_cli, nullptr);
         EXPECT_TRUE(other_act_cli->ok());
@@ -636,27 +636,27 @@ TEST(NodeTest, RegisterAndDeregisterMultipleOfAll) {
 }
 
 TEST(NodeTest, PreserveComponentOrderOnDeregistration) {
-  msg::mediator::NodeInfo node_info;
-  msg::mediator::PubInfo pub_info, pub_info2;
-  msg::mediator::SubInfo sub_info, sub_info2;
-  msg::mediator::SrvInfo srv_info, srv_info2;
-  msg::mediator::ActInfo act_info, act_info2;
+  sys_msgs::NodeInfo node_info;
+  sys_msgs::PubInfo pub_info, pub_info2;
+  sys_msgs::SubInfo sub_info, sub_info2;
+  sys_msgs::SrvInfo srv_info, srv_info2;
+  sys_msgs::ActInfo act_info, act_info2;
   TestFixture()
       .create_node("test_node", node_info)
-      .create_publisher<msg::standard::UInt32>("test_topic", pub_info, node_info)
-      .create_subscriber<msg::standard::UInt32>("test_topic", sub_info, node_info)
-      .create_service<msg::standard::UInt32, msg::standard::Time>("test_service", srv_info, node_info)
-      .create_service_client<msg::standard::UInt32, msg::standard::Time>("test_service", node_info)
-      .create_action<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>(
+      .create_publisher<std_msgs::UInt32>("test_topic", pub_info, node_info)
+      .create_subscriber<std_msgs::UInt32>("test_topic", sub_info, node_info)
+      .create_service<std_msgs::UInt32, std_msgs::Time>("test_service", srv_info, node_info)
+      .create_service_client<std_msgs::UInt32, std_msgs::Time>("test_service", node_info)
+      .create_action<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
           "test_action", act_info, node_info)
-      .create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("test_action", node_info)
-      .create_publisher<msg::standard::UInt32>("other_topic", pub_info2, node_info)
-      .create_subscriber<msg::standard::UInt32>("other_topic", sub_info2, node_info)
-      .create_service<msg::standard::UInt32, msg::standard::Time>("other_service", srv_info2, node_info)
-      .create_service_client<msg::standard::UInt32, msg::standard::Time>("other_service", node_info)
-      .create_action<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>(
+      .create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>("test_action", node_info)
+      .create_publisher<std_msgs::UInt32>("other_topic", pub_info2, node_info)
+      .create_subscriber<std_msgs::UInt32>("other_topic", sub_info2, node_info)
+      .create_service<std_msgs::UInt32, std_msgs::Time>("other_service", srv_info2, node_info)
+      .create_service_client<std_msgs::UInt32, std_msgs::Time>("other_service", node_info)
+      .create_action<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
           "other_action", act_info2, node_info)
-      .create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("other_action",
+      .create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>("other_action",
                                                                                                node_info)
       .destroy_node(node_info)
       .destroy_action(act_info2)
@@ -671,69 +671,69 @@ TEST(NodeTest, PreserveComponentOrderOnDeregistration) {
         Node node("test_node");
         EXPECT_TRUE(node.ok());
 
-        auto pub = node.create_publisher<msg::standard::UInt32>("test_topic");
+        auto pub = node.create_publisher<std_msgs::UInt32>("test_topic");
         EXPECT_NE(pub, nullptr);
         EXPECT_TRUE(pub->ok());
         pub = nullptr;
 
-        auto sub = node.create_subscriber("test_topic", [](const msg::standard::UInt32&) {});
+        auto sub = node.create_subscriber("test_topic", [](const std_msgs::UInt32&) {});
         EXPECT_NE(sub, nullptr);
         EXPECT_TRUE(sub->ok());
         sub = nullptr;
 
-        auto srv = node.create_service("test_service", [](const msg::standard::UInt32&, msg::standard::Time&) {});
+        auto srv = node.create_service("test_service", [](const std_msgs::UInt32&, std_msgs::Time&) {});
         EXPECT_NE(srv, nullptr);
         EXPECT_TRUE(srv->ok());
         srv = nullptr;
 
-        auto srv_cli = node.create_service_client<msg::standard::UInt32, msg::standard::Time>("test_service");
+        auto srv_cli = node.create_service_client<std_msgs::UInt32, std_msgs::Time>("test_service");
         EXPECT_NE(srv_cli, nullptr);
         EXPECT_TRUE(srv_cli->ok());
         srv_cli = nullptr;
 
-        auto act = node.create_action<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>(
+        auto act = node.create_action<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
             "test_action",
-            [](const msg::standard::UInt32&, msg::standard::UInt32&, msg::standard::Time&) -> bool { return true; });
+            [](const std_msgs::UInt32&, std_msgs::UInt32&, std_msgs::Time&) -> bool { return true; });
         EXPECT_NE(act, nullptr);
         EXPECT_TRUE(act->ok());
         act = nullptr;
 
         auto act_cli =
-            node.create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("test_action");
+            node.create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>("test_action");
         EXPECT_NE(act_cli, nullptr);
         EXPECT_TRUE(act_cli->ok());
         act_cli = nullptr;
 
-        auto other_pub = node.create_publisher<msg::standard::UInt32>("other_topic");
+        auto other_pub = node.create_publisher<std_msgs::UInt32>("other_topic");
         EXPECT_NE(other_pub, nullptr);
         EXPECT_TRUE(other_pub->ok());
         other_pub = nullptr;
 
-        auto other_sub = node.create_subscriber("other_topic", [](const msg::standard::UInt32&) {});
+        auto other_sub = node.create_subscriber("other_topic", [](const std_msgs::UInt32&) {});
         EXPECT_NE(other_sub, nullptr);
         EXPECT_TRUE(other_sub->ok());
         other_sub = nullptr;
 
         auto other_srv =
-            node.create_service("other_service", [](const msg::standard::UInt32&, msg::standard::Time&) {});
+            node.create_service("other_service", [](const std_msgs::UInt32&, std_msgs::Time&) {});
         EXPECT_NE(other_srv, nullptr);
         EXPECT_TRUE(other_srv->ok());
         other_srv = nullptr;
 
-        auto other_srv_cli = node.create_service_client<msg::standard::UInt32, msg::standard::Time>("other_service");
+        auto other_srv_cli = node.create_service_client<std_msgs::UInt32, std_msgs::Time>("other_service");
         EXPECT_NE(other_srv_cli, nullptr);
         EXPECT_TRUE(other_srv_cli->ok());
         other_srv_cli = nullptr;
 
-        auto other_act = node.create_action<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>(
+        auto other_act = node.create_action<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
             "other_action",
-            [](const msg::standard::UInt32&, msg::standard::UInt32&, msg::standard::Time&) -> bool { return true; });
+            [](const std_msgs::UInt32&, std_msgs::UInt32&, std_msgs::Time&) -> bool { return true; });
         EXPECT_NE(other_act, nullptr);
         EXPECT_TRUE(other_act->ok());
         other_act = nullptr;
 
         auto other_act_cli =
-            node.create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>(
+            node.create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
                 "other_action");
         EXPECT_NE(other_act_cli, nullptr);
         EXPECT_TRUE(other_act_cli->ok());
@@ -742,27 +742,27 @@ TEST(NodeTest, PreserveComponentOrderOnDeregistration) {
 }
 
 TEST(NodeTest, ShutdownFromSignal) {
-  msg::mediator::NodeInfo node_info;
-  msg::mediator::PubInfo pub_info, pub_info2;
-  msg::mediator::SubInfo sub_info, sub_info2;
-  msg::mediator::SrvInfo srv_info, srv_info2;
-  msg::mediator::ActInfo act_info, act_info2;
+  sys_msgs::NodeInfo node_info;
+  sys_msgs::PubInfo pub_info, pub_info2;
+  sys_msgs::SubInfo sub_info, sub_info2;
+  sys_msgs::SrvInfo srv_info, srv_info2;
+  sys_msgs::ActInfo act_info, act_info2;
   TestFixture()
       .create_node("test_node", node_info)
-      .create_publisher<msg::standard::UInt32>("test_topic", pub_info, node_info)
-      .create_subscriber<msg::standard::UInt32>("test_topic", sub_info, node_info)
-      .create_service<msg::standard::UInt32, msg::standard::Time>("test_service", srv_info, node_info)
-      .create_service_client<msg::standard::UInt32, msg::standard::Time>("test_service", node_info)
-      .create_action<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>(
+      .create_publisher<std_msgs::UInt32>("test_topic", pub_info, node_info)
+      .create_subscriber<std_msgs::UInt32>("test_topic", sub_info, node_info)
+      .create_service<std_msgs::UInt32, std_msgs::Time>("test_service", srv_info, node_info)
+      .create_service_client<std_msgs::UInt32, std_msgs::Time>("test_service", node_info)
+      .create_action<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
           "test_action", act_info, node_info)
-      .create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("test_action", node_info)
-      .create_publisher<msg::standard::UInt32>("other_topic", pub_info2, node_info)
-      .create_subscriber<msg::standard::UInt32>("other_topic", sub_info2, node_info)
-      .create_service<msg::standard::UInt32, msg::standard::Time>("other_service", srv_info2, node_info)
-      .create_service_client<msg::standard::UInt32, msg::standard::Time>("other_service", node_info)
-      .create_action<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>(
+      .create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>("test_action", node_info)
+      .create_publisher<std_msgs::UInt32>("other_topic", pub_info2, node_info)
+      .create_subscriber<std_msgs::UInt32>("other_topic", sub_info2, node_info)
+      .create_service<std_msgs::UInt32, std_msgs::Time>("other_service", srv_info2, node_info)
+      .create_service_client<std_msgs::UInt32, std_msgs::Time>("other_service", node_info)
+      .create_action<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
           "other_action", act_info2, node_info)
-      .create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("other_action",
+      .create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>("other_action",
                                                                                                node_info)
       .destroy_publisher(pub_info)
       .destroy_subscriber(sub_info)
@@ -778,69 +778,69 @@ TEST(NodeTest, ShutdownFromSignal) {
         Node node("test_node");
         EXPECT_TRUE(node.ok());
 
-        auto pub = node.create_publisher<msg::standard::UInt32>("test_topic");
+        auto pub = node.create_publisher<std_msgs::UInt32>("test_topic");
         EXPECT_NE(pub, nullptr);
         EXPECT_TRUE(pub->ok());
         pub = nullptr;
 
-        auto sub = node.create_subscriber("test_topic", [](const msg::standard::UInt32&) {});
+        auto sub = node.create_subscriber("test_topic", [](const std_msgs::UInt32&) {});
         EXPECT_NE(sub, nullptr);
         EXPECT_TRUE(sub->ok());
         sub = nullptr;
 
-        auto srv = node.create_service("test_service", [](const msg::standard::UInt32&, msg::standard::Time&) {});
+        auto srv = node.create_service("test_service", [](const std_msgs::UInt32&, std_msgs::Time&) {});
         EXPECT_NE(srv, nullptr);
         EXPECT_TRUE(srv->ok());
         srv = nullptr;
 
-        auto srv_cli = node.create_service_client<msg::standard::UInt32, msg::standard::Time>("test_service");
+        auto srv_cli = node.create_service_client<std_msgs::UInt32, std_msgs::Time>("test_service");
         EXPECT_NE(srv_cli, nullptr);
         EXPECT_TRUE(srv_cli->ok());
         srv_cli = nullptr;
 
-        auto act = node.create_action<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>(
+        auto act = node.create_action<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
             "test_action",
-            [](const msg::standard::UInt32&, msg::standard::UInt32&, msg::standard::Time&) -> bool { return true; });
+            [](const std_msgs::UInt32&, std_msgs::UInt32&, std_msgs::Time&) -> bool { return true; });
         EXPECT_NE(act, nullptr);
         EXPECT_TRUE(act->ok());
         act = nullptr;
 
         auto act_cli =
-            node.create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>("test_action");
+            node.create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>("test_action");
         EXPECT_NE(act_cli, nullptr);
         EXPECT_TRUE(act_cli->ok());
         act_cli = nullptr;
 
-        auto other_pub = node.create_publisher<msg::standard::UInt32>("other_topic");
+        auto other_pub = node.create_publisher<std_msgs::UInt32>("other_topic");
         EXPECT_NE(other_pub, nullptr);
         EXPECT_TRUE(other_pub->ok());
         other_pub = nullptr;
 
-        auto other_sub = node.create_subscriber("other_topic", [](const msg::standard::UInt32&) {});
+        auto other_sub = node.create_subscriber("other_topic", [](const std_msgs::UInt32&) {});
         EXPECT_NE(other_sub, nullptr);
         EXPECT_TRUE(other_sub->ok());
         other_sub = nullptr;
 
         auto other_srv =
-            node.create_service("other_service", [](const msg::standard::UInt32&, msg::standard::Time&) {});
+            node.create_service("other_service", [](const std_msgs::UInt32&, std_msgs::Time&) {});
         EXPECT_NE(other_srv, nullptr);
         EXPECT_TRUE(other_srv->ok());
         other_srv = nullptr;
 
-        auto other_srv_cli = node.create_service_client<msg::standard::UInt32, msg::standard::Time>("other_service");
+        auto other_srv_cli = node.create_service_client<std_msgs::UInt32, std_msgs::Time>("other_service");
         EXPECT_NE(other_srv_cli, nullptr);
         EXPECT_TRUE(other_srv_cli->ok());
         other_srv_cli = nullptr;
 
-        auto other_act = node.create_action<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>(
+        auto other_act = node.create_action<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
             "other_action",
-            [](const msg::standard::UInt32&, msg::standard::UInt32&, msg::standard::Time&) -> bool { return true; });
+            [](const std_msgs::UInt32&, std_msgs::UInt32&, std_msgs::Time&) -> bool { return true; });
         EXPECT_NE(other_act, nullptr);
         EXPECT_TRUE(other_act->ok());
         other_act = nullptr;
 
         auto other_act_cli =
-            node.create_action_client<msg::standard::UInt32, msg::standard::UInt32, msg::standard::Time>(
+            node.create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
                 "other_action");
         EXPECT_NE(other_act_cli, nullptr);
         EXPECT_TRUE(other_act_cli->ok());
@@ -857,10 +857,10 @@ TEST(NodeTest, ShutdownFromSignal) {
 }
 
 TEST(NodeTest, ParameterSetRequest) {
-  auto param = std::make_shared<msg::standard::String>();
+  auto param = std::make_shared<std_msgs::String>();
   param->data = "test_value";
 
-  msg::mediator::NodeInfo node_info;
+  sys_msgs::NodeInfo node_info;
   TestFixture()
       .create_node("test_node", node_info)
       .set_parameter("test_param", node_info, param)
@@ -875,10 +875,10 @@ TEST(NodeTest, ParameterSetRequest) {
 }
 
 TEST(NodeTest, ParameterSetRequestFailure) {
-  auto param = std::make_shared<msg::standard::String>();
+  auto param = std::make_shared<std_msgs::String>();
   param->data = "test_value";
 
-  msg::mediator::NodeInfo node_info;
+  sys_msgs::NodeInfo node_info;
   TestFixture()
       .create_node("test_node", node_info)
       .set_parameter("test_param", node_info, param, true)
@@ -893,10 +893,10 @@ TEST(NodeTest, ParameterSetRequestFailure) {
 }
 
 TEST(NodeTest, ParameterGetRequest) {
-  auto param = std::make_shared<msg::standard::String>();
+  auto param = std::make_shared<std_msgs::String>();
   param->data = "test_value";
 
-  msg::mediator::NodeInfo node_info;
+  sys_msgs::NodeInfo node_info;
   TestFixture()
       .create_node("test_node", node_info)
       .get_parameter("test_param", node_info, param)
@@ -905,7 +905,7 @@ TEST(NodeTest, ParameterGetRequest) {
         Node node("test_node");
         EXPECT_TRUE(node.ok());
 
-        msg::standard::String param_received;
+        std_msgs::String param_received;
         bool status = node.get_parameter("test_param", param_received);
         EXPECT_TRUE(status);
         EXPECT_EQ(param_received.data, param->data);
@@ -913,10 +913,10 @@ TEST(NodeTest, ParameterGetRequest) {
 }
 
 TEST(NodeTest, ParameterGetRequestFailure) {
-  auto param = std::make_shared<msg::standard::String>();
+  auto param = std::make_shared<std_msgs::String>();
   param->data = "test_value";
 
-  msg::mediator::NodeInfo node_info;
+  sys_msgs::NodeInfo node_info;
   TestFixture()
       .create_node("test_node", node_info)
       .get_parameter("test_param", node_info, param, true)
@@ -925,39 +925,39 @@ TEST(NodeTest, ParameterGetRequestFailure) {
         Node node("test_node");
         EXPECT_TRUE(node.ok());
 
-        msg::standard::String param_received;
+        std_msgs::String param_received;
         bool status = node.get_parameter("test_param", param_received);
         EXPECT_FALSE(status);
       });
 }
 
 TEST(NodeTest, SystemInfoGetRequest) {
-  msg::mediator::SystemInfo sys_info;
+  sys_msgs::SystemInfo sys_info;
   sys_info.nodes.resize(1);
   sys_info.nodes[0].name = "test_node";
   sys_info.nodes[0].id = 1;
   sys_info.publishers.resize(1);
   sys_info.publishers[0].topic_info.name = "test_topic";
-  sys_info.publishers[0].topic_info.message_hash = msg::standard::UInt32().hash();
+  sys_info.publishers[0].topic_info.message_hash = std_msgs::UInt32().hash();
   sys_info.publishers[0].endpoint.address = "127.0.0.1";
   sys_info.publishers[0].endpoint.port = 1234;
   sys_info.subscribers.resize(1);
   sys_info.subscribers[0].topic_info.name = "test_topic";
-  sys_info.subscribers[0].topic_info.message_hash = msg::standard::UInt32().hash();
+  sys_info.subscribers[0].topic_info.message_hash = std_msgs::UInt32().hash();
   sys_info.subscribers[0].endpoint.address = "127.0.0.1";
   sys_info.subscribers[0].endpoint.port = 5678;
   sys_info.services.resize(1);
   sys_info.services[0].name = "test_service";
-  sys_info.services[0].request_hash = msg::standard::UInt32().hash();
-  sys_info.services[0].response_hash = msg::standard::Time().hash();
+  sys_info.services[0].request_hash = std_msgs::UInt32().hash();
+  sys_info.services[0].response_hash = std_msgs::Time().hash();
   sys_info.services[0].endpoint.address = "127.0.0.1";
   sys_info.services[0].endpoint.port = 9012;
   sys_info.topics.resize(1);
   sys_info.topics[0].name = "test_topic";
-  sys_info.topics[0].message_hash = msg::standard::UInt32().hash();
+  sys_info.topics[0].message_hash = std_msgs::UInt32().hash();
   sys_info.services.resize(1);
 
-  msg::mediator::NodeInfo node_info;
+  sys_msgs::NodeInfo node_info;
   TestFixture()
       .create_node("test_node", node_info)
       .get_system_info(sys_info, node_info)
@@ -966,7 +966,7 @@ TEST(NodeTest, SystemInfoGetRequest) {
         Node node("test_node");
         EXPECT_TRUE(node.ok());
 
-        msg::mediator::SystemInfo sys_info_received;
+        sys_msgs::SystemInfo sys_info_received;
         bool status = node.get_system_info(sys_info_received);
         EXPECT_TRUE(status);
         EXPECT_EQ(sys_info_received.nodes.size(), sys_info.nodes.size());

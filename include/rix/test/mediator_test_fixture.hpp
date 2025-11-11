@@ -1,16 +1,16 @@
 #pragma once
 
 #include "rix/core/mediator.hpp"
-#include "rix/msg/mediator/ActRequest.hpp"
-#include "rix/msg/mediator/ActResponse.hpp"
-#include "rix/msg/mediator/SrvRequest.hpp"
-#include "rix/msg/mediator/SrvResponse.hpp"
-#include "rix/msg/mediator/Status.hpp"
-#include "rix/msg/mediator/SubNotify.hpp"
+#include "rix/std_msgs/UInt64.hpp"
+#include "rix/sys_msgs/ActRequest.hpp"
+#include "rix/sys_msgs/ActResponse.hpp"
+#include "rix/sys_msgs/SrvRequest.hpp"
+#include "rix/sys_msgs/SrvResponse.hpp"
+#include "rix/sys_msgs/Status.hpp"
+#include "rix/sys_msgs/SubNotify.hpp"
 #include "rix/test/socket_builder.hpp"
 #include "rix/test/socket_manager.hpp"
 #include <gtest/gtest.h>
-#include <rix/msg/standard/UInt64.hpp>
 
 namespace rix {
 
@@ -20,25 +20,28 @@ public:
   explicit MediatorTestFixture(const Endpoint& endpoint = Endpoint("127.0.0.1", 0)) : endpoint_(endpoint) {}
 
   MediatorTestFixture& ping() {
-    msg::mediator::Operation operation;
+    sys_msgs::Operation operation;
     operation.opcode = OPCODE::PING;
     operation.len = 0;
 
-    msg::mediator::Status status;
+    sys_msgs::Status status;
     status.error = 0;
 
     auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket).recv_message(operation, operation.size()).send_message(OPCODE::STATUS_RESPONSE, status).close();
+    SocketBuilder(socket)
+        .recv_message(operation, operation.get_prefix_len())
+        .send_message(OPCODE::STATUS_RESPONSE, status)
+        .close();
     return *this;
   }
 
   // Configure node registration to succeed
   MediatorTestFixture& register_node(const std::string& node_name, uint64_t node_id, bool should_fail = false) {
-    msg::mediator::NodeInfo node_info;
+    sys_msgs::NodeInfo node_info;
     node_info.name = node_name;
     node_info.id = node_id;
 
-    msg::mediator::Status status;
+    sys_msgs::Status status;
     status.error = should_fail ? -1 : 0;
     status.id = node_info.id;
 
@@ -52,7 +55,7 @@ public:
 
   // Configure node deregistration
   MediatorTestFixture& deregister_node(const std::string& node_name, uint64_t node_id) {
-    msg::mediator::NodeInfo node_info;
+    sys_msgs::NodeInfo node_info;
     node_info.name = node_name;
     node_info.id = node_id;
 
@@ -68,7 +71,7 @@ public:
                                           std::array<uint64_t, 2> message_hash,
                                           bool should_fail = false,
                                           const Endpoint& endpoint = Endpoint("127.0.0.1", 8001)) {
-    msg::mediator::PubInfo pub_info;
+    sys_msgs::PubInfo pub_info;
     pub_info.node_id = node_id;
     pub_info.id = id;
     pub_info.topic_info.name = topic;
@@ -76,7 +79,7 @@ public:
     pub_info.endpoint.address = endpoint.address;
     pub_info.endpoint.port = endpoint.port;
 
-    msg::mediator::Status status;
+    sys_msgs::Status status;
     status.error = should_fail ? -1 : 0;
     status.id = pub_info.id;
 
@@ -96,7 +99,7 @@ public:
                                             const std::string& topic,
                                             std::array<uint64_t, 2> message_hash,
                                             const Endpoint& endpoint = Endpoint("127.0.0.1", 8001)) {
-    msg::mediator::PubInfo pub_info;
+    sys_msgs::PubInfo pub_info;
     pub_info.node_id = node_id;
     pub_info.id = id;
     pub_info.topic_info.name = topic;
@@ -115,7 +118,7 @@ public:
                                            std::array<uint64_t, 2> message_hash,
                                            bool should_fail = false,
                                            const Endpoint& endpoint = Endpoint("127.0.0.1", 8001)) {
-    msg::mediator::SubInfo sub_info;
+    sys_msgs::SubInfo sub_info;
     sub_info.node_id = node_id;
     sub_info.id = id;
     sub_info.topic_info.name = topic;
@@ -123,7 +126,7 @@ public:
     sub_info.endpoint.address = endpoint.address;
     sub_info.endpoint.port = endpoint.port;
 
-    msg::mediator::Status status;
+    sys_msgs::Status status;
     status.error = should_fail ? -1 : 0;
     status.id = sub_info.id;
 
@@ -143,7 +146,7 @@ public:
                                              const std::string& topic,
                                              std::array<uint64_t, 2> message_hash,
                                              const Endpoint& endpoint = Endpoint("127.0.0.1", 8001)) {
-    msg::mediator::SubInfo sub_info;
+    sys_msgs::SubInfo sub_info;
     sub_info.node_id = node_id;
     sub_info.id = id;
     sub_info.topic_info.name = topic;
@@ -164,7 +167,7 @@ public:
                                         std::array<uint64_t, 2> response_hash,
                                         bool should_fail = false,
                                         const Endpoint& endpoint = Endpoint("127.0.0.1", 8001)) {
-    msg::mediator::SrvInfo srv_info;
+    sys_msgs::SrvInfo srv_info;
     srv_info.id = id;
     srv_info.node_id = node_id;
     srv_info.name = service;
@@ -173,7 +176,7 @@ public:
     srv_info.endpoint.address = endpoint.address;
     srv_info.endpoint.port = endpoint.port;
 
-    msg::mediator::Status status;
+    sys_msgs::Status status;
     status.error = should_fail ? -1 : 0;
     status.id = srv_info.id;
 
@@ -194,7 +197,7 @@ public:
                                           std::array<uint64_t, 2> request_hash,
                                           std::array<uint64_t, 2> response_hash,
                                           const Endpoint& endpoint = Endpoint("127.0.0.1", 8001)) {
-    msg::mediator::SrvInfo srv_info;
+    sys_msgs::SrvInfo srv_info;
     srv_info.id = id;
     srv_info.node_id = node_id;
     srv_info.name = service;
@@ -216,13 +219,13 @@ public:
                                               uint64_t srv_id,
                                               bool should_fail = false,
                                               const Endpoint& endpoint = Endpoint("127.0.0.1", 8001)) {
-    msg::mediator::SrvRequest srv_req;
+    sys_msgs::SrvRequest srv_req;
     srv_req.node_id = node_id;
     srv_req.name = service;
     srv_req.request_hash = request_hash;
     srv_req.response_hash = response_hash;
 
-    msg::mediator::SrvResponse srv_res;
+    sys_msgs::SrvResponse srv_res;
     srv_res.error = should_fail ? -1 : 0;
     if (!should_fail) {
       srv_res.srv_info.name = service;
@@ -253,7 +256,7 @@ public:
                                        std::array<uint64_t, 2> result_hash,
                                        bool should_fail = false,
                                        const Endpoint& endpoint = Endpoint("127.0.0.1", 8001)) {
-    msg::mediator::ActInfo act_info;
+    sys_msgs::ActInfo act_info;
     act_info.id = id;
     act_info.node_id = node_id;
     act_info.name = action;
@@ -263,7 +266,7 @@ public:
     act_info.endpoint.address = endpoint.address;
     act_info.endpoint.port = endpoint.port;
 
-    msg::mediator::Status status;
+    sys_msgs::Status status;
     status.error = should_fail ? -1 : 0;
     status.id = act_info.id;
 
@@ -282,7 +285,7 @@ public:
                                          const std::string& action,
                                          bool should_fail = false,
                                          const Endpoint& endpoint = Endpoint("127.0.0.1", 8001)) {
-    msg::mediator::ActInfo act_info;
+    sys_msgs::ActInfo act_info;
     act_info.id = id;
     act_info.node_id = node_id;
     act_info.name = action;
@@ -303,14 +306,14 @@ public:
                                              uint64_t act_id,
                                              bool should_fail = false,
                                              const Endpoint& endpoint = Endpoint("127.0.0.1", 8001)) {
-    msg::mediator::ActRequest act_req;
+    sys_msgs::ActRequest act_req;
     act_req.node_id = node_id;
     act_req.name = action;
     act_req.goal_hash = goal_hash;
     act_req.feedback_hash = feedback_hash;
     act_req.result_hash = result_hash;
 
-    msg::mediator::ActResponse act_res;
+    sys_msgs::ActResponse act_res;
     act_res.error = should_fail ? -1 : 0;
     if (!should_fail) {
       act_res.act_info.name = action;
@@ -334,14 +337,14 @@ public:
   // Configure parameter get request
   MediatorTestFixture& request_parameter_get(uint64_t node_id,
                                              const std::string& name,
-                                             std::shared_ptr<msg::Message> value,
+                                             std::shared_ptr<Message> value,
                                              bool should_fail = false) {
-    msg::mediator::ParamInfo request;
+    sys_msgs::ParamInfo request;
     request.id = node_id;
     request.name = name;
     request.message_hash = value->hash();
 
-    msg::mediator::ParamInfo response;
+    sys_msgs::ParamInfo response;
     response.id = request.id;
     response.name = request.name;
     response.message_hash = request.message_hash;
@@ -362,9 +365,9 @@ public:
   // Configure parameter set request
   MediatorTestFixture& request_parameter_set(uint64_t node_id,
                                              const std::string& name,
-                                             std::shared_ptr<msg::Message> value,
+                                             std::shared_ptr<Message> value,
                                              bool should_fail = false) {
-    msg::mediator::ParamInfo param_info;
+    sys_msgs::ParamInfo param_info;
     param_info.id = node_id;
     param_info.name = name;
     param_info.message_hash = value->hash();
@@ -372,7 +375,7 @@ public:
     size_t offset = 0;
     value->serialize(param_info.data.data(), offset);
 
-    msg::mediator::Status status;
+    sys_msgs::Status status;
     status.error = should_fail ? -1 : 0;
     status.id = param_info.id;
 
@@ -385,9 +388,9 @@ public:
   }
 
   // Configure system info get request
-  MediatorTestFixture& request_system_info(uint64_t node_id, const msg::mediator::SystemInfo& info) {
+  MediatorTestFixture& request_system_info(uint64_t node_id, const sys_msgs::SystemInfo& info) {
     auto socket = socket_manager_.create_socket();
-    msg::standard::UInt64 id;
+    std_msgs::UInt64 id;
     id.data = node_id;
     SocketBuilder(socket)
         .recv_message(OPCODE::SYSTEM_GET_REQUEST, id)
@@ -401,7 +404,7 @@ public:
                                          const Endpoint& endpoint,
                                          const std::string& topic,
                                          std::array<uint64_t, 2> message_hash,
-                                         const msg::mediator::SubNotify& notify) {
+                                         const sys_msgs::SubNotify& notify) {
     auto socket = socket_manager_.create_socket();
     SocketBuilder(socket).connect(endpoint).send_message(OPCODE::SUB_NOTIFY, notify).close();
     return *this;

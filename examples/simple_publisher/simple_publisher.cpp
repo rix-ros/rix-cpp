@@ -11,7 +11,7 @@ SimplePublisher::SimplePublisher(double rate, int port) : Node(NAME) {
   }
 
   // Create a publisher on topic /chatter with message type Header
-  pub = create_publisher<msg::standard::Header>("/chatter", Endpoint(DEFAULT_IP, port));
+  pub = create_publisher<std_msgs::Header>("/chatter", Endpoint(DEFAULT_IP, port));
 
   // If the publisher failed to initialize, then ok() will return false
   if (!pub->ok()) {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "rix/msg/geometry/Pose.hpp"
+#include "rix/geometry_msgs/Pose.hpp"
 #include "rix/rob/eigen_util.hpp"
 #include "rix/rob/robot_model.hpp"
 
@@ -14,16 +14,16 @@ public:
                             uint32_t max_iterations = 1000);
 
   bool solve_ik(const std::string& link_name,
-                const msg::geometry::Transform& goal,
-                msg::sensor::JS initial_guess,
-                msg::sensor::JS& solution) const;
+                const geometry_msgs::Transform& goal,
+                sensor_msgs::JS initial_guess,
+                sensor_msgs::JS& solution) const;
 
   bool solve_ik(const std::string& link_name,
-                const msg::geometry::Transform& goal,
-                msg::sensor::JS initial_guess,
-                std::vector<msg::sensor::JS>& solution) const;
+                const geometry_msgs::Transform& goal,
+                sensor_msgs::JS initial_guess,
+                std::vector<sensor_msgs::JS>& solution) const;
 
-  msg::geometry::Transform solve_fk(const std::string& link_name) const;
+  geometry_msgs::Transform solve_fk(const std::string& link_name) const;
 
   static Eigen::MatrixXd get_jacobian(const std::vector<std::shared_ptr<Joint>>& chain, Eigen::Affine3d& ee_transform);
 

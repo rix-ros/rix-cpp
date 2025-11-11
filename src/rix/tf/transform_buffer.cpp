@@ -28,10 +28,10 @@ bool TransformBuffer::empty() const { return buffer_.empty(); }
 void TransformBuffer::clear() { buffer_.clear(); }
 
 /*< TODO: Implement the insert method. */
-void TransformBuffer::insert(const Time& time, const msg::geometry::Transform& transform) {
+void TransformBuffer::insert(const Time& time, const geometry_msgs::Transform& transform) {
   // Insert new entry with binary search
   auto it = std::lower_bound(
-      buffer_.begin(), buffer_.end(), time, [](const std::pair<Time, msg::geometry::Transform>& a, const Time& b) {
+      buffer_.begin(), buffer_.end(), time, [](const std::pair<Time, geometry_msgs::Transform>& a, const Time& b) {
         return a.first < b;
       });
   // If the times are equal, overwrite
@@ -49,7 +49,7 @@ void TransformBuffer::insert(const Time& time, const msg::geometry::Transform& t
 }
 
 /*< TODO: Implement the get method. */
-bool TransformBuffer::get(const Time& time, msg::geometry::Transform& transform) const {
+bool TransformBuffer::get(const Time& time, geometry_msgs::Transform& transform) const {
   if (buffer_.empty()) {
     return false;
   }
@@ -62,7 +62,7 @@ bool TransformBuffer::get(const Time& time, msg::geometry::Transform& transform)
 
   // Find the closest entry in the buffer
   auto it = std::lower_bound(
-      buffer_.begin(), buffer_.end(), time, [](const std::pair<Time, msg::geometry::Transform>& a, const Time& b) {
+      buffer_.begin(), buffer_.end(), time, [](const std::pair<Time, geometry_msgs::Transform>& a, const Time& b) {
         return a.first < b;
       });
 
@@ -93,7 +93,7 @@ bool TransformBuffer::get(const Time& time, msg::geometry::Transform& transform)
   return true;
 }
 
-const std::deque<std::pair<Time, msg::geometry::Transform>>& TransformBuffer::data() const { return buffer_; }
+const std::deque<std::pair<Time, geometry_msgs::Transform>>& TransformBuffer::data() const { return buffer_; }
 
 Duration TransformBuffer::duration() const { return duration_; }
 

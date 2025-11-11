@@ -5,10 +5,10 @@
 using namespace rix;
 
 TEST(SimpleActionClientTest, Create) {
-  msg::mediator::NodeInfo node_info;
+  sys_msgs::NodeInfo node_info;
   TestFixture()
       .create_node("simple_action_client", node_info)
-      .create_action_client<msg::standard::Double, msg::standard::Float, msg::standard::Double>("/exponent", node_info)
+      .create_action_client<std_msgs::Double, std_msgs::Float, std_msgs::Double>("/exponent", node_info)
       .destroy_node(node_info)
       .build<SimpleActionClient>([](TestFixture& fixture) {
         SimpleActionClient node(1);
@@ -17,7 +17,7 @@ TEST(SimpleActionClientTest, Create) {
 }
 
 TEST(SimpleActionClientTest, CreateNodeRegisterFailure) {
-  msg::mediator::NodeInfo node_info;
+  sys_msgs::NodeInfo node_info;
   TestFixture()
       .create_node("simple_action_client", node_info, true) // Simulate failure
       .build<SimpleActionClient>([](TestFixture& fixture) {
@@ -27,10 +27,10 @@ TEST(SimpleActionClientTest, CreateNodeRegisterFailure) {
 }
 
 TEST(SimpleActionClientTest, CreateActionClientFailure) {
-  msg::mediator::NodeInfo node_info;
+  sys_msgs::NodeInfo node_info;
   TestFixture()
       .create_node("simple_action_client", node_info)
-      .create_action_client<msg::standard::Double, msg::standard::Float, msg::standard::Double>(
+      .create_action_client<std_msgs::Double, std_msgs::Float, std_msgs::Double>(
           "/exponent", node_info, true) // Simulate failure
       .destroy_node(node_info)
       .build<SimpleActionClient>([](TestFixture& fixture) {
@@ -40,23 +40,23 @@ TEST(SimpleActionClientTest, CreateActionClientFailure) {
 }
 
 TEST(SimpleServiceClientTest, Spin) {
-  auto goal = std::make_shared<msg::standard::Double>();
+  auto goal = std::make_shared<std_msgs::Double>();
   goal->data = 0.0;
-  auto feedbacks = std::vector<std::shared_ptr<msg::standard::Float>>();
+  auto feedbacks = std::vector<std::shared_ptr<std_msgs::Float>>();
   double result_data = 0.0;
   for (int i = 0; i < 10; ++i) {
-    auto feedback = std::make_shared<msg::standard::Float>();
+    auto feedback = std::make_shared<std_msgs::Float>();
     feedback->data = static_cast<float>(i) / 10.0f * 100.0f;
     feedbacks.push_back(feedback);
     result_data += pow(goal->data, i) / tgamma(static_cast<double>(i + 1));
   }
-  auto result = std::make_shared<msg::standard::Double>();
+  auto result = std::make_shared<std_msgs::Double>();
   result->data = result_data;
 
-  msg::mediator::NodeInfo node_info;
+  sys_msgs::NodeInfo node_info;
   TestFixture()
       .create_node("simple_action_client", node_info)
-      .create_action_client<msg::standard::Double, msg::standard::Float, msg::standard::Double>("/exponent", node_info)
+      .create_action_client<std_msgs::Double, std_msgs::Float, std_msgs::Double>("/exponent", node_info)
       .enable_operation_notifications()
       .send_action_goal(goal, feedbacks, result)
       .disable_operation_notifications()

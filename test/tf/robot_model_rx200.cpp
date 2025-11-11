@@ -78,7 +78,7 @@ TEST(RobotModel, GetJointStatesTestRX200) {
   robot.set_state("shoulder", -M_PI / 3, 1.2, 0.8);
   robot.set_state("waist", -M_PI / 3, 1.2, 0.8);
 
-  std::map<std::string, rix::msg::sensor::JointState> correct;
+  std::map<std::string, rix::sensor_msgs::JointState> correct;
   auto joint_names = robot.get_joint_names();
   for (auto j : joint_names) {
     auto joint = robot.get_joint(j);

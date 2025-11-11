@@ -5,7 +5,7 @@ int main(int argc, char** argv) {
   Log::set_log_level(Log::Level::DEBUG);
 
   auto parser = ArgumentParser(NAME, "A simple subscriber example.");
-  parser.add<int>("port", "The port for the subscriber server.", 'p', 8000);
+  parser.add<int>("port", "The port for the subscriber server.", 'p', 8002);
 
   if (!parser.parse(argc, argv)) {
     Log::error << "Failed to parse arguments." << std::endl;

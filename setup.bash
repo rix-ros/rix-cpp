@@ -4,7 +4,6 @@
 alias rixhub="$HOME/.rix/bin/rixhub"
 alias rixmsg="$HOME/.rix/bin/rixmsg"
 alias rixinfo="$HOME/.rix/bin/rixinfo"
-alias rixtopic="$HOME/.rix/bin/rixtopic"
 alias jrdf="$HOME/.rix/bin/jrdf"
 
 # Set the CMake prefix path for RIX
@@ -20,3 +19,4 @@ source $HOME/.rix/venv/bin/activate
 export RIX_RIXHUB_IP=127.0.0.1
 export RIX_RIXHUB_PORT=48104
 export RIX_DEFAULT_IP=127.0.0.1
+export RIX_MULTITHREADED=0

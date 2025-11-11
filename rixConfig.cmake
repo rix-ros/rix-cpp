@@ -1,3 +1,1 @@
 include("${CMAKE_CURRENT_LIST_DIR}/rixTargets.cmake")
-
-@THREADS_FIND_PACKAGE@

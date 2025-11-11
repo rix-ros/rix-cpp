@@ -53,10 +53,7 @@ private:
   Event event_;
   Callback callback_;
   std::mutex callback_mutex_;
-
-#ifdef RIX_MULTITHREADED
   std::thread spin_thread_{};
-#endif
 };
 
 } // namespace rix
