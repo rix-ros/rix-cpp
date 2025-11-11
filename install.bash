@@ -21,7 +21,7 @@ tar -xvf v3.11.3.tar.gz
 cd json-3.11.3
 mkdir -p build
 cd build
-cmake -DCMAKE_INSTALL_PREFIX=~/.rix/ ..
+cmake -DJSON_BuildTests=OFF -DCMAKE_INSTALL_PREFIX=~/.rix/ ..
 make install -j4
 cd ../..
 rm -rf json-3.11.3 v3.11.3.tar.gz
@@ -54,6 +54,14 @@ bash install.bash
 cd ..
 rm -rf rix-py
 echo "rix-py installed."
+
+echo "Installing jrdf ..."
+git clone https://github.com/rix-ros/jrdf.git
+cd jrdf
+bash install.bash
+cd ..
+rm -rf jrdf
+echo "jrdf installed."
 
 echo "Installing rix-cpp ..."
 mkdir -p build
