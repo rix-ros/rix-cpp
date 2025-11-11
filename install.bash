@@ -2,12 +2,6 @@
 
 set -e
 
-MULTITHREADED_FLAG=""
-if [[ "$1" == "--multithreaded" ]]; then
-  MULTITHREADED_FLAG="-DMULTITHREADED=ON"
-  echo "Compiling rix-cpp with MULTITHREADED=ON"
-fi
-
 echo "Installing Rix to $HOME/.rix"
 
 echo "Installing Eigen 3.4.0 ..."
@@ -64,7 +58,7 @@ echo "rix-py installed."
 echo "Installing rix-cpp ..."
 mkdir -p build
 cd build
-cmake -DCMAKE_PREFIX_PATH=$HOME/.rix/ -DCMAKE_INSTALL_PREFIX=$HOME/.rix/ $MULTITHREADED_FLAG ..
+cmake -DCMAKE_PREFIX_PATH=$HOME/.rix/ -DCMAKE_INSTALL_PREFIX=$HOME/.rix/ ..
 make -j4
 make install
 cd ..

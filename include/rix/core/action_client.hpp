@@ -54,10 +54,7 @@ private:
   mutable std::mutex mutex_{};
   std::condition_variable result_condition_{};
   bool result_received_{false};
-
-#ifdef RIX_MULTITHREADED
   std::thread spin_thread_{};
-#endif
 
   using Spinner::spin;
   using Spinner::spin_once;

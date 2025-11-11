@@ -1,17 +1,17 @@
 #include "rix/core/action_client.hpp"
+#include "rix/std_msgs/Void.hpp"
 #include "rix/sys_msgs/ActResponse.hpp"
 #include "rix/sys_msgs/Status.hpp"
-#include "rix/std_msgs/Void.hpp"
 
 namespace rix {
 
 ActionClient::~ActionClient() {
-#ifdef RIX_MULTITHREADED
-  shutdown();
-  if (spin_thread_.joinable()) {
-    spin_thread_.join();
+  if (MULTITHREADED) {
+    shutdown();
+    if (spin_thread_.joinable()) {
+      spin_thread_.join();
+    }
   }
-#endif
 }
 
 bool ActionClient::dispatch(const Message& goal) {
@@ -92,9 +92,7 @@ bool ActionClient::wait_for_result(const Duration& timeout) {
   return result_condition_.wait_for(lock, timeout.raw(), [this]() { return result_received_; });
 }
 
-ActionClient::ActionClient(const sys_msgs::ActRequest& request,
-                           SocketFactory factory,
-                           const Endpoint& rixhub_endpoint)
+ActionClient::ActionClient(const sys_msgs::ActRequest& request, SocketFactory factory, const Endpoint& rixhub_endpoint)
     : request_(request), socket_factory_(factory) {
   auto client = socket_factory_();
   if (!client) {
@@ -132,9 +130,9 @@ ActionClient::ActionClient(const sys_msgs::ActRequest& request,
   endpoint_.address = response.act_info.endpoint.address;
   endpoint_.port = response.act_info.endpoint.port;
 
-#ifdef RIX_MULTITHREADED
-  spin_thread_ = std::thread([this]() { this->spin(); });
-#endif
+  if (MULTITHREADED) {
+    spin_thread_ = std::thread([this]() { this->spin(); });
+  }
 }
 
 void ActionClient::on_spin() {

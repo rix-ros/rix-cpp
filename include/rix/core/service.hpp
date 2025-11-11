@@ -38,10 +38,7 @@ private:
   std::atomic<bool> registered_flag_;
   std::shared_ptr<Message> request_instance_;
   std::shared_ptr<Message> response_instance_;
-
-#ifdef RIX_MULTITHREADED
   std::thread spin_thread_{};
-#endif
 
   Service(const sys_msgs::SrvInfo& info, SocketFactory socket_factory, const Endpoint& rixhub_endpoint);
 

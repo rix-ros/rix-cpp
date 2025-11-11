@@ -13,16 +13,16 @@ Action::~Action() {
       client->send_message(OPCODE::ACT_DEREGISTER, info_);
     }
   }
-#ifdef RIX_MULTITHREADED
-  acceptor_.shutdown();
-  if (acceptor_.spin_thread.joinable()) {
-    acceptor_.spin_thread.join();
+  if (MULTITHREADED) {
+    acceptor_.shutdown();
+    if (acceptor_.spin_thread.joinable()) {
+      acceptor_.spin_thread.join();
+    }
+    shutdown();
+    if (spin_thread_.joinable()) {
+      spin_thread_.join();
+    }
   }
-  shutdown();
-  if (spin_thread_.joinable()) {
-    spin_thread_.join();
-  }
-#endif
 }
 
 void Action::set_goal_callback(std::function<void()> callback) {
@@ -93,10 +93,10 @@ Action::Action(const sys_msgs::ActInfo& info, SocketFactory socket_factory, cons
 
   Log::debug << "Action created for \"" << info_.name << "\"." << std::endl;
 
-#ifdef RIX_MULTITHREADED
-  acceptor_.spin_thread = std::thread([this]() { this->acceptor_.spin(); });
-  spin_thread_ = std::thread([this]() { this->spin(); });
-#endif
+  if (MULTITHREADED) {
+    acceptor_.spin_thread = std::thread([this]() { this->acceptor_.spin(); });
+    spin_thread_ = std::thread([this]() { this->spin(); });
+  }
 }
 
 Action::ActAcceptor::ActAcceptor(Action& parent) : parent(parent) {}
@@ -164,9 +164,9 @@ void Action::ActAcceptor::on_spin() {
 }
 
 void Action::on_spin() {
-#ifndef RIX_MULTITHREADED
-  acceptor_.spin_once();
-#endif
+  if (!MULTITHREADED) {
+    acceptor_.spin_once();
+  }
   std::lock_guard<std::mutex> guard(mutex_);
 
   if (!ok() || !connection_ || !callback_) {

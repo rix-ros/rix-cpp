@@ -111,16 +111,16 @@ void Node::on_spin() {
       it = components_.erase(it);
       continue;
     }
-#ifndef RIX_MULTITHREADED
-    component->spin_once();
-#endif
+    if (!MULTITHREADED) {
+      component->spin_once();
+    }
     ++it;
   }
 
-#ifdef RIX_MULTITHREADED
-  // Sleep to prevent busy waiting
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
-#endif
+  if (MULTITHREADED) {
+    // Sleep to prevent busy waiting
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
 }
 
 std::shared_ptr<Publisher> Node::create_publisher(const sys_msgs::TopicInfo& topic_info,

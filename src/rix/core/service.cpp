@@ -59,9 +59,9 @@ Service::Service(const sys_msgs::SrvInfo& info, SocketFactory socket_factory, co
 
   Log::debug << "Service created for \"" << info_.name << "\"." << std::endl;
 
-#ifdef RIX_MULTITHREADED
-  spin_thread_ = std::thread([this]() { this->spin(); });
-#endif
+  if (MULTITHREADED) {
+    spin_thread_ = std::thread([this]() { this->spin(); });
+  }
 }
 
 Service::~Service() {
@@ -75,12 +75,12 @@ Service::~Service() {
     }
   }
 
-#ifdef RIX_MULTITHREADED
-  shutdown();
-  if (spin_thread_.joinable()) {
-    spin_thread_.join();
+  if (MULTITHREADED) {
+    shutdown();
+    if (spin_thread_.joinable()) {
+      spin_thread_.join();
+    }
   }
-#endif
 
   Log::debug << "Service for \"" << info_.name << "\" destroyed." << std::endl;
 }

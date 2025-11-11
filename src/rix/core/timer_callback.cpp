@@ -7,18 +7,18 @@ TimerCallback::TimerCallback(const Duration& duration, Callback callback) : dura
   event_.current_expected = event_.last_expected = event_.last_real = Time(0.0);
   event_.last_duration = Duration(0.0);
 
-#ifdef RIX_MULTITHREADED
-  spin_thread_ = std::thread([this]() { this->spin(); });
-#endif
+  if (MULTITHREADED) {
+    spin_thread_ = std::thread([this]() { this->spin(); });
+  }
 }
 
 TimerCallback::~TimerCallback() {
-#ifdef RIX_MULTITHREADED
-  shutdown();
-  if (spin_thread_.joinable()) {
-    spin_thread_.join();
+  if (MULTITHREADED) {
+    shutdown();
+    if (spin_thread_.joinable()) {
+      spin_thread_.join();
+    }
   }
-#endif
 }
 
 void TimerCallback::on_spin() {

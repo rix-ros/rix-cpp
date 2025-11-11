@@ -19,3 +19,4 @@ source $HOME/.rix/venv/bin/activate
 export RIX_RIXHUB_IP=127.0.0.1
 export RIX_RIXHUB_PORT=48104
 export RIX_DEFAULT_IP=127.0.0.1
+export RIX_MULTITHREADED=0

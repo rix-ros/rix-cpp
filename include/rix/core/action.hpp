@@ -46,10 +46,7 @@ private:
   std::shared_ptr<Message> goal_instance_{};
   std::shared_ptr<Message> feedback_instance_{};
   std::shared_ptr<Message> result_instance_{};
-
-#ifdef RIX_MULTITHREADED
   std::thread spin_thread_{};
-#endif
 
   // Internal class to handle accepting new connections from rixhub
   class ActAcceptor : public Spinner {
@@ -65,9 +62,7 @@ private:
     void on_spin() override;
 
     Action& parent;
-#ifdef RIX_MULTITHREADED
     std::thread spin_thread{};
-#endif
   };
 
   ActAcceptor acceptor_{*this};

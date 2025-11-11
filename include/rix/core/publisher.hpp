@@ -33,10 +33,7 @@ private:
   mutable std::mutex connections_mutex_;
   Endpoint rixhub_endpoint_;
   std::atomic<bool> registered_flag_;
-
-#ifdef RIX_MULTITHREADED
   std::thread spin_thread_{};
-#endif
 
   Publisher(const sys_msgs::PubInfo& info, SocketFactory factory, Endpoint rixhub_endpoint);
 

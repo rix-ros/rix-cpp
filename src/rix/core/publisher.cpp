@@ -62,9 +62,9 @@ Publisher::Publisher(const sys_msgs::PubInfo& info, SocketFactory factory, Endpo
 
   Log::debug << "Publisher created on topic \"" << info_.topic_info.name << "\"." << std::endl;
 
-#ifdef RIX_MULTITHREADED
-  spin_thread_ = std::thread([this]() { this->spin(); });
-#endif
+  if (MULTITHREADED) {
+    spin_thread_ = std::thread([this]() { this->spin(); });
+  }
 }
 
 Publisher::~Publisher() {
@@ -80,12 +80,12 @@ Publisher::~Publisher() {
   }
   Log::debug << "Publisher on topic \"" << info_.topic_info.name << "\" destroyed." << std::endl;
 
-#ifdef RIX_MULTITHREADED
-  shutdown();
-  if (spin_thread_.joinable()) {
-    spin_thread_.join();
+  if (MULTITHREADED) {
+    shutdown();
+    if (spin_thread_.joinable()) {
+      spin_thread_.join();
+    }
   }
-#endif
 }
 
 void Publisher::publish(const Message& msg) {

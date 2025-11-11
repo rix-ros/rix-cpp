@@ -59,10 +59,10 @@ Subscriber::Subscriber(const sys_msgs::SubInfo& info, SocketFactory socket_facto
 
   Log::debug << "Subscriber created on topic \"" << info_.topic_info.name << "\"." << std::endl;
 
-#ifdef RIX_MULTITHREADED
-  sub_notify_acceptor_.spin_thread = std::thread([this]() { this->sub_notify_acceptor_.spin(); });
-  spin_thread_ = std::thread([this]() { this->spin(); });
-#endif
+  if (MULTITHREADED) {
+    sub_notify_acceptor_.spin_thread = std::thread([this]() { this->sub_notify_acceptor_.spin(); });
+    spin_thread_ = std::thread([this]() { this->spin(); });
+  }
 }
 
 Subscriber::~Subscriber() {
@@ -77,16 +77,16 @@ Subscriber::~Subscriber() {
   }
   Log::debug << "Subscriber on topic \"" << info_.topic_info.name << "\" destroyed." << std::endl;
 
-#ifdef RIX_MULTITHREADED
-  sub_notify_acceptor_.shutdown();
-  if (sub_notify_acceptor_.spin_thread.joinable()) {
-    sub_notify_acceptor_.spin_thread.join();
+  if (MULTITHREADED) {
+    sub_notify_acceptor_.shutdown();
+    if (sub_notify_acceptor_.spin_thread.joinable()) {
+      sub_notify_acceptor_.spin_thread.join();
+    }
+    shutdown();
+    if (spin_thread_.joinable()) {
+      spin_thread_.join();
+    }
   }
-  shutdown();
-  if (spin_thread_.joinable()) {
-    spin_thread_.join();
-  }
-#endif
 }
 
 size_t Subscriber::get_publisher_count() const {
@@ -97,10 +97,10 @@ size_t Subscriber::get_publisher_count() const {
 /**< TODO: Implement the spin_once method */
 void Subscriber::on_spin() {
 
-#ifndef RIX_MULTITHREADED
-  // In single-threaded mode, we need to also spin the acceptor
-  sub_notify_acceptor_.spin_once();
-#endif
+  if (!MULTITHREADED) {
+    // In single-threaded mode, we need to also spin the acceptor
+    sub_notify_acceptor_.spin_once();
+  }
 
   std::lock_guard<std::mutex> guard(callback_mutex_);
   if (clients_.empty() || !callback_) {
@@ -110,14 +110,9 @@ void Subscriber::on_spin() {
   std::vector<std::shared_ptr<GenericSocket>> readable;
 
   if (GenericSocket::get_poller()) {
-
     std::vector<std::shared_ptr<GenericSocket>> exceptional;
 
-#ifdef RIX_MULTITHREADED
-    Duration timeout(1.0);
-#else
-    Duration timeout(0.0);
-#endif
+    Duration timeout(MULTITHREADED ? 1.0 : 0.0);
 
     GenericSocket::poll(sockets, timeout, PollFlag::READ, readable, exceptional);
 
@@ -127,6 +122,7 @@ void Subscriber::on_spin() {
       Log::debug << "Removed exceptional publisher from topic \"" << info_.topic_info.name << "\"." << std::endl;
     }
     exceptional.clear();
+
   } else {
     // Fallback if poller is not available
     for (const auto& sock : sockets) {
@@ -167,11 +163,8 @@ void Subscriber::on_spin() {
 Subscriber::SubNotifyAcceptor::SubNotifyAcceptor(Subscriber& parent) : parent(parent) {}
 
 void Subscriber::SubNotifyAcceptor::on_spin() {
-#ifdef RIX_MULTITHREADED
-  Duration timeout(1.0);
-#else
-  Duration timeout(0.0);
-#endif
+  Duration timeout(MULTITHREADED ? 1.0 : 0.0);
+
   // Check to see if rixhub has made a connection
   if (!parent.server_->wait_readable(timeout)) {
     return;

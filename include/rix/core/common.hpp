@@ -9,10 +9,7 @@
 #include "rix/ipc/socket.hpp"
 #include "rix/util/environment.hpp"
 #include "rix/util/log.hpp"
-
-#ifdef RIX_MULTITHREADED
 #include <thread>
-#endif
 
 namespace rix {
 
@@ -24,6 +21,9 @@ static inline const uint16_t RIXHUB_PORT{static_cast<uint16_t>(std::stoi(get_env
 
 // Default IP is loopback address, can be overridden by RIX_DEFAULT_IP environment variable
 static inline const std::string DEFAULT_IP{get_env("RIX_DEFAULT_IP", "127.0.0.1")};
+
+// Multithreading is disabled by default, can be enabled by setting RIX_MULTITHREADED to "1"
+static inline const bool MULTITHREADED{get_env("RIX_MULTITHREADED", "0") != "0"};
 
 enum OPCODE : uint8_t {
   STATUS_RESPONSE = 0,

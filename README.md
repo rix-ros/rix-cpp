@@ -42,10 +42,10 @@ This will:
 
 
 ### Multithreaded Support
-The default RIX install will use a single thread to manage all components of a Node. There are many cases where using multiple threads will result in a significant boost in performance. If you would like to install RIX with multithreading support, run the install script with the `--multithreaded` argument.
+By default, RIX will use a single thread to manage all components of a Node. There are many cases where using multiple threads will result in a significant boost in performance. If you would like to use RIX with multithreading support, set the `RIX_MULTITHREADED` environment variable to `1`.
 
 ```bash
-bash install.bash --multitheaded
+export RIX_MULTITHREADED=1
 ```
 
 ### Environment Setup
@@ -67,6 +67,7 @@ By default, RIX binds servers to the loopback address (`127.0.0.1`). You can con
 - `RIX_DEFAULT_IP`
 - `RIX_RIXHUB_IP`
 - `RIX_RIXHUB_PORT`
+- `RIX_MULTITHREADED`
 
 ---
 

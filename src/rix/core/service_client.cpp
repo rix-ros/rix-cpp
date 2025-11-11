@@ -43,18 +43,18 @@ ServiceClient::ServiceClient(const sys_msgs::SrvRequest& request,
   endpoint_.address = response.srv_info.endpoint.address;
   endpoint_.port = response.srv_info.endpoint.port;
 
-#ifdef RIX_MULTITHREADED
-  spin_thread_ = std::thread([this]() { this->spin(); });
-#endif
+  if (MULTITHREADED) {
+    spin_thread_ = std::thread([this]() { this->spin(); });
+  }
 }
 
 ServiceClient::~ServiceClient() {
-#ifdef RIX_MULTITHREADED
-  shutdown();
-  if (spin_thread_.joinable()) {
-    spin_thread_.join();
+  if (MULTITHREADED) {
+    shutdown();
+    if (spin_thread_.joinable()) {
+      spin_thread_.join();
+    }
   }
-#endif
 }
 
 void ServiceClient::on_spin() {}

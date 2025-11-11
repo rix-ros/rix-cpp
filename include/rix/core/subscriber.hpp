@@ -42,10 +42,7 @@ private:
   Endpoint rixhub_endpoint_;
   std::atomic<bool> registered_flag_;
   std::shared_ptr<Message> msg_instance_;
-
-#ifdef RIX_MULTITHREADED
   std::thread spin_thread_;
-#endif
 
   Subscriber(const sys_msgs::SubInfo& info, SocketFactory factory, const Endpoint& rixhub_endpoint);
 
@@ -63,9 +60,7 @@ private:
     void on_spin() override;
 
     Subscriber& parent;
-#ifdef RIX_MULTITHREADED
     std::thread spin_thread{};
-#endif
   };
 
   SubNotifyAcceptor sub_notify_acceptor_{*this};

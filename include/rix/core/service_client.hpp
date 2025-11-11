@@ -28,10 +28,7 @@ private:
   sys_msgs::SrvRequest request_;
   SocketFactory socket_factory_;
   Endpoint endpoint_;
-
-#ifdef RIX_MULTITHREADED
   std::thread spin_thread_{};
-#endif
 
   using Spinner::spin;
   using Spinner::spin_once;
