@@ -1,11 +1,13 @@
-#include "rix/ipc/posix_socket.hpp"
 #include <arpa/inet.h>
 #include <cstring>
 #include <fcntl.h>
 #include <sys/poll.h>
 #include <sys/socket.h>
+#include <signal.h>
 #include <sys/uio.h>
 #include <sys/un.h>
+
+#include "rix/ipc/posix_socket.hpp"
 
 namespace rix {
 
