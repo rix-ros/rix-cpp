@@ -60,6 +60,10 @@ target_include_directories(tf PUBLIC
     $<INSTALL_INTERFACE:$ENV{HOME}/.rix/include>
 )
 
+# Build RIXHub
+add_executable(rixhub src/rixhub.cpp)
+target_link_libraries(rixhub rix)
+
 # Build unit tests
 if(BUILD_TESTS)
     find_package(GTest REQUIRED)
@@ -88,16 +92,17 @@ if(BUILD_TESTS)
     target_link_libraries(tf_tests GTest::Main tf rix)
 endif()
 
-# Install library and headers
-install(TARGETS rix DESTINATION lib)
-install(TARGETS tf DESTINATION lib)
+# Install libaries
+install(TARGETS rix tf EXPORT rixTargets DESTINATION lib)
+
+# Install rixTargets.cmake 
+install(EXPORT rixTargets FILE rixTargets.cmake NAMESPACE rix:: DESTINATION lib/cmake/rix)
+
+# Install rixConfig.cmake
+install(FILES rixConfig.cmake DESTINATION lib/cmake/rix)
+
+# Install headers
 install(DIRECTORY include/rix DESTINATION include)
 
-install(TARGETS rix tf EXPORT rixTargets DESTINATION lib)
-install(EXPORT rixTargets FILE rixTargets.cmake NAMESPACE rix:: DESTINATION lib/cmake/rix)
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/rixConfig.cmake" DESTINATION lib/cmake/rix)
-
-# Build RIXHub
-add_executable(rixhub src/rixhub.cpp)
-target_link_libraries(rixhub rix)
+# Install RIXHub executable
 install(TARGETS rixhub DESTINATION bin)
