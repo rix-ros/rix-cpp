@@ -1,8 +1,11 @@
 #pragma once
 
-#include "rix/ipc/signal.hpp"
+#include <atomic>
+#include <csignal>
 #include <memory>
 #include <utility>
+
+#include "rix/ipc/signal.hpp"
 
 namespace rix {
 
