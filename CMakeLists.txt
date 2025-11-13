@@ -68,27 +68,26 @@ target_link_libraries(rixhub rix)
 if(BUILD_TESTS)
     find_package(GTest REQUIRED)
     message(STATUS "Building unit tests")
-    enable_testing()
     add_executable(node_test
-        test/node_test.cpp
+        tests/node_test.cpp
     )
     target_link_libraries(node_test GTest::gtest_main GTest::gmock rix)
     add_executable(mediator_test
-        test/mediator_test.cpp
+        tests/mediator_test.cpp
     )
     target_link_libraries(mediator_test GTest::gtest_main GTest::gmock rix)
     add_executable(message_test
-        test/message_test.cpp
+        tests/message_test.cpp
     )
     target_link_libraries(message_test GTest::gtest_main GTest::gmock rix)
 
     add_executable(tf_tests
-        test/tf/frame_graph.cpp
-        test/tf/joint.cpp
-        test/tf/robot_model_rx200.cpp
-        test/tf/robot_model_simple_bot.cpp
-        test/tf/kinematics_solver.cpp
-        test/tf/transform_buffer.cpp)
+        tests/tf/frame_graph.cpp
+        tests/tf/joint.cpp
+        tests/tf/robot_model_rx200.cpp
+        tests/tf/robot_model_simple_bot.cpp
+        tests/tf/kinematics_solver.cpp
+        tests/tf/transform_buffer.cpp)
     target_link_libraries(tf_tests GTest::Main tf rix)
 endif()
 
