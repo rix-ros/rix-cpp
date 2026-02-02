@@ -109,4 +109,80 @@ template <typename Functor>
 struct ActionCallbackTraits<Functor, std::void_t<decltype(&Functor::operator())>>
     : ActionCallbackTraits<decltype(&Functor::operator())> {};
 
+// Action Client Callback Traits (for feedback callbacks)
+template <typename T, typename = void> struct ActionClientCallbackTraits;
+
+// Specialization for function pointers
+template <typename TFeedback> struct ActionClientCallbackTraits<void (*)(const TFeedback&), void> {
+  using FeedbackType = TFeedback;
+  using ResultType = void;
+  using GoalType = void;
+};
+
+// Specialization for std::function
+template <typename TFeedback> struct ActionClientCallbackTraits<std::function<void(const TFeedback&)>, void> {
+  using FeedbackType = TFeedback;
+  using ResultType = void;
+  using GoalType = void;
+};
+
+// Specialization for const member function (lambda/functor)
+template <typename Class, typename TFeedback>
+struct ActionClientCallbackTraits<void (Class::*)(const TFeedback&) const, void> {
+  using FeedbackType = TFeedback;
+  using ResultType = void;
+  using GoalType = void;
+};
+
+// Specialization for non-const member function
+template <typename Class, typename TFeedback>
+struct ActionClientCallbackTraits<void (Class::*)(const TFeedback&), void> {
+  using FeedbackType = TFeedback;
+  using ResultType = void;
+  using GoalType = void;
+};
+
+// Specialization for lambdas and functors - only if they have operator()
+template <typename Functor>
+struct ActionClientCallbackTraits<Functor, std::void_t<decltype(&Functor::operator())>>
+    : ActionClientCallbackTraits<decltype(&Functor::operator())> {};
+
+// Action Client Result Callback Traits
+template <typename T, typename = void> struct ActionClientResultCallbackTraits;
+
+// Specialization for function pointers
+template <typename TResult> struct ActionClientResultCallbackTraits<void (*)(const TResult&), void> {
+  using ResultType = TResult;
+  using FeedbackType = void;
+  using GoalType = void;
+};
+
+// Specialization for std::function
+template <typename TResult> struct ActionClientResultCallbackTraits<std::function<void(const TResult&)>, void> {
+  using ResultType = TResult;
+  using FeedbackType = void;
+  using GoalType = void;
+};
+
+// Specialization for const member function (lambda/functor)
+template <typename Class, typename TResult>
+struct ActionClientResultCallbackTraits<void (Class::*)(const TResult&) const, void> {
+  using ResultType = TResult;
+  using FeedbackType = void;
+  using GoalType = void;
+};
+
+// Specialization for non-const member function
+template <typename Class, typename TResult>
+struct ActionClientResultCallbackTraits<void (Class::*)(const TResult&), void> {
+  using ResultType = TResult;
+  using FeedbackType = void;
+  using GoalType = void;
+};
+
+// Specialization for lambdas and functors - only if they have operator()
+template <typename Functor>
+struct ActionClientResultCallbackTraits<Functor, std::void_t<decltype(&Functor::operator())>>
+    : ActionClientResultCallbackTraits<decltype(&Functor::operator())> {};
+
 } // namespace rix

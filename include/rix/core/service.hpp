@@ -17,33 +17,64 @@ class Service final : public Spinner {
   friend class Node;
 
 public:
+  /**
+   * @brief Callback type definition for service requests.
+   * @tparam TRequest The request message type.
+   * @tparam TResponse The response message type.
+   */
   template <typename TRequest, typename TResponse> using Callback = std::function<void(const TRequest&, TResponse&)>;
 
+  // Disable copy and move semantics
   Service(const Service&) = delete;
   Service& operator=(const Service&) = delete;
   Service(Service&&) = delete;
   Service& operator=(Service&&) = delete;
+
+  /**
+   * @brief Destructor. Deregisters the service from rixhub.
+   */
   ~Service() override;
 
+  /**
+   * @brief Sets the callback function to be invoked on service requests.
+   * @tparam TRequest The request message type.
+   * @tparam TResponse The response message type.
+   * @param callback The callback function.
+   */
   template <typename TRequest, typename TResponse> void set_callback(Callback<TRequest, TResponse> callback);
 
 private:
+  /**
+   * @brief Callback type definition for untyped service requests.
+   */
   using CallbackUntyped = std::function<void(const Message&, Message&)>;
-  sys_msgs::SrvInfo info_;
-  std::shared_ptr<GenericSocket> server_;
-  SocketFactory socket_factory_;
-  CallbackUntyped callback_;
-  mutable std::mutex callback_mutex_;
-  Endpoint rixhub_endpoint_;
-  std::atomic<bool> registered_flag_;
-  std::shared_ptr<Message> request_instance_;
-  std::shared_ptr<Message> response_instance_;
-  std::thread spin_thread_{};
 
+  sys_msgs::SrvInfo info_;                     ///< Service information
+  std::shared_ptr<GenericSocket> server_;      ///< Server socket
+  SocketFactory socket_factory_;               ///< Socket factory function
+  CallbackUntyped callback_;                   ///< Callback function for service requests
+  mutable std::mutex callback_mutex_;          ///< Mutex for protecting the callback
+  Endpoint rixhub_endpoint_;                   ///< RIXHub endpoint
+  std::atomic<bool> registered_flag_;          ///< Registration flag
+  std::shared_ptr<Message> request_instance_;  ///< Prototype request message
+  std::shared_ptr<Message> response_instance_; ///< Prototype response message
+  std::thread spin_thread_{};                  ///< Thread running the spin loop
+
+  /**
+   * @brief Constructs a Service with the given SrvInfo, socket factory, and RIXHub endpoint.
+   * @param info The SrvInfo message containing service details.
+   * @param socket_factory The socket factory function.
+   * @param rixhub_endpoint The RIXHub endpoint.
+   */
   Service(const sys_msgs::SrvInfo& info, SocketFactory socket_factory, const Endpoint& rixhub_endpoint);
 
+  // Disable public spin methods (only Node can spin the Service)
   using Spinner::spin;
   using Spinner::spin_once;
+
+  /**
+   * @brief Internal spin implementation for the Service.
+   */
   void on_spin() override;
 };
 

@@ -80,6 +80,22 @@ source ~/.rix/setup.bash
 rixhub
 ```
 
+### Timer Example
+Create a timer that prints a message at 1 Hz:
+
+```cpp
+#include "rix/rix.hpp"
+using namespace rix;
+
+int main() {
+  Node node("timer_node");
+  node.create_timer(Duration(1.0), [&](const TimerCallback::Event event) {
+    Log::info << "Timer tick!" << std::endl;
+  });
+  node.spin();
+}
+```
+
 ### Publisher Example
 
 Create a publisher that sends `Header` messages at 1 Hz:
@@ -147,7 +163,7 @@ using rix::std_msgs::UInt32;
 using rix::std_msgs::Header;
 
 void service_callback(const UInt32 &req, Header &res) {
-  Log::info << "Received request!" << std::endl;
+  Log::info << "Received request: " << req.data << std::endl;
   res.frame_id = "Hello from service!";
   res.seq = req.data;
 }
@@ -172,25 +188,16 @@ using namespace rix;
 using rix::std_msgs::UInt32;
 using rix::std_msgs::Header;
 
-std::shared_ptr<ServiceClient> service_client;
-
-void timer_callback(const rix::TimerCallback::Event event) {
-  static int i = 0;
-  if (service_client) {
-    Header res;
-    UInt32 req;
-    req.data = i++;
-    if (service_client->call(req, res)) {
-      Log::info << res.frame_id << ", " << res.seq << std::endl;
-    }
-  }
-}
-
 int main() {
   Node node("service_client_node");
-  service_client = node.create_service_client<UInt32, Header>("/my_service");
-  node.create_timer(Duration(1.0), timer_callback);
-  node.spin();
+  auto service_client = node.create_service_client<UInt32, Header>("/my_service");
+  UInt32 req;
+  req.data = 5;
+  Header res;
+  if (service_client->call(req, res)) {
+    Log::info << "Response: " << res.frame_id << ", " << res.seq << std::endl;
+  }
+  return 0;
 }
 ```
 
@@ -209,15 +216,16 @@ using rix::std_msgs::Header;
 
 bool action_callback(const UInt32 &goal, const Header &feedback, Header &result) {
   static int count = 0;
-  Log::info << "Received action goal!" << std::endl;
+  Log::info << "Received goal!" << std::endl;
+  count++;
   if (count < goal.data) {
     Header fb;
     fb.frame_id = "Action feedback";
-    fb.seq = count++;
+    fb.seq = count;
     return false;
   }
   result.frame_id = "Hello from action!";
-  result.seq = goal.data;
+  result.seq = count;
   count = 0;
   return true;
 }
@@ -239,37 +247,24 @@ Dispatch an action goal from another node:
 #include "rix/std_msgs/Header.hpp"
 
 using namespace rix;
-using rix::std_msgs::UInt32;
-using rix::std_msgs::Header;
+using namespace rix::std_msgs;
 
-std::shared_ptr<ActionClient> action_client;
+std::shared_ptr<ActionClient> act_cli;
 
-void feedback_callback(const Header &feedback) {
-  Log::info << "Action feedback: " << feedback.frame_id << ", " << feedback.seq << std::endl;
-}
-
-void result_callback(const Header &result) {
-  Log::info << "Action completed: " << result.frame_id << ", " << result.seq << std::endl;
-}
-
-void timer_callback(const rix::TimerCallback::Event event) {
+void timer_callback(const TimerCallback::Event &event) {
   static int i = 0;
-  if (action_client) {
-    Header result;
-    UInt32 goal;
-    goal.data = 5; // Number of feedback messages to receive
-    if (action_client->dispatch(goal)) {
-        Log::info << "Sent action goal!" << std::endl;
-    }
-  }
+  Header result;
+  UInt32 goal;
+  goal.data = 5; // Number of feedback messages to receive
+  act_cli->dispatch(goal);
 }
 
 int main() {
   Node node("action_client_node");
-  action_client = node.create_action_client<UInt32, Header, Header>("/my_action");
-  action_client->set_feedback_callback(feedback_callback);
-  action_client->set_result_callback(result_callback);
-  node.create_timer(Duration(2.0), timer_callback);
+  act_cli = node.create_action_client<UInt32, Header, Header>("/my_action");
+  act_cli->set_feedback_callback([](const Header &msg) { Log::info << "Feedback: " << msg.seq << std::endl; });
+  act_cli->set_result_callback([](const Header &msg) { Log::info << "Result: " << msg.seq << std::endl; });
+  node.create_timer(Duration(1.0), timer_callback);
   node.spin();
 }
 ```

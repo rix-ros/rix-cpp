@@ -328,7 +328,7 @@ TEST(MessageTest, ActionAcceptGoalwithFeedbackAndResult) {
         if (!MULTITHREADED) {
           thr = std::thread([&node]() { node.spin(); });
         }
-        
+
         EXPECT_TRUE(server_socket->wait_for_operations(1, std::chrono::milliseconds(5000)));
         // 2 recv (opcode & goal) + 1 send (status) + 3 send (feedback) + 1 send (result) = 7 operations per connection
         EXPECT_TRUE(fixture.wait_for_all_connections(7, std::chrono::milliseconds(5000)));
@@ -403,7 +403,7 @@ TEST(MessageTest, ActionAcceptGoalWithCancel) {
         };
         act->set_callback<std_msgs::Time, std_msgs::UInt32, std_msgs::Time>(wrong_callback);
         EXPECT_TRUE(act->ok());
-        
+
         std::thread thr;
         if (!MULTITHREADED) {
           thr = std::thread([&node]() { node.spin(); });
@@ -703,19 +703,19 @@ TEST(MessageTest, ActionClientDispatch) {
         EXPECT_TRUE(node.ok());
 
         // Create action client
-        auto actcli = node.create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>("test_action");
+        std_msgs::UInt32 goal;
+        std::vector<std_msgs::UInt32> feedback;
+        std_msgs::Time result;
+        auto actcli = node.create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
+            "test_action",
+            [&feedback](const std_msgs::UInt32& fb) { feedback.push_back(fb); },
+            [&result](const std_msgs::Time& res) { result = res; });
         EXPECT_NE(actcli, nullptr);
         EXPECT_TRUE(actcli->ok());
 
         std::thread thr([&node]() { node.spin(); });
 
         // Send action goal and receive feedback/result
-        std_msgs::UInt32 goal;
-        std::vector<std_msgs::UInt32> feedback;
-        std_msgs::Time result;
-        actcli->set_feedback_callback<std_msgs::UInt32>(
-            [&feedback](const std_msgs::UInt32& fb) { feedback.push_back(fb); });
-        actcli->set_result_callback<std_msgs::Time>([&result](const std_msgs::Time& res) { result = res; });
         goal.data = 1;
         bool send_result = actcli->dispatch(goal);
         EXPECT_TRUE(send_result);
@@ -767,28 +767,29 @@ TEST(MessageTest, ActionClientDispatchWithCancel) {
         EXPECT_TRUE(node.ok());
 
         // Create action client
-        auto actcli = node.create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>("test_action");
+        std_msgs::UInt32 goal;
+        std::vector<std_msgs::UInt32> feedback;
+        std_msgs::Time result;
+        std::mutex feedback_mutex;
+        std::condition_variable feedback_cv;
+        std::shared_ptr<ActionClient> actcli =
+            node.create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
+                "test_action",
+                [&feedback, &actcli, &feedback_mutex, &feedback_cv](const std_msgs::UInt32& fb) {
+                  std::lock_guard<std::mutex> lock(feedback_mutex);
+                  feedback.push_back(fb);
+                  if (feedback.size() == 3) {
+                    actcli->cancel();
+                    feedback_cv.notify_one();
+                  }
+                },
+                [&result](const std_msgs::Time& res) { result = res; });
         EXPECT_NE(actcli, nullptr);
         EXPECT_TRUE(actcli->ok());
 
         std::thread thr([&node]() { node.spin(); });
 
         // Send action goal and receive feedback/result
-        std_msgs::UInt32 goal;
-        std::vector<std_msgs::UInt32> feedback;
-        std_msgs::Time result;
-        std::mutex feedback_mutex;
-        std::condition_variable feedback_cv;
-        actcli->set_feedback_callback<std_msgs::UInt32>(
-            [&feedback, actcli, &feedback_mutex, &feedback_cv](const std_msgs::UInt32& fb) {
-              std::lock_guard<std::mutex> lock(feedback_mutex);
-              feedback.push_back(fb);
-              if (feedback.size() == 3) {
-                actcli->cancel();
-                feedback_cv.notify_one();
-              }
-            });
-        actcli->set_result_callback<std_msgs::Time>([&result](const std_msgs::Time& res) { result = res; });
         goal.data = 1;
         bool send_result = actcli->dispatch(goal);
         EXPECT_TRUE(send_result);
@@ -842,19 +843,19 @@ TEST(MessageTest, ActionClientDispatchFailure) {
         EXPECT_TRUE(node.ok());
 
         // Create action client
-        auto actcli = node.create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>("test_action");
+        std_msgs::UInt32 goal;
+        std::vector<std_msgs::UInt32> feedback;
+        std_msgs::Time result;
+        auto actcli = node.create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
+            "test_action",
+            [&feedback](const std_msgs::UInt32& fb) { feedback.push_back(fb); },
+            [&result](const std_msgs::Time& res) { result = res; });
         EXPECT_NE(actcli, nullptr);
         EXPECT_TRUE(actcli->ok());
 
         std::thread thr([&node]() { node.spin(); });
 
         // Send action goal and receive feedback/result
-        std_msgs::UInt32 goal;
-        std::vector<std_msgs::UInt32> feedback;
-        std_msgs::Time result;
-        actcli->set_feedback_callback<std_msgs::UInt32>(
-            [&feedback](const std_msgs::UInt32& fb) { feedback.push_back(fb); });
-        actcli->set_result_callback<std_msgs::Time>([&result](const std_msgs::Time& res) { result = res; });
         goal.data = 1;
         bool send_result = actcli->dispatch(goal);
         EXPECT_FALSE(send_result);
@@ -899,29 +900,30 @@ TEST(MessageTest, ActionClientDispatchPreempt) {
         EXPECT_TRUE(node.ok());
 
         // Create action client
-        auto actcli = node.create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>("test_action");
+        std_msgs::UInt32 goal;
+        std::vector<std_msgs::UInt32> feedback;
+        std_msgs::Time result;
+        std::shared_ptr<ActionClient> actcli = node.create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
+            "test_action",
+            [&feedback, &actcli](const std_msgs::UInt32& fb) {
+              static bool first_feedback = true;
+              feedback.push_back(fb);
+              // Preempt after first feedback
+              if (first_feedback) {
+                first_feedback = false;
+                std_msgs::UInt32 preempt_goal;
+                preempt_goal.data = 2;
+                bool send_result = actcli->dispatch(preempt_goal);
+                EXPECT_TRUE(send_result);
+              }
+            },
+            [&result](const std_msgs::Time& res) { result = res; });
         EXPECT_NE(actcli, nullptr);
         EXPECT_TRUE(actcli->ok());
 
         std::thread thr([&node]() { node.spin(); });
 
         // Send action goal and receive feedback/result
-        std_msgs::UInt32 goal;
-        std::vector<std_msgs::UInt32> feedback;
-        std_msgs::Time result;
-        actcli->set_feedback_callback<std_msgs::UInt32>([&feedback, actcli](const std_msgs::UInt32& fb) {
-          static bool first_feedback = true;
-          feedback.push_back(fb);
-          // Preempt after first feedback
-          if (first_feedback) {
-            first_feedback = false;
-            std_msgs::UInt32 preempt_goal;
-            preempt_goal.data = 2;
-            bool send_result = actcli->dispatch(preempt_goal);
-            EXPECT_TRUE(send_result);
-          }
-        });
-        actcli->set_result_callback<std_msgs::Time>([&result](const std_msgs::Time& res) { result = res; });
         goal.data = 1;
         bool send_result = actcli->dispatch(goal);
         EXPECT_TRUE(send_result);
