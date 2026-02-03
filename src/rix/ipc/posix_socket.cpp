@@ -1,9 +1,9 @@
 #include <arpa/inet.h>
 #include <cstring>
 #include <fcntl.h>
+#include <signal.h>
 #include <sys/poll.h>
 #include <sys/socket.h>
-#include <signal.h>
 #include <sys/uio.h>
 #include <sys/un.h>
 
@@ -25,7 +25,7 @@ POSIXSocket::POSIXSocket(int fd) : fd_(fd) {}
 POSIXSocket::~POSIXSocket() { close(); }
 
 bool POSIXSocket::bind(const Endpoint& endpoint) const {
-  struct sockaddr_in addr {};
+  struct sockaddr_in addr{};
   addr.sin_family = AF_INET;
   addr.sin_port = htons(endpoint.port);
   inet_pton(AF_INET, endpoint.address.c_str(), &addr.sin_addr);
@@ -35,7 +35,7 @@ bool POSIXSocket::bind(const Endpoint& endpoint) const {
 bool POSIXSocket::listen(int backlog) const { return ::listen(fd_, backlog) == 0; }
 
 std::shared_ptr<GenericSocket> POSIXSocket::accept(Endpoint& remote_endpoint) const {
-  struct sockaddr_in addr {};
+  struct sockaddr_in addr{};
   socklen_t len = sizeof(addr);
   int sock_fd = ::accept(fd_, (struct sockaddr*)&addr, &len);
   if (sock_fd < 0) {
@@ -48,7 +48,7 @@ std::shared_ptr<GenericSocket> POSIXSocket::accept(Endpoint& remote_endpoint) co
 }
 
 bool POSIXSocket::connect(const Endpoint& endpoint) const {
-  struct sockaddr_in addr {};
+  struct sockaddr_in addr{};
   addr.sin_family = AF_INET;
   addr.sin_port = htons(endpoint.port);
   inet_pton(AF_INET, endpoint.address.c_str(), &addr.sin_addr);
@@ -125,13 +125,33 @@ ssize_t POSIXSocket::readv(MessageSegment* segments, size_t segment_count) const
   return bytes_received;
 }
 
-ssize_t POSIXSocket::send(const void* buf, size_t len, int flags) const { return ::send(fd_, buf, len, flags); }
+ssize_t POSIXSocket::send(const void* buf, size_t len, int flags) const {
+  ssize_t bytes_sent = 0;
+  ssize_t to_send = len;
+  while (bytes_sent < to_send) {
+    ssize_t ret = ::send(fd_, buf + bytes_sent, len - bytes_sent, flags);
+    if (ret < 0)
+      return -1;
+    bytes_sent += ret;
+  }
+  return bytes_sent;
+}
 
-ssize_t POSIXSocket::recv(void* buf, size_t len, int flags) const { return ::recv(fd_, buf, len, flags); }
+ssize_t POSIXSocket::recv(void* buf, size_t len, int flags) const {
+  ssize_t bytes_read = 0;
+  ssize_t to_read = len;
+  while (bytes_read < to_read) {
+    ssize_t ret = ::recv(fd_, buf + bytes_read, len - bytes_read, flags);
+    if (ret < 0)
+      return -1;
+    bytes_read += ret;
+  }
+  return bytes_read;
+}
 
 bool POSIXSocket::wait_readable(const Duration& timeout) const {
   // Implement with poll
-  struct pollfd pfd {};
+  struct pollfd pfd{};
   pfd.fd = fd_;
   pfd.events = POLLIN;
   int timeout_ms = static_cast<int>(timeout.to_milliseconds());
@@ -140,7 +160,7 @@ bool POSIXSocket::wait_readable(const Duration& timeout) const {
 }
 
 bool POSIXSocket::wait_writable(const Duration& timeout) const {
-  struct pollfd pfd {};
+  struct pollfd pfd{};
   pfd.fd = fd_;
   pfd.events = POLLOUT;
 
@@ -150,7 +170,7 @@ bool POSIXSocket::wait_writable(const Duration& timeout) const {
 }
 
 bool POSIXSocket::wait_exception(const Duration& timeout) const {
-  struct pollfd pfd {};
+  struct pollfd pfd{};
   pfd.fd = fd_;
   pfd.events = 0;
 
@@ -197,7 +217,7 @@ bool POSIXSocket::get_reuse_address() const {
 }
 
 Endpoint POSIXSocket::local_endpoint() const {
-  struct sockaddr_in addr {};
+  struct sockaddr_in addr{};
   socklen_t addrlen = sizeof(addr);
   if (getsockname(fd_, (struct sockaddr*)&addr, &addrlen) < 0) {
     return {};
@@ -211,7 +231,7 @@ Endpoint POSIXSocket::local_endpoint() const {
 }
 
 Endpoint POSIXSocket::remote_endpoint() const {
-  struct sockaddr_in addr {};
+  struct sockaddr_in addr{};
   socklen_t addrlen = sizeof(addr);
   if (getpeername(fd_, reinterpret_cast<struct sockaddr*>(&addr), &addrlen) < 0) {
     return {};

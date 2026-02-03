@@ -25,7 +25,9 @@ add_library(rix SHARED
     src/rix/core/subscriber.cpp
     src/rix/core/timer_callback.cpp
     src/rix/ipc/endpoint.cpp
-    src/rix/ipc/posix_socket.cpp
+    src/rix/ipc/stream.cpp
+    src/rix/ipc/tcp_acceptor.cpp
+    src/rix/ipc/tcp_stream.cpp
     src/rix/ipc/posix_signal.cpp
     src/rix/ipc/poll.cpp
     src/rix/util/argument_parser.cpp
