@@ -36,7 +36,7 @@ public:
 
 private:
   sys_msgs::SrvRequest request_; ///< The service request information.
-  SocketFactory socket_factory_; ///< Socket factory function.
+  TransportFactory socket_factory_; ///< Socket factory function.
   Endpoint endpoint_;            ///< Endpoint of the service.
   std::thread spin_thread_{};    ///< Thread running the spin loop.
 
@@ -55,7 +55,7 @@ private:
    * @param factory The socket factory to create sockets.
    * @param rixhub_endpoint The RIXHub endpoint.
    */
-  ServiceClient(const sys_msgs::SrvRequest& request, SocketFactory factory, const Endpoint& rixhub_endpoint);
+  ServiceClient(const sys_msgs::SrvRequest& request, TransportFactory factory, const Endpoint& rixhub_endpoint);
 };
 
 } // namespace rix

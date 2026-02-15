@@ -57,16 +57,16 @@ private:
    */
   using CallbackUntyped = std::function<void(const Message&)>;
 
-  sys_msgs::SubInfo info_;                           ///< The subscriber information.
-  std::shared_ptr<GenericSocket> server_;            ///< The server socket for incoming connections.
-  SocketFactory socket_factory_;                     ///< The socket factory function.
-  CallbackUntyped callback_;                         ///< The message callback function.
-  mutable std::mutex callback_mutex_;                ///< Mutex for protecting the callback.
-  std::set<std::shared_ptr<GenericSocket>> clients_; ///< The set of connected publisher sockets.
-  Endpoint rixhub_endpoint_;                         ///< The RIXHub endpoint.
-  std::atomic<bool> registered_flag_;                ///< Flag indicating if the subscriber is registered.
-  std::shared_ptr<Message> msg_instance_;            ///< Prototype message instance for deserialization.
-  std::thread spin_thread_;                          ///< The thread running the spin loop.
+  sys_msgs::SubInfo info_;                    ///< The subscriber information.
+  std::shared_ptr<Acceptor> server_;          ///< The server socket for incoming connections.
+  TransportFactory socket_factory_;           ///< The socket factory function.
+  CallbackUntyped callback_;                  ///< The message callback function.
+  mutable std::mutex callback_mutex_;         ///< Mutex for protecting the callback.
+  std::set<std::shared_ptr<Stream>> clients_; ///< The set of connected publisher sockets.
+  Endpoint rixhub_endpoint_;                  ///< The RIXHub endpoint.
+  std::atomic<bool> registered_flag_;         ///< Flag indicating if the subscriber is registered.
+  std::shared_ptr<Message> msg_instance_;     ///< Prototype message instance for deserialization.
+  std::thread spin_thread_;                   ///< The thread running the spin loop.
 
   /**
    * @brief Constructs a Subscriber with the given SubInfo, socket factory, and RIXHub endpoint.
@@ -74,7 +74,7 @@ private:
    * @param factory The socket factory to create sockets.
    * @param rixhub_endpoint The RIXHub endpoint.
    */
-  Subscriber(const sys_msgs::SubInfo& info, SocketFactory factory, const Endpoint& rixhub_endpoint);
+  Subscriber(const sys_msgs::SubInfo& info, TransportFactory factory, const Endpoint& rixhub_endpoint);
 
   /**
    * @brief Internal class to accept new subscriber notifications.

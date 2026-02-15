@@ -68,9 +68,9 @@ private:
   std::function<void()> goal_callback_{};        ///< Goal callback.
   std::function<void()> preempt_callback_{};     ///< Preempt callback.
   sys_msgs::ActInfo info_{};                     ///< Action information.
-  SocketFactory socket_factory_{};               ///< Socket factory function.
-  std::shared_ptr<GenericSocket> server_{};      ///< Server socket.
-  std::shared_ptr<GenericSocket> connection_{};  ///< Active connection socket.
+  TransportFactory socket_factory_{};            ///< Socket factory function.
+  std::shared_ptr<Acceptor> server_{};           ///< Server socket.
+  std::shared_ptr<Stream> connection_{};         ///< Active connection socket.
   mutable std::mutex mutex_{};                   ///< Mutex for protecting shared data.
   Endpoint rixhub_endpoint_{};                   ///< RIXHub endpoint
   std::atomic<bool> registered_flag_{};          ///< Flag indicating if the action is registered.
@@ -112,7 +112,7 @@ private:
    * @param socket_factory The socket factory function.
    * @param rixhub_endpoint The RIXHub endpoint.
    */
-  Action(const sys_msgs::ActInfo& info, SocketFactory socket_factory, const Endpoint& rixhub_endpoint);
+  Action(const sys_msgs::ActInfo& info, TransportFactory socket_factory, const Endpoint& rixhub_endpoint);
 
   // Disable public spin methods (only Node can spin the Action)
   using Spinner::spin;

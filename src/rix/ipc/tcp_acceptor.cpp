@@ -13,7 +13,7 @@
 
 namespace rix {
 
-TCPAcceptor::TCPAcceptor(const Endpoint& endpoint, int backlog = 64) : fd_(::socket(AF_INET, SOCK_STREAM, 0)) {
+TCPAcceptor::TCPAcceptor(const Endpoint& endpoint, int backlog) : fd_(::socket(AF_INET, SOCK_STREAM, 0)) {
   int optval = 1;
   int status = setsockopt(fd_, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
   if (status < 0) {

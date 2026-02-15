@@ -13,12 +13,16 @@
 namespace rix {
 
 // Constructor and Destructor
-TCPStream::TCPStream(const Endpoint& endpoint) : fd_(::socket(AF_INET, SOCK_STREAM, 0)) {
+TCPStream::TCPStream(const Endpoint& endpoint, bool blocking) : fd_(::socket(AF_INET, SOCK_STREAM, 0)) {
   static bool sigpipe_flag = false;
   if (!sigpipe_flag) {
     // Ignore SIGPIPE signal to prevent process termination on socket write errors
     signal(SIGPIPE, SIG_IGN);
     sigpipe_flag = true;
+  }
+
+  if (blocking) {
+    set_blocking(true);
   }
 
   struct sockaddr_in addr{};
@@ -186,7 +190,7 @@ bool TCPStream::readv(MessageSegment* segments, size_t segment_count, ssize_t& r
   return true;
 }
 
-ssize_t TCPStream::send(const void* buf, size_t len, int flags) const {
+ssize_t TCPStream::send(const uint8_t* buf, size_t len, int flags) const {
   ssize_t bytes_sent = 0;
   ssize_t to_send = len;
   while (bytes_sent < to_send) {
@@ -198,7 +202,7 @@ ssize_t TCPStream::send(const void* buf, size_t len, int flags) const {
   return bytes_sent;
 }
 
-ssize_t TCPStream::recv(void* buf, size_t len, int flags) const {
+ssize_t TCPStream::recv(uint8_t* buf, size_t len, int flags) const {
   ssize_t bytes_read = 0;
   ssize_t to_read = len;
   while (bytes_read < to_read) {

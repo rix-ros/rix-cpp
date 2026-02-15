@@ -4,16 +4,11 @@
 namespace rix {
 
 ServiceClient::ServiceClient(const sys_msgs::SrvRequest& request,
-                             SocketFactory socket_factory,
+                             TransportFactory socket_factory,
                              const Endpoint& rixhub_endpoint)
     : request_(request), socket_factory_(socket_factory) {
-  auto client = socket_factory_();
+  auto client = socket_factory_.create_stream(rixhub_endpoint, true);
   if (!client) {
-    shutdown();
-    return;
-  }
-
-  if (!client->connect(rixhub_endpoint)) {
     shutdown();
     return;
   }
@@ -64,12 +59,8 @@ bool ServiceClient::call(const Message& request, Message& response) {
     return false;
   }
 
-  auto client = socket_factory_();
+  auto client = socket_factory_.create_stream(endpoint_, true);
   if (!client) {
-    return false;
-  }
-
-  if (!client->connect(endpoint_)) {
     return false;
   }
 

@@ -6,7 +6,7 @@
 
 #include "rix/core/common.hpp"
 #include "rix/core/spinner.hpp"
-#include "rix/ipc/socket.hpp"
+#include "rix/ipc.hpp"
 #include "rix/sys_msgs/NodeInfo.hpp"
 #include "rix/sys_msgs/Operation.hpp"
 #include "rix/sys_msgs/ParamInfo.hpp"
@@ -19,8 +19,7 @@ namespace rix {
 
 class Mediator final : public Spinner {
 public:
-  explicit Mediator(const Endpoint& endpoint = Endpoint(DEFAULT_IP, RIXHUB_PORT),
-                    SocketFactory socket_factory = create_socket);
+  explicit Mediator(const Endpoint& endpoint = Endpoint(DEFAULT_IP, RIXHUB_PORT));
   ~Mediator() override;
 
   Mediator(const Mediator&) = delete;
@@ -37,8 +36,8 @@ public:
   size_t get_action_count() const { return actions_.size(); }
 
 private:
-  std::shared_ptr<GenericSocket> server_{};
-  SocketFactory socket_factory_{};
+  std::shared_ptr<Acceptor> server_{};
+  TransportFactory socket_factory_{};
   std::map<uint64_t, sys_msgs::NodeInfo> nodes_{};
   std::map<uint64_t, sys_msgs::PubInfo> publishers_{};
   std::map<uint64_t, sys_msgs::SubInfo> subscribers_{};
@@ -47,22 +46,22 @@ private:
   std::map<std::string, std::array<uint64_t, 2>> topic_hashes_{};
   std::map<std::string, std::pair<std::array<uint64_t, 2>, std::vector<uint8_t>>> parameters_{};
 
-  void handle_ping(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_node_register(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_pub_register(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_sub_register(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_srv_register(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_act_register(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_node_deregister(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_pub_deregister(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_sub_deregister(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_srv_deregister(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_act_deregister(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_srv_request(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_act_request(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_param_set_request(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_param_get_request(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
-  void handle_system_get_request(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn);
+  void handle_ping(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn);
+  void handle_node_register(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn);
+  void handle_pub_register(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn);
+  void handle_sub_register(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn);
+  void handle_srv_register(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn);
+  void handle_act_register(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn);
+  void handle_node_deregister(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn);
+  void handle_pub_deregister(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn);
+  void handle_sub_deregister(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn);
+  void handle_srv_deregister(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn);
+  void handle_act_deregister(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn);
+  void handle_srv_request(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn);
+  void handle_act_request(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn);
+  void handle_param_set_request(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn);
+  void handle_param_get_request(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn);
+  void handle_system_get_request(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn);
 
   void notify_subscribers(const std::vector<sys_msgs::SubInfo>& subscribers,
                           const sys_msgs::PubInfo& publisher);

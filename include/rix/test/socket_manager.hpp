@@ -40,7 +40,7 @@ public:
   }
 
   // Get the socket factory for Node/Mediator construction
-  SocketFactory get_factory() { return socket_factory_; }
+  TransportFactory get_factory() { return socket_factory_; }
 
   // Add a preconfigured socket to the queue
   void add_socket(const std::shared_ptr<MockSocket>& socket) const { sockets_->push(socket); }
@@ -60,7 +60,7 @@ public:
 
 private:
   std::shared_ptr<std::queue<std::shared_ptr<MockSocket>>> sockets_;
-  SocketFactory socket_factory_;
+  TransportFactory socket_factory_;
 };
 
 } // namespace rix

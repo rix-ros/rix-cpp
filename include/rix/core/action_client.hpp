@@ -82,8 +82,8 @@ private:
   CallbackUntyped feedback_callback_{};          ///< Untyped feedback callback.
   CallbackUntyped result_callback_{};            ///< Untyped result callback.
   sys_msgs::ActRequest request_{};               ///< Action request information.
-  SocketFactory socket_factory_{};               ///< Socket factory function.
-  std::shared_ptr<GenericSocket> client_{};      ///< Client socket.
+  TransportFactory socket_factory_{};               ///< Socket factory function.
+  std::shared_ptr<Stream> client_{};      ///< Client socket.
   Endpoint endpoint_{};                          ///< Action server endpoint.
   std::shared_ptr<Message> feedback_instance_{}; ///< Prototype feedback message.
   std::shared_ptr<Message> result_instance_{};   ///< Prototype result message.
@@ -107,7 +107,7 @@ private:
    * @param factory The socket factory to create sockets.
    * @param rixhub_endpoint The RIXHub endpoint.
    */
-  ActionClient(const sys_msgs::ActRequest& request, SocketFactory factory, const Endpoint& rixhub_endpoint);
+  ActionClient(const sys_msgs::ActRequest& request, TransportFactory factory, const Endpoint& rixhub_endpoint);
 };
 
 template <typename TFeedback> void ActionClient::set_feedback_callback(FeedbackCallback<TFeedback> callback) {

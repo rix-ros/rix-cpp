@@ -1,6 +1,5 @@
 #include "rix/rix.hpp"
 #include "rix/std_msgs/Header.hpp"
-#include "rix/test/test_fixture.hpp"
 
 const std::string NAME = "simple_publisher";
 

@@ -41,6 +41,9 @@ public:
             std::vector<std::shared_ptr<Pollable>>& exception) override;
 };
 
+// Define the default poller here
+using Poller = PollPoller;
+
 class Pollable {
   friend class PollPoller;
   friend class SelectPoller;
@@ -56,23 +59,30 @@ public:
 
   static std::shared_ptr<GenericPoller> get_poller() { return poller_; }
   static void set_poller(const std::shared_ptr<GenericPoller>& poller) { poller_ = poller; }
-  static bool poll(const std::vector<std::shared_ptr<Pollable>>& pollables,
+
+  template <typename T>
+  static bool poll(const std::vector<std::shared_ptr<T>>& pollables,
                    const Duration& duration,
                    const PollFlag flag,
-                   std::vector<std::shared_ptr<Pollable>>& success,
-                   std::vector<std::shared_ptr<Pollable>>& exception) {
+                   std::vector<std::shared_ptr<T>>& success,
+                   std::vector<std::shared_ptr<T>>& exception) {
+
+    static_assert(std::is_base_of<Pollable, T>::value, "T must be derived from Pollable");
+    
     if (!poller_) {
       return false;
     }
-    return poller_->poll(pollables, duration, flag, success, exception);
+
+    const auto& pollables_base = reinterpret_cast<const std::vector<std::shared_ptr<Pollable>>&>(pollables);
+    auto& success_base = reinterpret_cast<std::vector<std::shared_ptr<Pollable>>&>(success);
+    auto& exception_base = reinterpret_cast<std::vector<std::shared_ptr<Pollable>>&>(exception);
+
+    return poller_->poll(pollables_base, duration, flag, success_base, exception_base);
   }
 
 private:
   static inline std::shared_ptr<GenericPoller> poller_{std::make_shared<Poller>()};
   virtual bool get_fd(int& fd) const { return false; }
 };
-
-// Define the default poller here
-using Poller = PollPoller;
 
 } // namespace rix

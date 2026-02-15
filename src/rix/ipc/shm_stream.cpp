@@ -13,12 +13,16 @@
 namespace rix {
 
 // Constructor and Destructor
-TCPStream::TCPStream(const Endpoint& endpoint) : fd_(::socket(AF_INET, SOCK_STREAM, 0)) {
+TCPStream::TCPStream(const Endpoint& endpoint, bool blocking) : fd_(::socket(AF_INET, SOCK_STREAM, 0)) {
   static bool sigpipe_flag = false;
   if (!sigpipe_flag) {
     // Ignore SIGPIPE signal to prevent process termination on socket write errors
     signal(SIGPIPE, SIG_IGN);
     sigpipe_flag = true;
+  }
+
+  if (blocking) {
+    set_blocking(true);
   }
 
   struct sockaddr_in addr{};

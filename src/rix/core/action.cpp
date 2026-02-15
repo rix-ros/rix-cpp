@@ -5,13 +5,11 @@ namespace rix {
 
 Action::~Action() {
   if (registered_flag_) {
-    auto client = socket_factory_();
+    auto client = socket_factory_.create_stream(rixhub_endpoint_, true);
     if (!client) {
       return;
     }
-    if (client->connect(rixhub_endpoint_)) {
-      client->send_message(OPCODE::ACT_DEREGISTER, info_);
-    }
+    client->send_message(OPCODE::ACT_DEREGISTER, info_);
   }
   if (MULTITHREADED) {
     acceptor_.shutdown();
@@ -35,23 +33,10 @@ void Action::set_preempt_callback(std::function<void()> callback) {
   preempt_callback_ = callback;
 }
 
-Action::Action(const sys_msgs::ActInfo& info, SocketFactory socket_factory, const Endpoint& rixhub_endpoint)
+Action::Action(const sys_msgs::ActInfo& info, TransportFactory socket_factory, const Endpoint& rixhub_endpoint)
     : info_(info), socket_factory_(socket_factory), rixhub_endpoint_(rixhub_endpoint) {
-  server_ = socket_factory_();
+  server_ = socket_factory_.create_acceptor(Endpoint(info_.endpoint.address, info_.endpoint.port));
   if (!server_) {
-    shutdown();
-    return;
-  }
-
-  if (!server_->set_reuse_address(true)) {
-    shutdown();
-    return;
-  }
-  if (!server_->bind(Endpoint(info_.endpoint.address, info_.endpoint.port))) {
-    shutdown();
-    return;
-  }
-  if (!server_->listen(MAX_CONN)) {
     shutdown();
     return;
   }
@@ -68,11 +53,7 @@ Action::Action(const sys_msgs::ActInfo& info, SocketFactory socket_factory, cons
   info_.endpoint.port = server_endpoint.port;
 
   // Register publisher with rixhub
-  auto client = socket_factory_();
-  if (!client->connect(rixhub_endpoint_)) {
-    shutdown();
-    return;
-  }
+  auto client = socket_factory_.create_stream(rixhub_endpoint_, true);
   if (!client->send_message(OPCODE::ACT_REGISTER, info_)) {
     shutdown();
     return;

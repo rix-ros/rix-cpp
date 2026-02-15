@@ -11,7 +11,7 @@ class ShmStream final : public Stream {
 
 public:
   // Constructor and Destructor
-  ShmStream(const Endpoint& endpoint);
+  ShmStream(const Endpoint& endpoint, bool blocking);
   ~ShmStream();
 
   // Socket control operations

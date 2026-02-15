@@ -41,8 +41,8 @@ private:
   // Low-level I/O operations to be implemented by derived classes
   virtual bool writev(const ConstMessageSegment* segments, size_t segment_count, ssize_t& ret) const { return false; }
   virtual bool readv(MessageSegment* segments, size_t segment_count, ssize_t& ret) const { return false; }
-  virtual ssize_t send(const void* buf, size_t len, int flags) const = 0;
-  virtual ssize_t recv(void* buf, size_t len, int flags) const = 0;
+  virtual ssize_t send(const uint8_t* buf, size_t len, int flags) const = 0;
+  virtual ssize_t recv(uint8_t* buf, size_t len, int flags) const = 0;
 
   bool send_all(const ConstMessageSegment* segments, size_t segment_count) const;
   bool recv_all(MessageSegment* segments, size_t segment_count) const;

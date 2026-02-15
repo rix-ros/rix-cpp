@@ -3,24 +3,11 @@
 
 namespace rix {
 
-Publisher::Publisher(const sys_msgs::PubInfo& info, SocketFactory factory, Endpoint rixhub_endpoint)
+Publisher::Publisher(const sys_msgs::PubInfo& info, TransportFactory factory, Endpoint rixhub_endpoint)
     : info_(info), socket_factory_(factory), rixhub_endpoint_(rixhub_endpoint), registered_flag_(false) {
 
-  server_ = socket_factory_();
+  server_ = socket_factory_.create_acceptor(Endpoint(info_.endpoint.address, info_.endpoint.port));
   if (!server_) {
-    shutdown();
-    return;
-  }
-
-  if (!server_->set_reuse_address(true)) {
-    shutdown();
-    return;
-  }
-  if (!server_->bind(Endpoint(info_.endpoint.address, info_.endpoint.port))) {
-    shutdown();
-    return;
-  }
-  if (!server_->listen(MAX_CONN)) {
     shutdown();
     return;
   }
@@ -37,8 +24,8 @@ Publisher::Publisher(const sys_msgs::PubInfo& info, SocketFactory factory, Endpo
   info_.endpoint.port = server_endpoint.port;
 
   // Register publisher with rixhub
-  auto client = socket_factory_();
-  if (!client->connect(rixhub_endpoint_)) {
+  auto client = socket_factory_.create_stream(rixhub_endpoint_, true);
+  if (!client) {
     shutdown();
     return;
   }
@@ -70,13 +57,11 @@ Publisher::Publisher(const sys_msgs::PubInfo& info, SocketFactory factory, Endpo
 Publisher::~Publisher() {
   // Deregister publisher with rixhub
   if (registered_flag_) {
-    auto client = socket_factory_();
+    auto client = socket_factory_.create_stream(rixhub_endpoint_, true);
     if (!client) {
       return;
     }
-    if (client->connect(rixhub_endpoint_)) {
-      client->send_message(OPCODE::PUB_DEREGISTER, info_);
-    }
+    client->send_message(OPCODE::PUB_DEREGISTER, info_);
   }
   Log::debug << "Publisher on topic \"" << info_.topic_info.name << "\" destroyed." << std::endl;
 
@@ -104,28 +89,26 @@ void Publisher::publish(const Message& msg) {
     return;
   }
 
-  std::vector<std::shared_ptr<GenericSocket>> sockets(connections_.begin(), connections_.end());
-  std::vector<std::shared_ptr<GenericSocket>> writable;
-
-  if (GenericSocket::get_poller()) {
-    std::vector<std::shared_ptr<GenericSocket>> exceptional;
-    GenericSocket::poll(sockets, Duration(0.0), PollFlag::WRITE, writable, exceptional);
-
-    // Remove any clients that have exceptions
-    for (const auto& conn : exceptional) {
-      connections_.erase(conn);
-      Log::debug << "Removed exceptional subscriber from topic \"" << info_.topic_info.name << "\"." << std::endl;
-    }
+  std::vector<std::shared_ptr<Stream>> writable;
+  std::vector<std::shared_ptr<Stream>> exceptional;
+  if (Pollable::get_poller()) {
+    std::vector<std::shared_ptr<Stream>> connections_vector(connections_.begin(), connections_.end());
+    bool status = Pollable::poll(connections_vector, Duration(0.0), PollFlag::WRITE, writable, exceptional);
+    Log::info << "Status: " <<  status << ", Writable: " << writable.size() << ", Exception: " << exceptional.size() << std::endl;
   } else {
     // Fallback if poller is not available
-    for (const auto& sock : sockets) {
-      if (sock->is_writable()) {
-        writable.push_back(sock);
+    for (const auto& conn : connections_) {
+      if (conn->is_writable()) {
+        writable.push_back(conn);
       } else {
-        connections_.erase(sock);
-        Log::debug << "Removed exceptional subscriber from topic \"" << info_.topic_info.name << "\"." << std::endl;
+        exceptional.push_back(conn);
       }
     }
+  }
+  // Remove any clients that have exceptions
+  for (const auto& conn : exceptional) {
+    connections_.erase(conn);
+    Log::debug << "Removed exceptional subscriber from topic \"" << info_.topic_info.name << "\"." << std::endl;
   }
 
   // Send the message to each current connection

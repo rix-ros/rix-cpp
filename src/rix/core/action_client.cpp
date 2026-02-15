@@ -23,13 +23,8 @@ bool ActionClient::dispatch(const Message& goal) {
   } else {
     // Otherwise, create a new client and send a goal message
     opcode = OPCODE::ACT_GOAL_MESSAGE;
-    client_ = socket_factory_();
+    client_ = socket_factory_.create_stream(endpoint_, true);
     if (!client_) {
-      return false;
-    }
-
-    if (!client_->connect(endpoint_)) {
-      client_ = nullptr;
       return false;
     }
   }
@@ -92,15 +87,10 @@ bool ActionClient::wait_for_result(const Duration& timeout) {
   return result_condition_.wait_for(lock, timeout.raw(), [this]() { return result_received_; });
 }
 
-ActionClient::ActionClient(const sys_msgs::ActRequest& request, SocketFactory factory, const Endpoint& rixhub_endpoint)
+ActionClient::ActionClient(const sys_msgs::ActRequest& request, TransportFactory factory, const Endpoint& rixhub_endpoint)
     : request_(request), socket_factory_(factory) {
-  auto client = socket_factory_();
+  auto client = socket_factory_.create_stream(rixhub_endpoint, true);
   if (!client) {
-    shutdown();
-    return;
-  }
-
-  if (!client->connect(rixhub_endpoint)) {
     shutdown();
     return;
   }

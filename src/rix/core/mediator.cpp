@@ -9,11 +9,8 @@
 
 namespace rix {
 
-Mediator::Mediator(const Endpoint& rixhub_endpoint, SocketFactory socket_factory) : socket_factory_(socket_factory) {
-  server_ = socket_factory_();
-  server_->set_reuse_address(true);
-  server_->bind(rixhub_endpoint);
-  server_->listen(MAX_CONN);
+Mediator::Mediator(const Endpoint& rixhub_endpoint) : socket_factory_(transport_factories[Protocol::TCP]) {
+  server_ = socket_factory_.create_acceptor(rixhub_endpoint);
   // Ensure server was intitialized properly
   if (server_->is_exception()) {
     shutdown();
@@ -114,13 +111,13 @@ void Mediator::on_spin() {
   }
 }
 
-void Mediator::handle_ping(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+void Mediator::handle_ping(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn) {
   sys_msgs::Status status;
   status.error = 0;
   conn->send_message(OPCODE::STATUS_RESPONSE, status);
 }
 
-void Mediator::handle_node_register(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+void Mediator::handle_node_register(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn) {
   sys_msgs::Status status;
   status.error = 0;
   sys_msgs::NodeInfo info;
@@ -145,7 +142,7 @@ void Mediator::handle_node_register(const sys_msgs::Operation& operation, std::s
   conn->send_message(OPCODE::STATUS_RESPONSE, status);
 }
 
-void Mediator::handle_pub_register(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+void Mediator::handle_pub_register(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn) {
   sys_msgs::Status status;
   status.error = 0;
   sys_msgs::PubInfo info;
@@ -193,7 +190,7 @@ void Mediator::handle_pub_register(const sys_msgs::Operation& operation, std::sh
   notify_subscribers(subs_to_notify, info);
 }
 
-void Mediator::handle_sub_register(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+void Mediator::handle_sub_register(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn) {
   sys_msgs::Status status;
   status.error = 0;
   sys_msgs::SubInfo info;
@@ -240,7 +237,7 @@ void Mediator::handle_sub_register(const sys_msgs::Operation& operation, std::sh
   notify_subscribers(info, pubs_on_topic);
 }
 
-void Mediator::handle_srv_register(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+void Mediator::handle_srv_register(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn) {
   sys_msgs::Status status;
   status.error = 0;
   sys_msgs::SrvInfo info;
@@ -277,7 +274,7 @@ void Mediator::handle_srv_register(const sys_msgs::Operation& operation, std::sh
   conn->send_message(OPCODE::STATUS_RESPONSE, status);
 }
 
-void Mediator::handle_act_register(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+void Mediator::handle_act_register(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn) {
   sys_msgs::Status status;
   status.error = 0;
   sys_msgs::ActInfo info;
@@ -314,7 +311,7 @@ void Mediator::handle_act_register(const sys_msgs::Operation& operation, std::sh
   conn->send_message(OPCODE::STATUS_RESPONSE, status);
 }
 
-void Mediator::handle_node_deregister(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+void Mediator::handle_node_deregister(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn) {
   sys_msgs::NodeInfo info;
   if (!conn->recv_message(info, operation.len)) {
     return;
@@ -326,7 +323,7 @@ void Mediator::handle_node_deregister(const sys_msgs::Operation& operation, std:
   Log::info << "Deregistered node \"" << info.name << "\"." << std::endl;
 }
 
-void Mediator::handle_pub_deregister(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+void Mediator::handle_pub_deregister(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn) {
   sys_msgs::PubInfo info;
   if (!conn->recv_message(info, operation.len)) {
     return;
@@ -338,7 +335,7 @@ void Mediator::handle_pub_deregister(const sys_msgs::Operation& operation, std::
   Log::info << "Deregistered publisher on \"" << info.topic_info.name << "\"." << std::endl;
 }
 
-void Mediator::handle_sub_deregister(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+void Mediator::handle_sub_deregister(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn) {
   sys_msgs::SubInfo info;
   if (!conn->recv_message(info, operation.len)) {
     return;
@@ -350,7 +347,7 @@ void Mediator::handle_sub_deregister(const sys_msgs::Operation& operation, std::
   Log::info << "Deregistered subscriber on \"" << info.topic_info.name << "\"." << std::endl;
 }
 
-void Mediator::handle_srv_deregister(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+void Mediator::handle_srv_deregister(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn) {
   sys_msgs::SrvInfo info;
   if (!conn->recv_message(info, operation.len)) {
     return;
@@ -362,7 +359,7 @@ void Mediator::handle_srv_deregister(const sys_msgs::Operation& operation, std::
   Log::info << "Deregistered service \"" << info.name << "\"." << std::endl;
 }
 
-void Mediator::handle_act_deregister(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+void Mediator::handle_act_deregister(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn) {
   sys_msgs::ActInfo info;
   if (!conn->recv_message(info, operation.len)) {
     return;
@@ -374,7 +371,7 @@ void Mediator::handle_act_deregister(const sys_msgs::Operation& operation, std::
   Log::info << "Deregistered action \"" << info.name << "\"." << std::endl;
 }
 
-void Mediator::handle_srv_request(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+void Mediator::handle_srv_request(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn) {
 
   sys_msgs::SrvResponse response;
   response.error = 0;
@@ -407,7 +404,7 @@ void Mediator::handle_srv_request(const sys_msgs::Operation& operation, std::sha
   conn->send_message(OPCODE::SRV_RESPONSE, response);
 }
 
-void Mediator::handle_act_request(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+void Mediator::handle_act_request(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn) {
   sys_msgs::ActResponse response;
   response.error = 0;
 
@@ -439,7 +436,7 @@ void Mediator::handle_act_request(const sys_msgs::Operation& operation, std::sha
   conn->send_message(OPCODE::ACT_RESPONSE, response);
 }
 
-void Mediator::handle_param_set_request(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+void Mediator::handle_param_set_request(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn) {
 
   sys_msgs::Status status;
   status.error = 0;
@@ -470,7 +467,7 @@ void Mediator::handle_param_set_request(const sys_msgs::Operation& operation, st
   conn->send_message(OPCODE::STATUS_RESPONSE, status);
 }
 
-void Mediator::handle_param_get_request(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+void Mediator::handle_param_get_request(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn) {
 
   sys_msgs::ParamInfo info;
 
@@ -493,7 +490,7 @@ void Mediator::handle_param_get_request(const sys_msgs::Operation& operation, st
   conn->send_message(OPCODE::PARAM_GET_RESPONSE, info);
 }
 
-void Mediator::handle_system_get_request(const sys_msgs::Operation& operation, std::shared_ptr<GenericSocket> conn) {
+void Mediator::handle_system_get_request(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn) {
 
   sys_msgs::SystemInfo info;
   std_msgs::UInt64 node_id;
@@ -540,8 +537,7 @@ void Mediator::notify_subscribers(const std::vector<sys_msgs::SubInfo>& subscrib
   for (const auto& sub : subscribers) {
     Endpoint endpoint(sub.endpoint.address, sub.endpoint.port);
     notify.id = sub.id;
-    auto client = socket_factory_();
-    client->connect(endpoint);
+    auto client = socket_factory_.create_stream(endpoint, true);
     client->send_message(OPCODE::SUB_NOTIFY, notify);
   }
 }
@@ -555,8 +551,7 @@ void Mediator::notify_subscribers(const sys_msgs::SubInfo& subscriber,
   notify.publishers = publishers;
   Endpoint endpoint(subscriber.endpoint.address, subscriber.endpoint.port);
   notify.id = subscriber.id;
-  auto client = socket_factory_();
-  client->connect(endpoint);
+  auto client = socket_factory_.create_stream(endpoint, true);
   client->send_message(OPCODE::SUB_NOTIFY, notify);
 }
 

@@ -25,7 +25,7 @@ public:
   // Configure as a server socket (for pub/sub/service)
   SocketBuilder& as_server(const Endpoint& endpoint,
                            const Endpoint& bound_endpoint,
-                           SocketFactory create_socket,
+                           TransportFactory create_socket,
                            int accept_count = 0,
                            int iters_between_accept = 0) {
     EXPECT_CALL(*socket_, set_reuse_address(true)).Times(1).WillOnce(::testing::Return(true));

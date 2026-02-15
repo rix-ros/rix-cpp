@@ -50,8 +50,8 @@ private:
   using CallbackUntyped = std::function<void(const Message&, Message&)>;
 
   sys_msgs::SrvInfo info_;                     ///< Service information
-  std::shared_ptr<GenericSocket> server_;      ///< Server socket
-  SocketFactory socket_factory_;               ///< Socket factory function
+  std::shared_ptr<Acceptor> server_;      ///< Server socket
+  TransportFactory socket_factory_;               ///< Socket factory function
   CallbackUntyped callback_;                   ///< Callback function for service requests
   mutable std::mutex callback_mutex_;          ///< Mutex for protecting the callback
   Endpoint rixhub_endpoint_;                   ///< RIXHub endpoint
@@ -66,7 +66,7 @@ private:
    * @param socket_factory The socket factory function.
    * @param rixhub_endpoint The RIXHub endpoint.
    */
-  Service(const sys_msgs::SrvInfo& info, SocketFactory socket_factory, const Endpoint& rixhub_endpoint);
+  Service(const sys_msgs::SrvInfo& info, TransportFactory socket_factory, const Endpoint& rixhub_endpoint);
 
   // Disable public spin methods (only Node can spin the Service)
   using Spinner::spin;
