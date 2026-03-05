@@ -22,7 +22,7 @@ TimerCallback::~TimerCallback() {
 }
 
 void TimerCallback::on_spin() {
-  static const Duration ms = Duration(1e-3);
+  static const Duration sleep_threshold = Duration(5e-4); // 0.5 ms
   static const Duration margin = Duration(1e-4); // 0.1 ms
   static const Duration d_zero = Duration(0.0);
   static const Time t_zero = Time(0.0);
@@ -31,7 +31,7 @@ void TimerCallback::on_spin() {
   Duration delta = event_.current_real - event_.last_real;
   Duration remaining = duration_ - delta;
 
-  if (remaining >= ms) {
+  if (remaining >= sleep_threshold) {
     if (MULTITHREADED) {
       Time::sleep_for(remaining - margin);
     }
