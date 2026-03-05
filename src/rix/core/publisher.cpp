@@ -93,8 +93,7 @@ void Publisher::publish(const Message& msg) {
   std::vector<std::shared_ptr<Stream>> exceptional;
   if (Pollable::get_poller()) {
     std::vector<std::shared_ptr<Stream>> connections_vector(connections_.begin(), connections_.end());
-    bool status = Pollable::poll(connections_vector, Duration(0.0), PollFlag::WRITE, writable, exceptional);
-    Log::info << "Status: " <<  status << ", Writable: " << writable.size() << ", Exception: " << exceptional.size() << std::endl;
+    Pollable::poll(connections_vector, Duration(0.0), PollFlag::WRITE, writable, exceptional);
   } else {
     // Fallback if poller is not available
     for (const auto& conn : connections_) {
@@ -134,8 +133,10 @@ size_t Publisher::get_subscriber_count() const {
 }
 
 void Publisher::on_spin() {
+  Duration timeout(MULTITHREADED ? 1.0 : 0.0);
+
   // Check to see if a subscriber has made a connection
-  if (!server_->wait_readable(Duration(1.0))) {
+  if (!server_->wait_readable(timeout)) {
     return;
   }
 
