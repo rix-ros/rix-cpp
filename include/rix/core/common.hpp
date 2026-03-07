@@ -6,10 +6,7 @@
 #include <random>
 #include <string>
 
-#include "rix/ipc/acceptor.hpp"
-#include "rix/ipc/stream.hpp"
-#include "rix/ipc/tcp_acceptor.hpp"
-#include "rix/ipc/tcp_stream.hpp"
+#include "rix/ipc/transport_factory.hpp"
 #include "rix/util/environment.hpp"
 #include "rix/util/log.hpp"
 #include <thread>
@@ -61,23 +58,6 @@ enum OPCODE : uint8_t {
   PARAM_GET_RESPONSE,    ///< Sent from RIXHub as response to PARAM_GET_REQUEST
   SYSTEM_GET_RESPONSE,   ///< Sent from RIXHub as response to SYSTEM_GET_REQUEST
 };
-
-/**
- * @brief Type alias for socket factory function.
- */
-using AcceptorFactory = std::function<std::shared_ptr<Acceptor>(const Endpoint&)>;
-using StreamFactory = std::function<std::shared_ptr<Stream>(const Endpoint&, bool blocking)>;
-
-struct TransportFactory {
-  AcceptorFactory create_acceptor;
-  StreamFactory create_stream;
-};
-
-enum Protocol : uint8_t { TCP = 0 };
-
-const std::array<TransportFactory, 1> transport_factories = {
-    {{[](const Endpoint& endpoint) { return std::make_shared<TCPAcceptor>(endpoint); },
-      [](const Endpoint& endpoint, bool blocking) { return std::make_shared<TCPStream>(endpoint, blocking); }}}};
 
 /**
  * @brief Type alias for ID factory function.

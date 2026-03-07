@@ -5,7 +5,7 @@
 
 namespace rix {
 
-ActionClient::~ActionClient() {
+ActionClientImpl::~ActionClientImpl() {
   if (MULTITHREADED) {
     shutdown();
     if (spin_thread_.joinable()) {
@@ -14,7 +14,7 @@ ActionClient::~ActionClient() {
   }
 }
 
-bool ActionClient::dispatch(const Message& goal) {
+bool ActionClientImpl::dispatch(const Message& goal) {
   std::lock_guard<std::mutex> guard(mutex_);
   uint8_t opcode;
   if (client_) {
@@ -23,7 +23,7 @@ bool ActionClient::dispatch(const Message& goal) {
   } else {
     // Otherwise, create a new client and send a goal message
     opcode = OPCODE::ACT_GOAL_MESSAGE;
-    client_ = socket_factory_.create_stream(endpoint_, true);
+    client_ = factory_.create_stream(endpoint_, true);
     if (!client_) {
       return false;
     }
@@ -66,7 +66,7 @@ bool ActionClient::dispatch(const Message& goal) {
   return true;
 }
 
-bool ActionClient::cancel() {
+bool ActionClientImpl::cancel() {
   std::lock_guard<std::mutex> guard(mutex_);
   if (!client_) {
     return false;
@@ -82,14 +82,14 @@ bool ActionClient::cancel() {
   return true;
 }
 
-bool ActionClient::wait_for_result(const Duration& timeout) {
+bool ActionClientImpl::wait_for_result(const Duration& timeout) {
   std::unique_lock<std::mutex> lock(mutex_);
   return result_condition_.wait_for(lock, timeout.raw(), [this]() { return result_received_; });
 }
 
-ActionClient::ActionClient(const sys_msgs::ActRequest& request, TransportFactory factory, const Endpoint& rixhub_endpoint)
-    : request_(request), socket_factory_(factory) {
-  auto client = socket_factory_.create_stream(rixhub_endpoint, true);
+ActionClientImpl::ActionClientImpl(const sys_msgs::ActRequest& request, const Endpoint& rixhub_endpoint)
+    : request_(request), factory_(get_transport_factory(static_cast<Protocol>(request.protocol))) {
+  auto client = factory_.create_stream(rixhub_endpoint, true);
   if (!client) {
     shutdown();
     return;
@@ -125,7 +125,7 @@ ActionClient::ActionClient(const sys_msgs::ActRequest& request, TransportFactory
   }
 }
 
-void ActionClient::on_spin() {
+void ActionClientImpl::on_spin() {
   std::unique_lock<std::mutex> guard(mutex_);
   // If not ok, no active client, or no callbacks, do nothing
   if (!ok() || !client_ || !feedback_instance_ || !result_instance_) {
@@ -166,6 +166,26 @@ void ActionClient::on_spin() {
       return;
     }
   }
+}
+
+void ActionClientImpl::set_feedback_callback(CallbackUntyped callback, std::shared_ptr<Message> feedback_instance) {
+  if (feedback_instance->hash() != request_.feedback_hash) {
+    Log::warn << "Message type mismatch in set_callback." << std::endl;
+    return;
+  }
+  std::lock_guard<std::mutex> guard(mutex_);
+  feedback_callback_ = std::move(callback);
+  feedback_instance_ = std::move(feedback_instance);
+}
+
+void ActionClientImpl::set_result_callback(CallbackUntyped callback, std::shared_ptr<Message> result_instance) {
+  if (result_instance->hash() != request_.result_hash) {
+    Log::warn << "Message type mismatch in set_callback." << std::endl;
+    return;
+  }
+  std::lock_guard<std::mutex> guard(mutex_);
+  result_callback_ = std::move(callback);
+  result_instance_ = std::move(result_instance);
 }
 
 } // namespace rix

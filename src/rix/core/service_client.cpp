@@ -3,11 +3,9 @@
 
 namespace rix {
 
-ServiceClient::ServiceClient(const sys_msgs::SrvRequest& request,
-                             TransportFactory socket_factory,
-                             const Endpoint& rixhub_endpoint)
-    : request_(request), socket_factory_(socket_factory) {
-  auto client = socket_factory_.create_stream(rixhub_endpoint, true);
+ServiceClientImpl::ServiceClientImpl(const sys_msgs::SrvRequest& request, const Endpoint& rixhub_endpoint)
+    : request_(request), factory_(get_transport_factory(static_cast<Protocol>(request.protocol))) {
+  auto client = factory_.create_stream(rixhub_endpoint, true);
   if (!client) {
     shutdown();
     return;
@@ -43,7 +41,7 @@ ServiceClient::ServiceClient(const sys_msgs::SrvRequest& request,
   }
 }
 
-ServiceClient::~ServiceClient() {
+ServiceClientImpl::~ServiceClientImpl() {
   if (MULTITHREADED) {
     shutdown();
     if (spin_thread_.joinable()) {
@@ -52,14 +50,14 @@ ServiceClient::~ServiceClient() {
   }
 }
 
-void ServiceClient::on_spin() {}
+void ServiceClientImpl::on_spin() {}
 
-bool ServiceClient::call(const Message& request, Message& response) {
+bool ServiceClientImpl::call(const Message& request, Message& response) {
   if (!ok()) {
     return false;
   }
 
-  auto client = socket_factory_.create_stream(endpoint_, true);
+  auto client = factory_.create_stream(endpoint_, true);
   if (!client) {
     return false;
   }

@@ -15,51 +15,47 @@
 
 namespace rix {
 
+class Subscriber : public Spinner {
+public:
+  template <typename TMsg> using Callback = std::function<void(const TMsg&)>;
+  virtual ~Subscriber() = default;
+  virtual size_t get_publisher_count() const = 0;
+  template <typename TMsg> void set_callback(Callback<TMsg> callback);
+
+protected:
+  using CallbackUntyped = std::function<void(const Message&)>;
+
+private:
+  virtual void set_callback(CallbackUntyped callback, std::shared_ptr<Message> message) = 0;
+};
+
 class Node; // Forward declaration
 
-class Subscriber final : public Spinner {
+class SubscriberImpl final : public Subscriber {
   friend class Node;
 
 public:
-  /**
-   * @brief Callback type definition for message handling.
-   * @tparam TMsg The message type.
-   */
-  template <typename TMsg> using Callback = std::function<void(const TMsg&)>;
-
   // Disable copy and move semantics
-  Subscriber(const Subscriber&) = delete;
-  Subscriber& operator=(const Subscriber&) = delete;
-  Subscriber(Subscriber&&) = delete;
-  Subscriber& operator=(Subscriber&&) = delete;
+  SubscriberImpl(const SubscriberImpl&) = delete;
+  SubscriberImpl& operator=(const SubscriberImpl&) = delete;
+  SubscriberImpl(SubscriberImpl&&) = delete;
+  SubscriberImpl& operator=(SubscriberImpl&&) = delete;
 
   /**
    * @brief Destructor. Deregisters the subscriber from rixhub.
    */
-  ~Subscriber() override;
-
-  /**
-   * @brief Sets the callback function to be invoked on message receipt.
-   * @tparam TMsg The message type.
-   * @param callback The callback function.
-   */
-  template <typename TMsg> void set_callback(Callback<TMsg> callback);
+  ~SubscriberImpl() override;
 
   /**
    * @brief Returns the number of connected publishers.
    * @return The number of connected publishers.
    */
-  size_t get_publisher_count() const;
+  size_t get_publisher_count() const override;
 
 private:
-  /**
-   * @brief Callback type definition for untyped message handling.
-   */
-  using CallbackUntyped = std::function<void(const Message&)>;
-
   sys_msgs::SubInfo info_;                    ///< The subscriber information.
   std::shared_ptr<Acceptor> server_;          ///< The server socket for incoming connections.
-  TransportFactory socket_factory_;           ///< The socket factory function.
+  TransportFactory factory_;                  ///< The socket factory function.
   CallbackUntyped callback_;                  ///< The message callback function.
   mutable std::mutex callback_mutex_;         ///< Mutex for protecting the callback.
   std::set<std::shared_ptr<Stream>> clients_; ///< The set of connected publisher sockets.
@@ -69,12 +65,12 @@ private:
   std::thread spin_thread_;                   ///< The thread running the spin loop.
 
   /**
-   * @brief Constructs a Subscriber with the given SubInfo, socket factory, and RIXHub endpoint.
+   * @brief Constructs a SubscriberImpl with the given SubInfo, socket factory, and RIXHub endpoint.
    * @param info The SubInfo message containing subscriber details.
    * @param factory The socket factory to create sockets.
    * @param rixhub_endpoint The RIXHub endpoint.
    */
-  Subscriber(const sys_msgs::SubInfo& info, TransportFactory factory, const Endpoint& rixhub_endpoint);
+  SubscriberImpl(const sys_msgs::SubInfo& info, const Endpoint& rixhub_endpoint);
 
   /**
    * @brief Internal class to accept new subscriber notifications.
@@ -82,10 +78,10 @@ private:
   class SubNotifyAcceptor : public Spinner {
   public:
     /**
-     * @brief Constructs a SubNotifyAcceptor with the given parent Subscriber.
-     * @param parent The parent Subscriber.
+     * @brief Constructs a SubNotifyAcceptor with the given parent SubscriberImpl.
+     * @param parent The parent SubscriberImpl.
      */
-    explicit SubNotifyAcceptor(Subscriber& parent);
+    explicit SubNotifyAcceptor(SubscriberImpl& parent);
 
     ~SubNotifyAcceptor() override = default;
 
@@ -95,25 +91,27 @@ private:
     SubNotifyAcceptor(SubNotifyAcceptor&&) = delete;
     SubNotifyAcceptor& operator=(SubNotifyAcceptor&&) = delete;
 
-    Subscriber& parent;
+    SubscriberImpl& parent;
     std::thread spin_thread{};
 
   private:
     /**
      * @brief Internal spin implementation for the SubNotifyAcceptor.
-     * @details Accepts new connections and adds them to the parent Subscriber's client set.
+     * @details Accepts new connections and adds them to the parent SubscriberImpl's client set.
      */
     void on_spin() override;
   };
 
   SubNotifyAcceptor sub_notify_acceptor_{*this};
 
-  // Disable public spin methods (only Node can spin the Subscriber)
+  // Disable public spin methods (only Node can spin the SubscriberImpl)
   using Spinner::spin;
   using Spinner::spin_once;
 
+  void set_callback(CallbackUntyped callback, std::shared_ptr<Message> message) override;
+
   /**
-   * @brief Internal spin implementation for the Subscriber.
+   * @brief Internal spin implementation for the SubscriberImpl.
    * @details Receives messages from connected publishers and invokes the callback.
    */
   void on_spin() override;
@@ -122,17 +120,13 @@ private:
 template <typename TMsg> void Subscriber::set_callback(Callback<TMsg> callback) {
   static_assert(std::is_base_of_v<Message, TMsg>, "TMsg must be a subclass of Message.");
 
-  if (TMsg().hash() != info_.topic_info.message_hash) {
-    Log::warn << "Message type mismatch in set_callback." << std::endl;
-    return;
-  }
-  std::lock_guard guard(callback_mutex_);
-  msg_instance_ = std::make_shared<TMsg>();
-  callback_ = [callback](const Message& msg) {
-    // Safe to static cast because we checked the hash above
-    const auto& typed_msg = static_cast<const TMsg&>(msg);
-    callback(typed_msg);
+  auto msg_instance = std::make_shared<TMsg>();
+  CallbackUntyped untyped = [callback](const Message& msg) {
+    // Safe to static_cast because the hash is verified in the override
+    callback(static_cast<const TMsg&>(msg));
   };
+
+  set_callback(untyped, msg_instance);
 }
 
 } // namespace rix

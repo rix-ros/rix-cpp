@@ -3,10 +3,10 @@
 
 namespace rix {
 
-Publisher::Publisher(const sys_msgs::PubInfo& info, TransportFactory factory, Endpoint rixhub_endpoint)
-    : info_(info), socket_factory_(factory), rixhub_endpoint_(rixhub_endpoint), registered_flag_(false) {
-
-  server_ = socket_factory_.create_acceptor(Endpoint(info_.endpoint.address, info_.endpoint.port));
+PublisherImpl::PublisherImpl(const sys_msgs::PubInfo& info, Endpoint rixhub_endpoint)
+    : info_(info), factory_(get_transport_factory(static_cast<Protocol>(info.protocol))),
+      rixhub_endpoint_(rixhub_endpoint), registered_flag_(false) {
+  server_ = factory_.create_acceptor(Endpoint(info_.endpoint.address, info_.endpoint.port));
   if (!server_) {
     shutdown();
     return;
@@ -24,7 +24,7 @@ Publisher::Publisher(const sys_msgs::PubInfo& info, TransportFactory factory, En
   info_.endpoint.port = server_endpoint.port;
 
   // Register publisher with rixhub
-  auto client = socket_factory_.create_stream(rixhub_endpoint_, true);
+  auto client = factory_.create_stream(rixhub_endpoint_, true);
   if (!client) {
     shutdown();
     return;
@@ -47,23 +47,23 @@ Publisher::Publisher(const sys_msgs::PubInfo& info, TransportFactory factory, En
 
   registered_flag_ = true;
 
-  Log::debug << "Publisher created on topic \"" << info_.topic_info.name << "\"." << std::endl;
+  Log::debug << "PublisherImpl created on topic \"" << info_.topic_info.name << "\"." << std::endl;
 
   if (MULTITHREADED) {
     spin_thread_ = std::thread([this]() { this->spin(); });
   }
 }
 
-Publisher::~Publisher() {
+PublisherImpl::~PublisherImpl() {
   // Deregister publisher with rixhub
   if (registered_flag_) {
-    auto client = socket_factory_.create_stream(rixhub_endpoint_, true);
+    auto client = factory_.create_stream(rixhub_endpoint_, true);
     if (!client) {
       return;
     }
     client->send_message(OPCODE::PUB_DEREGISTER, info_);
   }
-  Log::debug << "Publisher on topic \"" << info_.topic_info.name << "\" destroyed." << std::endl;
+  Log::debug << "PublisherImpl on topic \"" << info_.topic_info.name << "\" destroyed." << std::endl;
 
   if (MULTITHREADED) {
     shutdown();
@@ -73,7 +73,7 @@ Publisher::~Publisher() {
   }
 }
 
-void Publisher::publish(const Message& msg) {
+void PublisherImpl::publish(const Message& msg) {
   if (!ok()) {
     return;
   }
@@ -127,12 +127,12 @@ void Publisher::publish(const Message& msg) {
   Log::debugv << "Published message on topic \"" << info_.topic_info.name << "\"." << std::endl;
 }
 
-size_t Publisher::get_subscriber_count() const {
+size_t PublisherImpl::get_subscriber_count() const {
   std::lock_guard<std::mutex> guard(connections_mutex_);
   return connections_.size();
 }
 
-void Publisher::on_spin() {
+void PublisherImpl::on_spin() {
   Duration timeout(MULTITHREADED ? 1.0 : 0.0);
 
   // Check to see if a subscriber has made a connection

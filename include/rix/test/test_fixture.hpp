@@ -6,200 +6,192 @@
 #include "rix/sys_msgs/ActResponse.hpp"
 #include "rix/sys_msgs/SrvResponse.hpp"
 #include "rix/sys_msgs/SubNotify.hpp"
+#include "rix/test/acceptor_builder.hpp"
 #include "rix/test/mock_clock.hpp"
 #include "rix/test/mock_poller.hpp"
-#include "socket_builder.hpp"
-#include "socket_manager.hpp"
+#include "rix/test/stream_builder.hpp"
+#include "rix/test/transport_manager.hpp"
 #include <gtest/gtest.h>
 
 namespace rix {
 
-// TODO: Revise the functions for waiting on operations, should instead be
-// "wait_for_publisher_accept" or "wait_for_subscriber_connect". The TestFixture
-// should not communicate details at the socket level, but rather at the higher level of
-// publishers and subscribers.
-
-// High-level test fixture for Node tests
-class TestFixture : std::enable_shared_from_this<TestFixture> {
+/**
+ * @brief Fixture 1: Internal RIX Test Fixture.
+ *
+ * Provides a fluent builder API for testing RIX's own IPC and core components.
+ * Tests set up expected mock transport behavior, then run a test function that
+ * exercises the real Node / Mediator / component code against the mocks.
+ *
+ * Uses the new Acceptor/Stream interfaces introduced by the IPC refactor.
+ *
+ * Socket categorization (carried forward from old fixture for synchronization):
+ *   - acceptor_sockets_: Server acceptors (Node, Publisher, Subscriber,
+ * Service, Action)
+ *   - connection_streams_: Streams returned by accept() (publisher→subscriber
+ * connections, etc.)
+ *   - client_streams_: Streams created by the SUT to connect outward
+ * (subscriber→publisher, etc.)
+ */
+class TestFixture {
 public:
   TestFixture()
       : rixhub_endpoint_(RIXHUB_IP, RIXHUB_PORT), enable_notifications_(false), enable_poller_(false),
         enable_clock_(false), expected_id_(1), current_id_(0) {
-    GenericSocket::set_poller(nullptr);
-  }
-
-  template <typename TNode> using TestFunction = std::function<void(TestFixture&)>;
-
-  // Build and return the configured node
-  template <typename TNode = Node> void build(TestFunction<TNode> test_func) {
-    static_assert(std::is_base_of_v<Node, TNode>, "TNode must be Node or derived from Node");
-    TNode::set_socket_factory(socket_manager_.get_factory());
-    TNode::set_id_factory([this]() { return ++current_id_; });
-    test_func(*this);
+    Pollable::set_poller(nullptr);
   }
 
   ~TestFixture() {
+    reset_transport_factory(Protocol::TCP);
+    NodeBase::set_id_factory(default_id_generator);
     if (enable_poller_) {
-      rix::GenericSocket::set_poller(nullptr);
+      Pollable::set_poller(nullptr);
     }
     if (enable_clock_) {
-      rix::Time::set_clock(std::make_shared<Clock>());
+      Time::set_clock(std::make_shared<Clock>());
     }
   }
 
+  template <typename TNode> using TestFunction = std::function<void(const TestFixture&)>;
+
+  /**
+   * @brief Inject mock transport, set ID factory, and invoke the test function.
+   */
+  template <typename TNode = Node> void build(TestFunction<TNode> test_func) {
+    static_assert(std::is_base_of_v<Node, TNode>, "TNode must be Node or derived from Node");
+    set_transport_factory(Protocol::TCP, &transport_manager_.get_factory());
+    NodeBase::set_id_factory([this]() { return ++current_id_; });
+    test_func(*this);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Configuration: clock, poller, notifications
+  // ---------------------------------------------------------------------------
+
   TestFixture& enable_clock(std::shared_ptr<MockClock>& clock) {
-    if (enable_clock_) {
+    if (enable_clock_)
       throw std::runtime_error("Clock already enabled");
-    }
     clock = std::make_shared<MockClock>();
-    rix::Time::set_clock(clock);
+    Time::set_clock(clock);
     enable_clock_ = true;
     return *this;
   }
 
   TestFixture& enable_poller(int max_poll_count = -1) {
-    if (enable_poller_) {
+    if (enable_poller_)
       throw std::runtime_error("Poller already enabled");
-    }
     enable_poller_ = true;
-    auto poller = std::make_shared<rix::MockPoller>(max_poll_count);
-    rix::GenericSocket::set_poller(poller);
+    auto poller = std::make_shared<MockPoller>(max_poll_count);
+    Pollable::set_poller(poller);
     EXPECT_CALL(*poller, poll).Times(::testing::AtLeast(1));
     return *this;
   }
 
-  // Enable operation notifications for synchronization in multithreaded tests
   TestFixture& enable_operation_notifications() {
-    if (enable_notifications_) {
+    if (enable_notifications_)
       throw std::runtime_error("Operation notifications already enabled");
-    }
     enable_notifications_ = true;
     return *this;
   }
 
-  // Disable operation notifications
   TestFixture& disable_operation_notifications() {
-    if (!enable_notifications_) {
+    if (!enable_notifications_)
       throw std::runtime_error("Operation notifications not enabled");
-    }
     enable_notifications_ = false;
     return *this;
   }
 
-  // Get a specific server socket by index (0-based)
-  std::shared_ptr<MockSocket> get_server_socket(size_t index = 0) const {
-    if (index < server_sockets_.size()) {
-      return server_sockets_[index];
-    }
-    return nullptr;
-  }
+  // ---------------------------------------------------------------------------
+  // Accessors for synchronization
+  // ---------------------------------------------------------------------------
 
-  // Get a specific connection socket by index (0-based)
-  std::shared_ptr<MockSocket> get_connection_socket(size_t index = 0) const {
-    if (index < connection_sockets_.size()) {
-      return connection_sockets_[index];
-    }
-    return nullptr;
-  }
+  // std::shared_ptr<MockAcceptor> get_acceptor(size_t index = 0) const {
+  //   return index < acceptors_.size() ? acceptors_[index] : nullptr;
+  // }
 
-  // Get a specific client socket by index (0-based)
-  std::shared_ptr<MockSocket> get_client_socket(size_t index = 0) const {
-    if (index < client_sockets_.size()) {
-      return client_sockets_[index];
-    }
-    return nullptr;
-  }
+  // std::shared_ptr<MockStream> get_connection_stream(size_t index = 0) const {
+  //   return index < connection_streams_.size() ? connection_streams_[index] : nullptr;
+  // }
 
-  // Get all server sockets
-  const std::vector<std::shared_ptr<MockSocket>>& get_server_sockets() const { return server_sockets_; }
+  // std::shared_ptr<MockStream> get_client_stream(size_t index = 0) const {
+  //   return index < client_streams_.size() ? client_streams_[index] : nullptr;
+  // }
 
-  // Get connection sockets (pub connections, service connections)
-  const std::vector<std::shared_ptr<MockSocket>>& get_connection_sockets() const { return connection_sockets_; }
+  const std::vector<std::shared_ptr<MockAcceptor>>& get_acceptors() const { return acceptors_; }
+  const std::vector<std::shared_ptr<MockStream>>& get_connection_streams() const { return connection_streams_; }
+  const std::vector<std::shared_ptr<MockStream>>& get_client_streams() const { return client_streams_; }
 
-  // Get client sockets (subscriber clients, service clients)
-  const std::vector<std::shared_ptr<MockSocket>>& get_client_sockets() const { return client_sockets_; }
-
-  // Wait for all server sockets to complete the specified number of operations
-  bool wait_for_all_servers(size_t operations_per_server,
-                            std::chrono::milliseconds timeout = std::chrono::milliseconds(5000)) const {
-    for (auto& server : server_sockets_) {
-      if (!server->wait_for_operations(operations_per_server, timeout)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  // Wait for all connection sockets to complete the specified number of operations
-  bool wait_for_all_connections(size_t operations_per_connection,
+  bool wait_for_all_connections(size_t ops_per_conn,
                                 std::chrono::milliseconds timeout = std::chrono::milliseconds(5000)) const {
-    for (auto& conn : connection_sockets_) {
-      if (!conn->wait_for_operations(operations_per_connection, timeout)) {
+    for (auto& conn : connection_streams_) {
+      if (!conn->wait_for_operations(ops_per_conn, timeout))
         return false;
-      }
     }
     return true;
   }
 
-  // Wait for all client sockets to complete the specified number of operations
-  bool wait_for_all_clients(size_t operations_per_client,
+  bool wait_for_all_clients(size_t ops_per_client,
                             std::chrono::milliseconds timeout = std::chrono::milliseconds(5000)) const {
-    for (auto& client : client_sockets_) {
-      if (!client->wait_for_operations(operations_per_client, timeout)) {
+    for (auto& client : client_streams_) {
+      if (!client->wait_for_operations(ops_per_client, timeout))
         return false;
-      }
     }
     return true;
   }
 
-  // Configure node registration to succeed
+  // ---------------------------------------------------------------------------
+  // Node lifecycle
+  // ---------------------------------------------------------------------------
+
   TestFixture& create_node(const std::string& name,
                            sys_msgs::NodeInfo& node_info,
                            bool should_fail = false,
                            int ping_count = 0,
                            const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
                            const Endpoint& bound_endpoint = Endpoint(DEFAULT_IP, 8000)) {
-    // Create the server socket for publisher connections
-    create_server(endpoint, bound_endpoint, ping_count);
+    // Node's server acceptor
+    create_server(bound_endpoint, ping_count);
 
     node_info.id = expected_id_++;
     node_info.name = name;
     node_info.endpoint.address = bound_endpoint.address;
     node_info.endpoint.port = bound_endpoint.port;
+    node_info.protocol = Protocol::TCP;
 
     sys_msgs::Status status;
     status.error = should_fail ? -1 : 0;
     status.id = node_info.id;
 
-    auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket)
-        .connect(rixhub_endpoint_)
+    // Registration stream (connects to rixhub)
+    auto reg = transport_manager_.create_stream();
+    StreamBuilder(reg)
         .send_message(OPCODE::NODE_REGISTER, node_info)
         .recv_message(OPCODE::STATUS_RESPONSE, status)
         .close();
     return *this;
   }
 
-  // Configure node deregistration
   TestFixture& destroy_node(const sys_msgs::NodeInfo& node_info) {
-    auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket).connect(rixhub_endpoint_).send_message(OPCODE::NODE_DEREGISTER, node_info).close();
+    auto stream = transport_manager_.create_stream();
+    StreamBuilder(stream).send_message(OPCODE::NODE_DEREGISTER, node_info).close();
     return *this;
   }
 
-  // Configure publisher registration
+  // ---------------------------------------------------------------------------
+  // Publisher lifecycle
+  // ---------------------------------------------------------------------------
+
   template <typename TMsg>
   TestFixture& create_publisher(const std::string& topic,
                                 sys_msgs::PubInfo& pub_info,
                                 const sys_msgs::NodeInfo& node_info,
                                 bool should_fail = false,
                                 int subscriber_count = 0,
+                                Protocol protocol = Protocol::TCP,
                                 const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
                                 const Endpoint& bound_endpoint = Endpoint(DEFAULT_IP, 8000)) {
     static_assert(std::is_base_of_v<Message, TMsg>, "TMsg must be derived from Message");
 
-    // Create the server socket for publisher connections
-    create_server(endpoint, bound_endpoint, subscriber_count);
+    create_server(bound_endpoint, subscriber_count);
 
     pub_info.node_id = node_info.id;
     pub_info.id = expected_id_++;
@@ -207,42 +199,42 @@ public:
     pub_info.topic_info.message_hash = TMsg().hash();
     pub_info.endpoint.address = bound_endpoint.address;
     pub_info.endpoint.port = bound_endpoint.port;
+    pub_info.protocol = protocol;
 
     sys_msgs::Status status;
     status.error = should_fail ? -1 : 0;
     status.id = pub_info.id;
 
-    // Registration socket
-    auto reg_socket = socket_manager_.create_socket();
-    SocketBuilder(reg_socket)
-        .connect(rixhub_endpoint_)
+    auto reg = transport_manager_.create_stream();
+    StreamBuilder(reg)
         .send_message(OPCODE::PUB_REGISTER, pub_info)
         .recv_message(OPCODE::STATUS_RESPONSE, status)
         .close();
-
     return *this;
   }
 
-  // Configure publisher deregistration
   TestFixture& destroy_publisher(const sys_msgs::PubInfo& pub_info) {
-    auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket).connect(rixhub_endpoint_).send_message(OPCODE::PUB_DEREGISTER, pub_info).close();
+    auto stream = transport_manager_.create_stream();
+    StreamBuilder(stream).send_message(OPCODE::PUB_DEREGISTER, pub_info).close();
     return *this;
   }
 
-  // Configure subscriber registration
+  // ---------------------------------------------------------------------------
+  // Subscriber lifecycle
+  // ---------------------------------------------------------------------------
+
   template <typename TMsg>
   TestFixture& create_subscriber(const std::string& topic,
                                  sys_msgs::SubInfo& sub_info,
                                  const sys_msgs::NodeInfo& node_info,
                                  bool should_fail = false,
                                  int notification_count = 0,
+                                 Protocol protocol = Protocol::TCP,
                                  const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
                                  const Endpoint& bound_endpoint = Endpoint(DEFAULT_IP, 8000)) {
     static_assert(std::is_base_of_v<Message, TMsg>, "TMsg must be derived from Message");
 
-    // Create the client socket for subscriber connections
-    create_server(endpoint, bound_endpoint, notification_count);
+    create_server(bound_endpoint, notification_count);
 
     sub_info.node_id = node_info.id;
     sub_info.id = expected_id_++;
@@ -250,42 +242,43 @@ public:
     sub_info.topic_info.message_hash = TMsg().hash();
     sub_info.endpoint.address = bound_endpoint.address;
     sub_info.endpoint.port = bound_endpoint.port;
+    sub_info.protocol = protocol;
 
     sys_msgs::Status status;
     status.error = should_fail ? -1 : 0;
     status.id = sub_info.id;
 
-    // Registration socket
-    auto reg_socket = socket_manager_.create_socket();
-    SocketBuilder(reg_socket)
-        .connect(rixhub_endpoint_)
+    auto reg = transport_manager_.create_stream();
+    StreamBuilder(reg)
         .send_message(OPCODE::SUB_REGISTER, sub_info)
         .recv_message(OPCODE::STATUS_RESPONSE, status)
         .close();
-
     return *this;
   }
 
-  // Configure subscriber deregistration
   TestFixture& destroy_subscriber(const sys_msgs::SubInfo& sub_info) {
-    auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket).connect(rixhub_endpoint_).send_message(OPCODE::SUB_DEREGISTER, sub_info).close();
+    auto stream = transport_manager_.create_stream();
+    StreamBuilder(stream).send_message(OPCODE::SUB_DEREGISTER, sub_info).close();
     return *this;
   }
 
-  // Configure service registration
+  // ---------------------------------------------------------------------------
+  // Service lifecycle
+  // ---------------------------------------------------------------------------
+
   template <typename TReq, typename TRes>
   TestFixture& create_service(const std::string& service,
                               sys_msgs::SrvInfo& srv_info,
                               const sys_msgs::NodeInfo& node_info,
                               bool should_fail = false,
                               int client_count = 0,
+                              Protocol protocol = Protocol::TCP,
                               const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
                               const Endpoint& bound_endpoint = Endpoint(DEFAULT_IP, 8000)) {
     static_assert(std::is_base_of_v<Message, TReq>, "TReq must be derived from Message");
     static_assert(std::is_base_of_v<Message, TRes>, "TRes must be derived from Message");
-    // Create the server socket for service connections
-    create_server(endpoint, bound_endpoint, client_count);
+
+    create_server(bound_endpoint, client_count);
 
     srv_info.node_id = node_info.id;
     srv_info.id = expected_id_++;
@@ -294,30 +287,30 @@ public:
     srv_info.response_hash = TRes().hash();
     srv_info.endpoint.address = bound_endpoint.address;
     srv_info.endpoint.port = bound_endpoint.port;
+    srv_info.protocol = protocol;
 
     sys_msgs::Status status;
     status.error = should_fail ? -1 : 0;
     status.id = srv_info.id;
 
-    // Registration socket
-    auto reg_socket = socket_manager_.create_socket();
-    SocketBuilder(reg_socket)
-        .connect(rixhub_endpoint_)
+    auto reg = transport_manager_.create_stream();
+    StreamBuilder(reg)
         .send_message(OPCODE::SRV_REGISTER, srv_info)
         .recv_message(OPCODE::STATUS_RESPONSE, status)
         .close();
-
     return *this;
   }
 
-  // Configure service deregistration
   TestFixture& destroy_service(const sys_msgs::SrvInfo& srv_info) {
-    const auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket).connect(rixhub_endpoint_).send_message(OPCODE::SRV_DEREGISTER, srv_info).close();
+    auto stream = transport_manager_.create_stream();
+    StreamBuilder(stream).send_message(OPCODE::SRV_DEREGISTER, srv_info).close();
     return *this;
   }
 
-  // Configure action registration
+  // ---------------------------------------------------------------------------
+  // Action lifecycle
+  // ---------------------------------------------------------------------------
+
   template <typename TGoal, typename TFeedback, typename TResult>
   TestFixture& create_action(const std::string& action,
                              sys_msgs::ActInfo& act_info,
@@ -325,13 +318,14 @@ public:
                              int iters_between_accept = 0,
                              bool should_fail = false,
                              int client_count = 0,
+                             Protocol protocol = Protocol::TCP,
                              const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
                              const Endpoint& bound_endpoint = Endpoint(DEFAULT_IP, 8000)) {
     static_assert(std::is_base_of_v<Message, TGoal>, "TGoal must be derived from Message");
     static_assert(std::is_base_of_v<Message, TFeedback>, "TFeedback must be derived from Message");
     static_assert(std::is_base_of_v<Message, TResult>, "TResult must be derived from Message");
-    // Create the server socket for action connections
-    create_server(endpoint, bound_endpoint, client_count, iters_between_accept);
+
+    create_server(bound_endpoint, client_count, iters_between_accept);
 
     act_info.node_id = node_info.id;
     act_info.id = expected_id_++;
@@ -341,38 +335,42 @@ public:
     act_info.goal_hash = TGoal().hash();
     act_info.feedback_hash = TFeedback().hash();
     act_info.result_hash = TResult().hash();
+    act_info.protocol = protocol;
 
     sys_msgs::Status status;
     status.error = should_fail ? -1 : 0;
     status.id = act_info.id;
-    // Registration socket
-    auto reg_socket = socket_manager_.create_socket();
-    SocketBuilder(reg_socket)
-        .connect(rixhub_endpoint_)
+
+    auto reg = transport_manager_.create_stream();
+    StreamBuilder(reg)
         .send_message(OPCODE::ACT_REGISTER, act_info)
         .recv_message(OPCODE::STATUS_RESPONSE, status)
         .close();
     return *this;
   }
 
-  // Configure action deregistration
   TestFixture& destroy_action(const sys_msgs::ActInfo& act_info) {
-    auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket).connect(rixhub_endpoint_).send_message(OPCODE::ACT_DEREGISTER, act_info).close();
+    auto stream = transport_manager_.create_stream();
+    StreamBuilder(stream).send_message(OPCODE::ACT_DEREGISTER, act_info).close();
     return *this;
   }
 
-  // Configure service client request
+  // ---------------------------------------------------------------------------
+  // Service client / Action client registration
+  // ---------------------------------------------------------------------------
+
   template <typename TReq, typename TRes>
   TestFixture& create_service_client(const std::string& service,
                                      const sys_msgs::NodeInfo& node_info,
                                      bool should_fail = false,
+                                     Protocol protocol = Protocol::TCP,
                                      const Endpoint& service_endpoint = Endpoint(DEFAULT_IP, 8000)) {
     sys_msgs::SrvRequest srv_req;
     srv_req.node_id = node_info.id;
     srv_req.name = service;
     srv_req.request_hash = TReq().hash();
     srv_req.response_hash = TRes().hash();
+    srv_req.protocol = protocol;
 
     sys_msgs::SrvResponse srv_res;
     srv_res.error = should_fail ? -1 : 0;
@@ -384,21 +382,16 @@ public:
       srv_res.srv_info.endpoint.port = service_endpoint.port;
     }
 
-    // Registration socket
-    auto reg_socket = socket_manager_.create_socket();
-    SocketBuilder(reg_socket)
-        .connect(rixhub_endpoint_)
-        .send_message(OPCODE::SRV_REQUEST, srv_req)
-        .recv_message(OPCODE::SRV_RESPONSE, srv_res)
-        .close();
+    auto reg = transport_manager_.create_stream();
+    StreamBuilder(reg).send_message(OPCODE::SRV_REQUEST, srv_req).recv_message(OPCODE::SRV_RESPONSE, srv_res).close();
     return *this;
   }
 
-  // Configure action client request
   template <typename TGoal, typename TFeedback, typename TResult>
   TestFixture& create_action_client(const std::string& action,
                                     const sys_msgs::NodeInfo& node_info,
                                     bool should_fail = false,
+                                    Protocol protocol = Protocol::TCP,
                                     const Endpoint& action_endpoint = Endpoint(DEFAULT_IP, 8000)) {
     sys_msgs::ActRequest act_req;
     act_req.node_id = node_info.id;
@@ -406,6 +399,7 @@ public:
     act_req.goal_hash = TGoal().hash();
     act_req.feedback_hash = TFeedback().hash();
     act_req.result_hash = TResult().hash();
+    act_req.protocol = protocol;
 
     sys_msgs::ActResponse act_res;
     act_res.error = should_fail ? -1 : 0;
@@ -418,17 +412,280 @@ public:
       act_res.act_info.endpoint.port = action_endpoint.port;
     }
 
-    // Registration socket
-    auto reg_socket = socket_manager_.create_socket();
-    SocketBuilder(reg_socket)
-        .connect(rixhub_endpoint_)
-        .send_message(OPCODE::ACT_REQUEST, act_req)
-        .recv_message(OPCODE::ACT_RESPONSE, act_res)
+    auto reg = transport_manager_.create_stream();
+    StreamBuilder(reg).send_message(OPCODE::ACT_REQUEST, act_req).recv_message(OPCODE::ACT_RESPONSE, act_res).close();
+    return *this;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Ping
+  // ---------------------------------------------------------------------------
+
+  TestFixture& accept_ping(const sys_msgs::NodeInfo& node_info) {
+    std::shared_ptr<MockStream> unused;
+    return accept_ping(node_info, unused);
+  }
+
+  TestFixture& accept_ping(const sys_msgs::NodeInfo& node_info, std::shared_ptr<MockStream>& conn) {
+    conn = transport_manager_.create_stream();
+    if (enable_notifications_)
+      connection_streams_.push_back(conn);
+
+    sys_msgs::Operation operation;
+    operation.opcode = OPCODE::PING;
+    operation.len = 0;
+
+    sys_msgs::Status status;
+    status.id = node_info.id;
+    status.error = 0;
+
+    auto builder = StreamBuilder(conn);
+    if (enable_notifications_)
+      builder.enable_operation_notifications();
+    builder.recv_message(operation, operation.get_prefix_len()).send_message(OPCODE::STATUS_RESPONSE, status).close();
+    return *this;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Publisher connection handling
+  // ---------------------------------------------------------------------------
+
+  template <typename TMsg> TestFixture& accept_subscriber(const std::vector<std::shared_ptr<TMsg>>& messages) {
+    std::shared_ptr<MockStream> unused;
+    return accept_subscriber<TMsg>(messages, unused);
+  }
+
+  template <typename TMsg>
+  TestFixture& accept_subscriber(const std::vector<std::shared_ptr<TMsg>>& messages,
+                                 std::shared_ptr<MockStream>& conn) {
+    conn = transport_manager_.create_stream();
+    if (enable_notifications_)
+      connection_streams_.push_back(conn);
+
+    auto builder = StreamBuilder(conn);
+    if (enable_notifications_)
+      builder.enable_operation_notifications();
+    for (auto& msg : messages) {
+      builder.send_message(OPCODE::PUB_MESSAGE, *msg);
+    }
+    builder.close();
+    return *this;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Subscriber notification and connection
+  // ---------------------------------------------------------------------------
+
+  template <typename TMsg>
+  TestFixture& accept_notification(const std::string& topic, const std::vector<Endpoint>& publisher_endpoints) {
+    std::shared_ptr<MockStream> unused;
+    return accept_notification<TMsg>(topic, publisher_endpoints, unused);
+  }
+
+  template <typename TMsg>
+  TestFixture& accept_notification(const std::string& topic,
+                                   const std::vector<Endpoint>& publisher_endpoints,
+                                   std::shared_ptr<MockStream>& conn) {
+    sys_msgs::SubNotify sub_notify;
+    sub_notify.publishers.resize(publisher_endpoints.size());
+    for (size_t i = 0; i < publisher_endpoints.size(); i++) {
+      sub_notify.publishers[i].topic_info.name = topic;
+      sub_notify.publishers[i].topic_info.message_hash = TMsg().hash();
+      sub_notify.publishers[i].endpoint.address = publisher_endpoints[i].address;
+      sub_notify.publishers[i].endpoint.port = publisher_endpoints[i].port;
+      sub_notify.publishers[i].id = static_cast<uint32_t>(i + 1);
+    }
+
+    conn = transport_manager_.create_stream();
+    if (enable_notifications_)
+      connection_streams_.push_back(conn);
+
+    auto builder = StreamBuilder(conn);
+    if (enable_notifications_)
+      builder.enable_operation_notifications();
+    builder.recv_message(OPCODE::SUB_NOTIFY, sub_notify).close();
+    return *this;
+  }
+
+  template <typename TMsg>
+  TestFixture& connect_to_publisher(const std::string& topic,
+                                    const std::vector<Endpoint>& publisher_endpoints,
+                                    const std::vector<std::shared_ptr<TMsg>>& messages) {
+    std::shared_ptr<MockStream> unused;
+    return connect_to_publisher<TMsg>(topic, publisher_endpoints, messages, unused);
+  }
+
+  template <typename TMsg>
+  TestFixture& connect_to_publisher(const Endpoint& publisher_endpoint,
+                                    const std::vector<std::shared_ptr<TMsg>>& messages,
+                                    std::shared_ptr<MockStream>& client) {
+    client = transport_manager_.create_stream();
+    if (enable_notifications_)
+      client_streams_.push_back(client);
+
+    auto builder = StreamBuilder(client);
+    if (enable_notifications_)
+      builder.enable_operation_notifications();
+    builder.set_blocking(false).set_blocking(true);
+    for (auto& msg : messages) {
+      builder.recv_message(OPCODE::PUB_MESSAGE, *msg);
+    }
+    builder.close();
+    return *this;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Service connection handling
+  // ---------------------------------------------------------------------------
+
+  template <typename TRequest, typename TResponse>
+  TestFixture& accept_service_client(std::shared_ptr<TRequest> request, std::shared_ptr<TResponse> response) {
+    std::shared_ptr<MockStream> unused;
+    return accept_service_client<TRequest, TResponse>(request, response, unused);
+  }
+
+  template <typename TRequest, typename TResponse>
+  TestFixture& accept_service_client(std::shared_ptr<TRequest> request,
+                                     std::shared_ptr<TResponse> response,
+                                     std::shared_ptr<MockStream>& conn) {
+    conn = transport_manager_.create_stream();
+    if (enable_notifications_)
+      connection_streams_.push_back(conn);
+
+    auto builder = StreamBuilder(conn);
+    if (enable_notifications_)
+      builder.enable_operation_notifications();
+    builder.recv_message(OPCODE::SRV_REQUEST_MESSAGE, *request)
+        .send_message(OPCODE::SRV_RESPONSE_MESSAGE, *response)
         .close();
     return *this;
   }
 
-  // Configure parameter set request
+  // ---------------------------------------------------------------------------
+  // Service client call
+  // ---------------------------------------------------------------------------
+
+  template <typename TRequest, typename TResponse>
+  TestFixture& call_service_client(std::shared_ptr<TRequest> request, std::shared_ptr<TResponse> response) {
+    std::shared_ptr<MockStream> unused;
+    return call_service_client<TRequest, TResponse>(request, response, unused);
+  }
+
+  template <typename TRequest, typename TResponse>
+  TestFixture& call_service_client(std::shared_ptr<TRequest> request,
+                                   std::shared_ptr<TResponse> response,
+                                   std::shared_ptr<MockStream>& client) {
+    client = transport_manager_.create_stream();
+    if (enable_notifications_)
+      client_streams_.push_back(client);
+
+    auto builder = StreamBuilder(client);
+    if (enable_notifications_)
+      builder.enable_operation_notifications();
+    builder.send_message(OPCODE::SRV_REQUEST_MESSAGE, *request)
+        .recv_message(OPCODE::SRV_RESPONSE_MESSAGE, *response)
+        .close();
+    return *this;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Action connection handling
+  // ---------------------------------------------------------------------------
+
+  template <typename TGoal, typename TFeedback, typename TResult>
+  TestFixture& accept_action_client(std::shared_ptr<TGoal> goal,
+                                    std::vector<std::shared_ptr<TFeedback>> feedback,
+                                    std::shared_ptr<TResult> result) {
+    std::shared_ptr<MockStream> unused;
+    return accept_action_client<TGoal, TFeedback, TResult>(goal, feedback, result, unused);
+  }
+
+  template <typename TGoal, typename TFeedback, typename TResult>
+  TestFixture& accept_action_client(std::shared_ptr<TGoal> goal,
+                                    std::vector<std::shared_ptr<TFeedback>> feedback,
+                                    std::shared_ptr<TResult> result,
+                                    std::shared_ptr<MockStream>& conn,
+                                    bool should_fail = false) {
+    conn = transport_manager_.create_stream();
+    if (enable_notifications_)
+      connection_streams_.push_back(conn);
+
+    auto builder = StreamBuilder(conn);
+    if (enable_notifications_)
+      builder.enable_operation_notifications();
+
+    sys_msgs::Operation operation;
+    operation.opcode = OPCODE::ACT_GOAL_MESSAGE;
+    operation.len = goal->size();
+    builder.recv_message(operation, operation.get_prefix_len());
+
+    sys_msgs::Status status;
+    if (should_fail) {
+      status.error = -1;
+      builder.send_message(OPCODE::ACT_RESPONSE_MESSAGE, status).close();
+      return *this;
+    } else {
+      status.error = 0;
+      builder.recv_message(*goal, goal->size()).send_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
+    }
+    for (auto& fb : feedback) {
+      builder.send_message(OPCODE::ACT_FEEDBACK_MESSAGE, *fb);
+    }
+    builder.send_message(OPCODE::ACT_RESULT_MESSAGE, *result).close();
+    return *this;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Action client goal / feedback / result
+  // ---------------------------------------------------------------------------
+
+  template <typename TGoal, typename TFeedback, typename TResult>
+  TestFixture& send_action_goal(std::shared_ptr<TGoal> goal,
+                                std::vector<std::shared_ptr<TFeedback>> feedback,
+                                std::shared_ptr<TResult> result,
+                                bool should_fail = false) {
+    std::shared_ptr<MockStream> unused;
+    return send_action_goal<TGoal, TFeedback, TResult>(goal, feedback, result, should_fail, unused);
+  }
+
+  template <typename TGoal, typename TFeedback, typename TResult>
+  TestFixture& send_action_goal(std::shared_ptr<TGoal> goal,
+                                std::vector<std::shared_ptr<TFeedback>> feedback,
+                                std::shared_ptr<TResult> result,
+                                std::shared_ptr<MockStream>& client,
+                                bool should_fail = false) {
+    client = transport_manager_.create_stream();
+    if (enable_notifications_)
+      client_streams_.push_back(client);
+
+    auto builder = StreamBuilder(client);
+    if (enable_notifications_)
+      builder.enable_operation_notifications();
+
+    sys_msgs::Operation goal_op;
+    goal_op.opcode = OPCODE::ACT_GOAL_MESSAGE;
+    goal_op.len = goal->get_prefix_len();
+    builder.send_message(OPCODE::ACT_GOAL_MESSAGE, *goal);
+
+    sys_msgs::Status status;
+    if (should_fail) {
+      status.error = -1;
+      builder.recv_message(OPCODE::ACT_RESPONSE_MESSAGE, status).close();
+      return *this;
+    }
+    status.error = 0;
+    builder.recv_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
+    for (auto& fb : feedback) {
+      builder.recv_message(OPCODE::ACT_FEEDBACK_MESSAGE, *fb);
+    }
+    builder.recv_message(OPCODE::ACT_RESULT_MESSAGE, *result).close();
+    return *this;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Parameter server
+  // ---------------------------------------------------------------------------
+
   TestFixture& set_parameter(const std::string& name,
                              const sys_msgs::NodeInfo& node_info,
                              const std::shared_ptr<Message>& value,
@@ -445,16 +702,14 @@ public:
     status.error = should_fail ? -1 : 0;
     status.id = param_info.id;
 
-    auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket)
-        .connect(rixhub_endpoint_)
+    auto stream = transport_manager_.create_stream();
+    StreamBuilder(stream)
         .send_message(OPCODE::PARAM_SET_REQUEST, param_info)
         .recv_message(OPCODE::STATUS_RESPONSE, status)
         .close();
     return *this;
   }
 
-  // Configure parameter get request
   TestFixture& get_parameter(const std::string& name,
                              const sys_msgs::NodeInfo& node_info,
                              const std::shared_ptr<Message>& value,
@@ -474,421 +729,61 @@ public:
       value->serialize(response.data.data(), offset);
     }
 
-    auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket)
-        .connect(rixhub_endpoint_)
+    auto stream = transport_manager_.create_stream();
+    StreamBuilder(stream)
         .send_message(OPCODE::PARAM_GET_REQUEST, request)
         .recv_message(OPCODE::PARAM_GET_RESPONSE, response)
         .close();
     return *this;
   }
 
-  // Configure system info get request
   TestFixture& get_system_info(const sys_msgs::SystemInfo& info, const sys_msgs::NodeInfo& node_info) {
     std_msgs::UInt64 id;
     id.data = node_info.id;
-    const auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket)
-        .connect(rixhub_endpoint_)
+    auto stream = transport_manager_.create_stream();
+    StreamBuilder(stream)
         .send_message(OPCODE::SYSTEM_GET_REQUEST, id)
         .recv_message(OPCODE::SYSTEM_GET_RESPONSE, info)
         .close();
     return *this;
   }
 
-  TestFixture& accept_ping() {
-    auto conn_socket = socket_manager_.create_socket();
-    if (enable_notifications_) {
-      connection_sockets_.push_back(conn_socket);
-    }
-    sys_msgs::Operation operation;
-    operation.opcode = OPCODE::PING;
-    operation.len = 0;
-
-    auto builder = SocketBuilder(conn_socket);
-    if (enable_notifications_) {
-      builder.enable_operation_notifications();
-    }
-    builder.recv_message(operation, operation.get_prefix_len()).close();
-    return *this;
-  }
-
-  // Configure publisher server with connection sockets
-  template <typename TMsg> TestFixture& accept_subscriber(const std::vector<std::shared_ptr<TMsg>>& messages) {
-    // Create connection sockets
-    auto conn_socket = socket_manager_.create_socket();
-    if (enable_notifications_) {
-      connection_sockets_.push_back(conn_socket);
-    }
-    auto builder = SocketBuilder(conn_socket);
-    if (enable_notifications_) {
-      builder.enable_operation_notifications();
-    }
-    for (auto& msg : messages) {
-      builder.send_message(OPCODE::PUB_MESSAGE, *msg);
-    }
-    builder.close();
-    return *this;
-  }
-
-  // Configure subscriber connections
-  template <typename TMsg>
-  TestFixture& accept_notification(const std::string& topic, const std::vector<Endpoint>& publisher_endpoints) {
-    sys_msgs::SubNotify sub_notify;
-    sub_notify.publishers.resize(publisher_endpoints.size());
-    for (size_t i = 0; i < publisher_endpoints.size(); i++) {
-      sub_notify.publishers[i].topic_info.name = topic;
-      sub_notify.publishers[i].topic_info.message_hash = TMsg().hash();
-      sub_notify.publishers[i].endpoint.address = publisher_endpoints[i].address;
-      sub_notify.publishers[i].endpoint.port = publisher_endpoints[i].port;
-      sub_notify.publishers[i].id = static_cast<uint32_t>(i + 1);
-    }
-
-    // Create notification connection socket
-    auto notify_socket = socket_manager_.create_socket();
-    if (enable_notifications_) {
-      connection_sockets_.push_back(notify_socket);
-    }
-    auto builder = SocketBuilder(notify_socket);
-    if (enable_notifications_) {
-      builder.enable_operation_notifications();
-    }
-    builder.recv_message(OPCODE::SUB_NOTIFY, sub_notify).close();
-    return *this;
-  }
-
-  // Configure subscriber clients
-  template <typename TMsg>
-  TestFixture& connect_to_publisher(const Endpoint& publisher_endpoint,
-                                    const std::vector<std::shared_ptr<TMsg>>& messages) {
-    auto client_socket = socket_manager_.create_socket();
-    if (enable_notifications_) {
-      client_sockets_.push_back(client_socket);
-    }
-    auto builder = SocketBuilder(client_socket);
-    if (enable_notifications_) {
-      builder.enable_operation_notifications();
-    }
-    builder.set_blocking(false).connect(publisher_endpoint).set_blocking(true);
-    for (auto& msg : messages) {
-      builder.recv_message(OPCODE::PUB_MESSAGE, *msg);
-    }
-    builder.close();
-    return *this;
-  }
-
-  // Configure service server with connection sockets
-  template <typename TRequest, typename TResponse>
-  TestFixture& accept_service_client(std::shared_ptr<TRequest> request, std::shared_ptr<TResponse> response) {
-    auto conn_socket = socket_manager_.create_socket();
-    if (enable_notifications_) {
-      connection_sockets_.push_back(conn_socket);
-    }
-    auto builder = SocketBuilder(conn_socket);
-    if (enable_notifications_) {
-      builder.enable_operation_notifications();
-    }
-    builder.recv_message(OPCODE::SRV_REQUEST_MESSAGE, *request)
-        .send_message(OPCODE::SRV_RESPONSE_MESSAGE, *response)
-        .close();
-    return *this;
-  }
-
-  // Configure action server with connection sockets
-  template <typename TGoal, typename TFeedback, typename TResult>
-  TestFixture& accept_action_client(std::shared_ptr<TGoal> goal,
-                                    std::vector<std::shared_ptr<TFeedback>> feedback,
-                                    std::shared_ptr<TResult> result,
-                                    bool should_fail = false) {
-    auto conn_socket = socket_manager_.create_socket();
-    if (enable_notifications_) {
-      connection_sockets_.push_back(conn_socket);
-    }
-    auto builder = SocketBuilder(conn_socket);
-    if (enable_notifications_) {
-      builder.enable_operation_notifications();
-    }
-    sys_msgs::Operation operation;
-    operation.opcode = OPCODE::ACT_GOAL_MESSAGE;
-    operation.len = goal->size();
-    builder.recv_message(operation, operation.get_prefix_len());
-    sys_msgs::Status status;
-    if (should_fail) {
-      // Immediately send result with error
-      status.error = -1;
-      builder.send_message(OPCODE::ACT_RESPONSE_MESSAGE, status).close();
-      return *this;
-    } else {
-      status.error = 0;
-      builder.recv_message(*goal, goal->size()).send_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
-    }
-    for (auto& fb : feedback) {
-      builder.send_message(OPCODE::ACT_FEEDBACK_MESSAGE, *fb);
-    }
-    builder.send_message(OPCODE::ACT_RESULT_MESSAGE, *result).close();
-    return *this;
-  }
-
-  template <typename TGoal, typename TFeedback>
-  TestFixture& accept_action_client_with_cancel(std::shared_ptr<TGoal> goal,
-                                                std::vector<std::shared_ptr<TFeedback>> feedback,
-                                                bool should_fail = false) {
-    auto conn_socket = socket_manager_.create_socket();
-    if (enable_notifications_) {
-      connection_sockets_.push_back(conn_socket);
-    }
-    auto builder = SocketBuilder(conn_socket);
-    if (enable_notifications_) {
-      builder.enable_operation_notifications();
-    }
-    sys_msgs::Operation operation;
-    operation.opcode = OPCODE::ACT_GOAL_MESSAGE;
-    operation.len = goal->size();
-    builder.recv_message(operation, operation.get_prefix_len());
-    sys_msgs::Status status;
-    if (should_fail) {
-      // Immediately send result with error
-      status.error = -1;
-      builder.send_message(OPCODE::ACT_RESPONSE_MESSAGE, status).close();
-      return *this;
-    } else {
-      status.error = 0;
-      builder.recv_message(*goal, goal->size()).send_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
-    }
-    for (auto& fb : feedback) {
-      builder.send_message(OPCODE::ACT_FEEDBACK_MESSAGE, *fb);
-    }
-    operation.opcode = OPCODE::ACT_CANCEL_MESSAGE;
-    operation.len = 0;
-    builder.recv_message(operation, operation.get_prefix_len()).close();
-    return *this;
-  }
-
-  template <typename TGoal, typename TFeedback, typename TResult>
-  TestFixture& accept_action_client_with_preempt(std::vector<std::shared_ptr<TGoal>> goals,
-                                                 std::vector<std::vector<std::shared_ptr<TFeedback>>> feedbacks,
-                                                 std::shared_ptr<TResult> result,
-                                                 bool should_fail = false) {
-    if (goals.size() != feedbacks.size()) {
-      throw std::runtime_error("Goals and feedbacks size mismatch");
-    }
-    if (goals.size() < 2) {
-      throw std::runtime_error("At least two goals required for preempt test");
-    }
-    auto conn_socket = socket_manager_.create_socket();
-    if (enable_notifications_) {
-      connection_sockets_.push_back(conn_socket);
-    }
-    auto builder = SocketBuilder(conn_socket);
-    if (enable_notifications_) {
-      builder.enable_operation_notifications();
-    }
-    sys_msgs::Operation operation;
-    operation.opcode = OPCODE::ACT_GOAL_MESSAGE;
-    operation.len = goals[0]->size();
-    builder.recv_message(operation, operation.get_prefix_len());
-    sys_msgs::Status status;
-    if (should_fail) {
-      // Immediately send result with error
-      status.error = -1;
-      builder.send_message(OPCODE::ACT_RESPONSE_MESSAGE, status).close();
-      return *this;
-    } else {
-      status.error = 0;
-      // First set of goal/feedbacks
-      builder.recv_message(*goals[0], goals[0]->size()).send_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
-      for (size_t i = 0; i < feedbacks[0].size(); i++) {
-        builder.send_message(OPCODE::ACT_FEEDBACK_MESSAGE, *feedbacks[0][i]);
-      }
-    }
-    // Preempt with other goals
-    for (size_t g = 1; g < goals.size(); g++) {
-      // Preempt message
-      operation.opcode = OPCODE::ACT_PREEMPT_MESSAGE;
-      operation.len = goals[g]->size();
-      builder.recv_message(operation, operation.get_prefix_len());
-      builder.recv_message(*goals[g], goals[g]->size()).send_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
-      for (size_t i = 0; i < feedbacks[g].size(); i++) {
-        builder.send_message(OPCODE::ACT_FEEDBACK_MESSAGE, *feedbacks[g][i]);
-      }
-    }
-    builder.send_message(OPCODE::ACT_RESULT_MESSAGE, *result).close();
-    return *this;
-  }
-
-  // Configure service client
-  template <typename TRequest, typename TResponse>
-  TestFixture& call_service_client(std::shared_ptr<TRequest> request,
-                                   std::shared_ptr<TResponse> response,
-                                   const Endpoint& service_endpoint = Endpoint(DEFAULT_IP, 8000)) {
-    auto socket = socket_manager_.create_socket();
-    if (enable_notifications_) {
-      client_sockets_.push_back(socket);
-    }
-    auto builder = SocketBuilder(socket);
-    if (enable_notifications_) {
-      builder.enable_operation_notifications();
-    }
-    builder.connect(service_endpoint)
-        .send_message(OPCODE::SRV_REQUEST_MESSAGE, *request)
-        .recv_message(OPCODE::SRV_RESPONSE_MESSAGE, *response)
-        .close();
-    return *this;
-  }
-
-  // Configure action client
-  template <typename TGoal, typename TFeedback, typename TResult>
-  TestFixture& send_action_goal(std::shared_ptr<TGoal> goal,
-                                std::vector<std::shared_ptr<TFeedback>> feedback,
-                                std::shared_ptr<TResult> result,
-                                bool should_fail = false,
-                                const Endpoint& action_endpoint = Endpoint(DEFAULT_IP, 8000)) {
-    auto socket = socket_manager_.create_socket();
-    if (enable_notifications_) {
-      client_sockets_.push_back(socket);
-    }
-    auto builder = SocketBuilder(socket);
-    if (enable_notifications_) {
-      builder.enable_operation_notifications();
-    }
-    builder.connect(action_endpoint).send_message(OPCODE::ACT_GOAL_MESSAGE, *goal);
-
-    sys_msgs::Status status;
-    if (should_fail) {
-      status.error = -1;
-      builder.recv_message(OPCODE::ACT_RESPONSE_MESSAGE, status).close();
-      return *this;
-    } else {
-      status.error = 0;
-      builder.recv_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
-    }
-
-    for (auto& fb : feedback) {
-      builder.recv_message(OPCODE::ACT_FEEDBACK_MESSAGE, *fb);
-    }
-
-    builder.recv_message(OPCODE::ACT_RESULT_MESSAGE, *result).close();
-    return *this;
-  }
-
-  // Configure action client
-  template <typename TGoal, typename TFeedback>
-  TestFixture& send_action_goal_with_cancel(std::shared_ptr<TGoal> goal,
-                                            std::vector<std::shared_ptr<TFeedback>> feedback,
-                                            bool should_fail = false,
-                                            const Endpoint& action_endpoint = Endpoint(DEFAULT_IP, 8000)) {
-    auto socket = socket_manager_.create_socket();
-    if (enable_notifications_) {
-      client_sockets_.push_back(socket);
-    }
-    auto builder = SocketBuilder(socket);
-    if (enable_notifications_) {
-      builder.enable_operation_notifications();
-    }
-    builder.connect(action_endpoint).send_message(OPCODE::ACT_GOAL_MESSAGE, *goal);
-
-    sys_msgs::Status status;
-    if (should_fail) {
-      status.error = -1;
-      builder.recv_message(OPCODE::ACT_RESPONSE_MESSAGE, status).close();
-      return *this;
-    } else {
-      status.error = 0;
-      builder.recv_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
-    }
-
-    for (auto& fb : feedback) {
-      builder.recv_message(OPCODE::ACT_FEEDBACK_MESSAGE, *fb);
-    }
-    std_msgs::Void cancel_msg;
-    builder.send_message(OPCODE::ACT_CANCEL_MESSAGE, cancel_msg).close();
-    return *this;
-  }
-
-  // Configure action client
-  template <typename TGoal, typename TFeedback, typename TResult>
-  TestFixture& send_action_goal_with_preempt(std::vector<std::shared_ptr<TGoal>> goals,
-                                             std::vector<std::vector<std::shared_ptr<TFeedback>>> feedback,
-                                             std::shared_ptr<TResult> result,
-                                             bool should_fail = false,
-                                             const Endpoint& action_endpoint = Endpoint(DEFAULT_IP, 8000)) {
-    if (goals.size() != feedback.size()) {
-      throw std::runtime_error("Goals and feedback size mismatch");
-    }
-    if (goals.size() < 2) {
-      throw std::runtime_error("At least two goals required for preempt test");
-    }
-    auto socket = socket_manager_.create_socket();
-    if (enable_notifications_) {
-      client_sockets_.push_back(socket);
-    }
-    auto builder = SocketBuilder(socket);
-    if (enable_notifications_) {
-      builder.enable_operation_notifications();
-    }
-    builder.connect(action_endpoint);
-
-    for (size_t i = 0; i < goals.size(); i++) {
-      if (i == 0) {
-        // First goal
-        builder.send_message(OPCODE::ACT_GOAL_MESSAGE, *goals[i]);
-      } else {
-        // Preempt message
-        builder.send_message(OPCODE::ACT_PREEMPT_MESSAGE, *goals[i]);
-      }
-
-      sys_msgs::Status status;
-      if (should_fail) {
-        status.error = -1;
-        builder.recv_message(OPCODE::ACT_RESPONSE_MESSAGE, status).close();
-        return *this;
-      } else {
-        status.error = 0;
-        builder.recv_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
-      }
-      for (auto& fb : feedback[i]) {
-        builder.recv_message(OPCODE::ACT_FEEDBACK_MESSAGE, *fb);
-      }
-    }
-
-    builder.recv_message(OPCODE::ACT_RESULT_MESSAGE, *result).close();
-    return *this;
-  }
-
 private:
-  SocketManager socket_manager_;
   Endpoint rixhub_endpoint_;
+  TransportManager transport_manager_;
   bool enable_notifications_;
   bool enable_poller_;
   bool enable_clock_;
   uint64_t expected_id_;
   uint64_t current_id_;
 
-  // Categorized socket tracking
-  std::vector<std::shared_ptr<MockSocket>> server_sockets_;     // Server sockets
-  std::vector<std::shared_ptr<MockSocket>> connection_sockets_; // Connection sockets (pub/sub/srv connections)
-  std::vector<std::shared_ptr<MockSocket>> client_sockets_;     // Client sockets (sub/srvcli clients)
+  // Categorized mocks for synchronization
+  std::vector<std::shared_ptr<MockAcceptor>> acceptors_;
+  std::vector<std::shared_ptr<MockStream>> connection_streams_;
+  std::vector<std::shared_ptr<MockStream>> client_streams_;
 
-  // Configure server
-  TestFixture& create_server(const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
-                             const Endpoint& bound_endpoint = Endpoint(DEFAULT_IP, 8000),
-                             int accept_count = 0,
-                             int iters_between_accept = 0) {
-    auto socket = socket_manager_.create_socket();
-    if (enable_notifications_) {
-      server_sockets_.push_back(socket);
-    }
-    auto builder = SocketBuilder(socket);
-    if (enable_notifications_) {
+  /**
+   * @brief Internal helper to create a server (MockAcceptor) and its accept()
+   * streams. The AcceptorBuilder is used to wire up the mock expectations.
+   */
+  void create_server(const Endpoint& bound_endpoint, int accept_count, int iters_between_accept = 0) {
+    auto acceptor = transport_manager_.create_acceptor();
+    if (enable_notifications_)
+      acceptors_.push_back(acceptor);
+
+    auto builder = AcceptorBuilder(acceptor);
+    if (enable_notifications_)
       builder.enable_operation_notifications();
-    }
+
+    // The accept() calls return streams from the TransportManager.
+    // Those streams are created later by accept_subscriber,
+    // accept_notification, etc.
+    auto factory = transport_manager_.get_factory();
     builder.as_server(
-        endpoint,
         bound_endpoint,
-        [this]() { return this->socket_manager_.get_factory()(); },
         accept_count,
+        [factory]() { return factory.create_stream(Endpoint{}, true); },
         iters_between_accept);
-    return *this;
   }
 };
 

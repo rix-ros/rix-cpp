@@ -3,11 +3,12 @@
 
 namespace rix {
 
-Service::Service(const sys_msgs::SrvInfo& info, TransportFactory socket_factory, const Endpoint& rixhub_endpoint)
-    : info_(info), socket_factory_(socket_factory), rixhub_endpoint_(rixhub_endpoint), registered_flag_(false),
-      request_instance_(nullptr), response_instance_(nullptr) {
+ServiceImpl::ServiceImpl(const sys_msgs::SrvInfo& info, const Endpoint& rixhub_endpoint)
+    : info_(info), factory_(get_transport_factory(static_cast<Protocol>(info.protocol))),
+      rixhub_endpoint_(rixhub_endpoint), registered_flag_(false), request_instance_(nullptr),
+      response_instance_(nullptr) {
 
-  server_ = socket_factory_.create_acceptor(Endpoint(info_.endpoint.address, info_.endpoint.port));
+  server_ = factory_.create_acceptor(Endpoint(info_.endpoint.address, info_.endpoint.port));
 
   // Ensure server was intitialized properly
   if (server_->is_exception()) {
@@ -21,7 +22,7 @@ Service::Service(const sys_msgs::SrvInfo& info, TransportFactory socket_factory,
   info_.endpoint.port = server_endpoint.port;
 
   // Register service with rixhub
-  auto client = socket_factory_.create_stream(rixhub_endpoint_, true);
+  auto client = factory_.create_stream(rixhub_endpoint_, true);
 
   if (!client->send_message(OPCODE::SRV_REGISTER, info_)) {
     shutdown();
@@ -48,9 +49,9 @@ Service::Service(const sys_msgs::SrvInfo& info, TransportFactory socket_factory,
   }
 }
 
-Service::~Service() {
+ServiceImpl::~ServiceImpl() {
   if (registered_flag_) {
-    auto client = socket_factory_.create_stream(rixhub_endpoint_, true);
+    auto client = factory_.create_stream(rixhub_endpoint_, true);
     if (!client) {
       return;
     }
@@ -64,10 +65,10 @@ Service::~Service() {
     }
   }
 
-  Log::debug << "Service for \"" << info_.name << "\" destroyed." << std::endl;
+  Log::debug << "ServiceImpl for \"" << info_.name << "\" destroyed." << std::endl;
 }
 
-void Service::on_spin() {
+void ServiceImpl::on_spin() {
   if (!callback_) {
     return;
   }
@@ -99,6 +100,19 @@ void Service::on_spin() {
   conn->send_message(OPCODE::SRV_RESPONSE_MESSAGE, *response_instance_);
 
   Log::debug << "Processed service request for \"" << info_.name << "\"." << std::endl;
+}
+
+void ServiceImpl::set_callback(CallbackUntyped callback,
+                               std::shared_ptr<Message> request_instance,
+                               std::shared_ptr<Message> response_instance) {
+  if (request_instance->hash() != info_.request_hash || response_instance->hash() != info_.response_hash) {
+    Log::warn << "Message type mismatch in set_callback." << std::endl;
+    return;
+  }
+  std::lock_guard<std::mutex> guard(callback_mutex_);
+  callback_ = std::move(callback);
+  request_instance_ = std::move(request_instance);
+  response_instance_ = std::move(response_instance);
 }
 
 } // namespace rix

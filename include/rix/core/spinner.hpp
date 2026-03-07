@@ -73,16 +73,17 @@ public:
    */
   static std::shared_ptr<GenericSignal> get_shutdown_signal() { return shutdown_signal_; }
 
+protected:
+  /**
+   * @brief Internal spin implementation for the Spinner.
+   */
+  virtual void on_spin() = 0;
+
 private:
   std::atomic<bool> shutdown_flag_{false}; ///< Flag indicating if the spinner is shut down.
   static inline std::shared_ptr<GenericSignal> shutdown_signal_{create_signal(SIGINT)}; ///< The global shutdown signal.
   static inline std::mutex mutex_{};          ///< Mutex for protecting the shutdown signal.
   static inline bool signal_received_{false}; ///< Flag indicating if a shutdown signal has been received.
-
-  /**
-   * @brief Internal spin implementation for the Spinner.
-   */
-  virtual void on_spin() = 0;
 };
 
 } // namespace rix

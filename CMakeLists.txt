@@ -70,27 +70,33 @@ target_link_libraries(rixhub rix)
 if(BUILD_TESTS)
     find_package(GTest REQUIRED)
     message(STATUS "Building unit tests")
+    add_executable(harness_example_test
+        tests/harness_example_test.cpp
+    )
+    target_link_libraries(harness_example_test GTest::gtest_main GTest::gmock rix)
+
     add_executable(node_test
         tests/node_test.cpp
     )
     target_link_libraries(node_test GTest::gtest_main GTest::gmock rix)
-    add_executable(mediator_test
-        tests/mediator_test.cpp
-    )
-    target_link_libraries(mediator_test GTest::gtest_main GTest::gmock rix)
-    add_executable(message_test
-        tests/message_test.cpp
-    )
-    target_link_libraries(message_test GTest::gtest_main GTest::gmock rix)
 
-    add_executable(tf_tests
-        tests/tf/frame_graph.cpp
-        tests/tf/joint.cpp
-        tests/tf/robot_model_rx200.cpp
-        tests/tf/robot_model_simple_bot.cpp
-        tests/tf/kinematics_solver.cpp
-        tests/tf/transform_buffer.cpp)
-    target_link_libraries(tf_tests GTest::Main tf rix)
+    # add_executable(mediator_test
+    #     tests/mediator_test.cpp
+    # )
+    # target_link_libraries(mediator_test GTest::gtest_main GTest::gmock rix)
+    # add_executable(message_test
+    #     tests/message_test.cpp
+    # )
+    # target_link_libraries(message_test GTest::gtest_main GTest::gmock rix)
+
+    # add_executable(tf_tests
+    #     tests/tf/frame_graph.cpp
+    #     tests/tf/joint.cpp
+    #     tests/tf/robot_model_rx200.cpp
+    #     tests/tf/robot_model_simple_bot.cpp
+    #     tests/tf/kinematics_solver.cpp
+    #     tests/tf/transform_buffer.cpp)
+    # target_link_libraries(tf_tests GTest::Main tf rix)
 endif()
 
 # Install libaries

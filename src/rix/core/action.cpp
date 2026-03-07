@@ -3,9 +3,9 @@
 
 namespace rix {
 
-Action::~Action() {
+ActionImpl::~ActionImpl() {
   if (registered_flag_) {
-    auto client = socket_factory_.create_stream(rixhub_endpoint_, true);
+    auto client = factory_.create_stream(rixhub_endpoint_, true);
     if (!client) {
       return;
     }
@@ -23,19 +23,20 @@ Action::~Action() {
   }
 }
 
-void Action::set_goal_callback(std::function<void()> callback) {
+void ActionImpl::set_goal_callback(std::function<void()> callback) {
   std::lock_guard<std::mutex> guard(mutex_);
   goal_callback_ = callback;
 }
 
-void Action::set_preempt_callback(std::function<void()> callback) {
+void ActionImpl::set_preempt_callback(std::function<void()> callback) {
   std::lock_guard<std::mutex> guard(mutex_);
   preempt_callback_ = callback;
 }
 
-Action::Action(const sys_msgs::ActInfo& info, TransportFactory socket_factory, const Endpoint& rixhub_endpoint)
-    : info_(info), socket_factory_(socket_factory), rixhub_endpoint_(rixhub_endpoint) {
-  server_ = socket_factory_.create_acceptor(Endpoint(info_.endpoint.address, info_.endpoint.port));
+ActionImpl::ActionImpl(const sys_msgs::ActInfo& info, const Endpoint& rixhub_endpoint)
+    : info_(info), factory_(get_transport_factory(static_cast<Protocol>(info.protocol))),
+      rixhub_endpoint_(rixhub_endpoint) {
+  server_ = factory_.create_acceptor(Endpoint(info_.endpoint.address, info_.endpoint.port));
   if (!server_) {
     shutdown();
     return;
@@ -53,7 +54,7 @@ Action::Action(const sys_msgs::ActInfo& info, TransportFactory socket_factory, c
   info_.endpoint.port = server_endpoint.port;
 
   // Register publisher with rixhub
-  auto client = socket_factory_.create_stream(rixhub_endpoint_, true);
+  auto client = factory_.create_stream(rixhub_endpoint_, true);
   if (!client->send_message(OPCODE::ACT_REGISTER, info_)) {
     shutdown();
     return;
@@ -80,9 +81,9 @@ Action::Action(const sys_msgs::ActInfo& info, TransportFactory socket_factory, c
   }
 }
 
-Action::ActAcceptor::ActAcceptor(Action& parent) : parent(parent) {}
+ActionImpl::ActAcceptor::ActAcceptor(ActionImpl& parent) : parent(parent) {}
 
-void Action::ActAcceptor::on_spin() {
+void ActionImpl::ActAcceptor::on_spin() {
   std::lock_guard<std::mutex> guard(parent.mutex_);
   if (!parent.ok() || !parent.callback_) {
     return;
@@ -144,7 +145,7 @@ void Action::ActAcceptor::on_spin() {
   }
 }
 
-void Action::on_spin() {
+void ActionImpl::on_spin() {
   if (!MULTITHREADED) {
     acceptor_.spin_once();
   }
@@ -217,6 +218,22 @@ void Action::on_spin() {
     }
     Log::debug << "Sent feedback for action \"" << info_.name << "\"." << std::endl;
   }
+}
+
+void ActionImpl::set_callback(CallbackUntyped callback,
+                              std::shared_ptr<Message> goal_instance,
+                              std::shared_ptr<Message> feedback_instance,
+                              std::shared_ptr<Message> result_instance) {
+  if (goal_instance->hash() != info_.goal_hash || feedback_instance->hash() != info_.feedback_hash ||
+      result_instance->hash() != info_.result_hash) {
+    Log::warn << "Message type mismatch in set_callback." << std::endl;
+    return;
+  }
+  std::lock_guard<std::mutex> guard(mutex_);
+  callback_ = std::move(callback);
+  goal_instance_ = std::move(goal_instance);
+  feedback_instance_ = std::move(feedback_instance);
+  result_instance_ = std::move(result_instance);
 }
 
 } // namespace rix

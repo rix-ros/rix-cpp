@@ -9,7 +9,7 @@
 
 namespace rix {
 
-Mediator::Mediator(const Endpoint& rixhub_endpoint) : socket_factory_(transport_factories[Protocol::TCP]) {
+Mediator::Mediator(const Endpoint& rixhub_endpoint) : socket_factory_(get_transport_factory(Protocol::TCP)) {
   server_ = socket_factory_.create_acceptor(rixhub_endpoint);
   // Ensure server was intitialized properly
   if (server_->is_exception()) {
