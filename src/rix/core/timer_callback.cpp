@@ -1,3 +1,5 @@
+#include <thread>
+
 #include "rix/core/timer_callback.hpp"
 
 namespace rix {
@@ -22,8 +24,9 @@ TimerCallback::~TimerCallback() {
 }
 
 void TimerCallback::on_spin() {
-  static const Duration sleep_threshold = Duration(5e-4); // 0.5 ms
-  static const Duration margin = Duration(1e-4); // 0.1 ms
+  static const Duration sleep_threshold = Duration(2e-3); // 2 ms
+  static const Duration yield_threshold = Duration(1e-4); // 0.1 ms
+  static const Duration margin = Duration(5e-4);          // 0.5 ms
   static const Duration d_zero = Duration(0.0);
   static const Time t_zero = Time(0.0);
 
@@ -31,26 +34,31 @@ void TimerCallback::on_spin() {
   Duration delta = event_.current_real - event_.last_real;
   Duration remaining = duration_ - delta;
 
-  if (remaining >= sleep_threshold) {
-    if (MULTITHREADED) {
-      Time::sleep_for(remaining - margin);
+  if (remaining <= d_zero) {
+    event_.last_duration = delta;
+    if (event_.current_expected == t_zero) {
+      event_.current_expected = event_.current_real;
+    } else {
+      event_.current_expected += duration_;
     }
-    return;
-  } else if (remaining > d_zero) {
+
+    std::lock_guard<std::mutex> guard(callback_mutex_);
+    callback_(event_);
+    event_.last_real = event_.current_real;
+    event_.last_expected = event_.current_expected;
     return;
   }
 
-  event_.last_duration = delta;
-  if (event_.current_expected == t_zero) {
-    event_.current_expected = event_.current_real;
-  } else {
-    event_.current_expected += duration_;
+  if (!MULTITHREADED) {
+    return;
   }
 
-  std::lock_guard<std::mutex> guard(callback_mutex_);
-  callback_(event_);
-  event_.last_real = event_.current_real;
-  event_.last_expected = event_.current_expected;
+  if (remaining >= sleep_threshold) {
+    Time::sleep_for(remaining - margin);
+  } else if (remaining >= yield_threshold) {
+    std::this_thread::yield();
+  }
+  return;
 }
 
 void TimerCallback::set_callback(Callback callback) { callback_ = callback; }
