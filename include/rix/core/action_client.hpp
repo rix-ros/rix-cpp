@@ -34,12 +34,18 @@ private:
   virtual void set_result_callback(CallbackUntyped callback, std::shared_ptr<Message> result_instance) = 0;
 };
 
-class Node; // Forward declaration
+namespace detail {
 
 class ActionClientImpl final : public ActionClient {
-  friend class Node;
-
 public:
+  /**
+   * @brief Constructs an ActionClientImpl with the given ActRequest, socket factory, and RIXHub endpoint.
+   * @param request The ActRequest message containing action client details.
+   * @param factory The socket factory to create sockets.
+   * @param rixhub_endpoint The RIXHub endpoint.
+   */
+  ActionClientImpl(const sys_msgs::ActRequest& request, const Endpoint& rixhub_endpoint);
+
   // Disable copy and move semantics
   ActionClientImpl(const ActionClientImpl&) = delete;
   ActionClientImpl& operator=(const ActionClientImpl&) = delete;
@@ -96,15 +102,9 @@ private:
    * @brief Internal spin implementation for the ActionClientImpl.
    */
   void on_spin() override;
-
-  /**
-   * @brief Constructs an ActionClientImpl with the given ActRequest, socket factory, and RIXHub endpoint.
-   * @param request The ActRequest message containing action client details.
-   * @param factory The socket factory to create sockets.
-   * @param rixhub_endpoint The RIXHub endpoint.
-   */
-  ActionClientImpl(const sys_msgs::ActRequest& request, const Endpoint& rixhub_endpoint);
 };
+
+} // namespace detail
 
 template <typename TFeedback> void ActionClient::set_feedback_callback(FeedbackCallback<TFeedback> callback) {
   static_assert(std::is_base_of_v<Message, TFeedback>, "TFeedback must be a subclass of Message.");

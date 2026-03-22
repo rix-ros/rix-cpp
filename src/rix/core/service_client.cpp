@@ -2,6 +2,7 @@
 #include "rix/sys_msgs/SrvResponse.hpp"
 
 namespace rix {
+namespace detail {
 
 ServiceClientImpl::ServiceClientImpl(const sys_msgs::SrvRequest& request, const Endpoint& rixhub_endpoint)
     : request_(request), factory_(get_transport_factory(static_cast<Protocol>(request.protocol))) {
@@ -78,4 +79,5 @@ bool ServiceClientImpl::call(const Message& request, Message& response) {
   return true;
 }
 
+} // namespace detail
 } // namespace rix

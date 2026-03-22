@@ -29,12 +29,18 @@ private:
   virtual void set_callback(CallbackUntyped callback, std::shared_ptr<Message> message) = 0;
 };
 
-class Node; // Forward declaration
+namespace detail {
 
 class SubscriberImpl final : public Subscriber {
-  friend class Node;
-
 public:
+  /**
+   * @brief Constructs a SubscriberImpl with the given SubInfo, socket factory, and RIXHub endpoint.
+   * @param info The SubInfo message containing subscriber details.
+   * @param factory The socket factory to create sockets.
+   * @param rixhub_endpoint The RIXHub endpoint.
+   */
+  SubscriberImpl(const sys_msgs::SubInfo& info, const Endpoint& rixhub_endpoint);
+
   // Disable copy and move semantics
   SubscriberImpl(const SubscriberImpl&) = delete;
   SubscriberImpl& operator=(const SubscriberImpl&) = delete;
@@ -63,14 +69,6 @@ private:
   std::atomic<bool> registered_flag_;         ///< Flag indicating if the subscriber is registered.
   std::shared_ptr<Message> msg_instance_;     ///< Prototype message instance for deserialization.
   std::thread spin_thread_;                   ///< The thread running the spin loop.
-
-  /**
-   * @brief Constructs a SubscriberImpl with the given SubInfo, socket factory, and RIXHub endpoint.
-   * @param info The SubInfo message containing subscriber details.
-   * @param factory The socket factory to create sockets.
-   * @param rixhub_endpoint The RIXHub endpoint.
-   */
-  SubscriberImpl(const sys_msgs::SubInfo& info, const Endpoint& rixhub_endpoint);
 
   /**
    * @brief Internal class to accept new subscriber notifications.
@@ -116,6 +114,7 @@ private:
    */
   void on_spin() override;
 };
+} // namespace detail
 
 template <typename TMsg> void Subscriber::set_callback(Callback<TMsg> callback) {
   static_assert(std::is_base_of_v<Message, TMsg>, "TMsg must be a subclass of Message.");

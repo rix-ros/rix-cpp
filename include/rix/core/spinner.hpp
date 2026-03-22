@@ -41,6 +41,7 @@ public:
       return;
     }
     if (mutex_.try_lock()) {
+      // TODO: Move signal checking to a separate thread.
       if (shutdown_signal_ && shutdown_signal_->is_ready()) {
         signal_received_ = true;
         shutdown();
@@ -72,6 +73,9 @@ public:
    * @return The shutdown signal.
    */
   static std::shared_ptr<GenericSignal> get_shutdown_signal() { return shutdown_signal_; }
+
+  static bool signal_received() { return signal_received_; }
+  static void reset_signal_received() { signal_received_ = false; }
 
 protected:
   /**

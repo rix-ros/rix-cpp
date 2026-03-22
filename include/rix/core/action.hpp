@@ -33,11 +33,9 @@ private:
                             std::shared_ptr<Message> result_instance) = 0;
 };
 
-class Node; // Forward declaration
+namespace detail {
 
 class ActionImpl final : public Action {
-  friend class Node;
-
 public:
   /**
    * @brief Callback type definition for action goals.
@@ -47,6 +45,14 @@ public:
    */
   template <typename TGoal, typename TFeedback, typename TResult>
   using Callback = std::function<bool(const TGoal&, TFeedback&, TResult&)>;
+
+  /**
+   * @brief Constructs an ActionImpl with the given ActInfo, socket factory, and RIXHub endpoint.
+   * @param info The ActInfo message containing action details.
+   * @param socket_factory The socket factory function.
+   * @param rixhub_endpoint The RIXHub endpoint.
+   */
+  ActionImpl(const sys_msgs::ActInfo& info, const Endpoint& rixhub_endpoint);
 
   // Disable copy and move semantics
   ActionImpl(const ActionImpl&) = delete;
@@ -93,14 +99,6 @@ private:
   std::thread spin_thread_{};                    ///< Thread running the spin loop.
 
   /**
-   * @brief Constructs an ActionImpl with the given ActInfo, socket factory, and RIXHub endpoint.
-   * @param info The ActInfo message containing action details.
-   * @param socket_factory The socket factory function.
-   * @param rixhub_endpoint The RIXHub endpoint.
-   */
-  ActionImpl(const sys_msgs::ActInfo& info, const Endpoint& rixhub_endpoint);
-
-  /**
    * @brief Internal class to accept new action goal notifications.
    */
   class ActAcceptor : public Spinner {
@@ -141,6 +139,8 @@ private:
    */
   void on_spin() override;
 };
+
+} // namespace detail
 
 template <typename TGoal, typename TFeedback, typename TResult>
 void Action::set_callback(Callback<TGoal, TFeedback, TResult> callback) {

@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 option(BUILD_TESTS "Build unit tests" OFF)
 option(MULTITHREADED "Enable multi-threaded support" OFF)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -O3")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 
 # Set RPATH settings for proper dynamic library loading
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
@@ -24,6 +24,8 @@ add_library(rix SHARED
     src/rix/core/service.cpp
     src/rix/core/subscriber.cpp
     src/rix/core/timer_callback.cpp
+    src/rix/core/component_factory.cpp
+    src/rix/core/mediator_client.cpp
     src/rix/ipc/endpoint.cpp
     src/rix/ipc/stream.cpp
     src/rix/ipc/tcp_acceptor.cpp

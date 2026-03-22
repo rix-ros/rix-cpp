@@ -15,12 +15,18 @@ public:
   virtual bool call(const Message& request, Message& response) = 0;
 };
 
-class Node; // Forward declaration
+namespace detail {
 
 class ServiceClientImpl final : public ServiceClient {
-  friend class Node;
-
 public:
+  /**
+   * @brief Constructs a ServiceClientImpl with the given SrvRequest, socket factory, and RIXHub endpoint.
+   * @param request The SrvRequest message containing service request details.
+   * @param factory The socket factory to create sockets.
+   * @param rixhub_endpoint The RIXHub endpoint.
+   */
+  ServiceClientImpl(const sys_msgs::SrvRequest& request, const Endpoint& rixhub_endpoint);
+
   // Disable copy and move semantics
   ServiceClientImpl(const ServiceClientImpl&) = delete;
   ServiceClientImpl& operator=(const ServiceClientImpl&) = delete;
@@ -54,14 +60,7 @@ private:
    * @brief Internal spin implementation for the ServiceClientImpl.
    */
   void on_spin() override;
-
-  /**
-   * @brief Constructs a ServiceClientImpl with the given SrvRequest, socket factory, and RIXHub endpoint.
-   * @param request The SrvRequest message containing service request details.
-   * @param factory The socket factory to create sockets.
-   * @param rixhub_endpoint The RIXHub endpoint.
-   */
-  ServiceClientImpl(const sys_msgs::SrvRequest& request, const Endpoint& rixhub_endpoint);
 };
 
+} // namespace detail
 } // namespace rix

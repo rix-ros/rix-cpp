@@ -2,6 +2,7 @@
 #include "rix/sys_msgs/Status.hpp"
 
 namespace rix {
+namespace detail {
 
 ActionImpl::~ActionImpl() {
   if (registered_flag_) {
@@ -236,4 +237,5 @@ void ActionImpl::set_callback(CallbackUntyped callback,
   result_instance_ = std::move(result_instance);
 }
 
+} // namespace detail
 } // namespace rix

@@ -3,6 +3,7 @@
 #include "rix/sys_msgs/SubNotify.hpp"
 
 namespace rix {
+namespace detail {
 
 SubscriberImpl::SubscriberImpl(const sys_msgs::SubInfo& info, const Endpoint& rixhub_endpoint)
     : info_(info), factory_(get_transport_factory(static_cast<Protocol>(info.protocol))), callback_(nullptr),
@@ -192,4 +193,5 @@ void SubscriberImpl::set_callback(CallbackUntyped callback, std::shared_ptr<Mess
   msg_instance_ = std::move(message);
 }
 
+} // namespace detail
 } // namespace rix

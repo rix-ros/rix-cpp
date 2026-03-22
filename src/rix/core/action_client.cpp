@@ -4,6 +4,7 @@
 #include "rix/sys_msgs/Status.hpp"
 
 namespace rix {
+namespace detail {
 
 ActionClientImpl::~ActionClientImpl() {
   if (MULTITHREADED) {
@@ -188,4 +189,5 @@ void ActionClientImpl::set_result_callback(CallbackUntyped callback, std::shared
   result_instance_ = std::move(result_instance);
 }
 
+} // namespace detail
 } // namespace rix

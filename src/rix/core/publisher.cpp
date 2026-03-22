@@ -2,6 +2,7 @@
 #include "rix/sys_msgs/Status.hpp"
 
 namespace rix {
+namespace detail {
 
 PublisherImpl::PublisherImpl(const sys_msgs::PubInfo& info, Endpoint rixhub_endpoint)
     : info_(info), factory_(get_transport_factory(static_cast<Protocol>(info.protocol))),
@@ -154,4 +155,5 @@ void PublisherImpl::on_spin() {
   connections_.insert(conn);
 }
 
+} // namespace detail
 } // namespace rix

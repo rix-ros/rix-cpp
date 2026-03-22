@@ -17,12 +17,19 @@ public:
   virtual size_t get_subscriber_count() const = 0;
 };
 
-class Node; // Forward declaration
+// TODO: Move PublisherImpl to a separate source file and hide it from the public interface
+namespace detail {
 
 class PublisherImpl final : public Publisher {
-  friend class Node;
-
 public:
+  /**
+   * @brief Constructs a PublisherImpl with the given PubInfo, socket factory, and RIXHub endpoint.
+   * @param info The PubInfo message containing publisher details.
+   * @param factory The socket factory to create sockets.
+   * @param rixhub_endpoint The RIXHub endpoint.
+   */
+  PublisherImpl(const sys_msgs::PubInfo& info, Endpoint rixhub_endpoint);
+
   // Disable copy and move semantics
   PublisherImpl(const PublisherImpl&) = delete;
   PublisherImpl& operator=(const PublisherImpl&) = delete;
@@ -56,14 +63,6 @@ private:
   std::atomic<bool> registered_flag_;             ///< Flag indicating if the publisher is registered.
   std::thread spin_thread_{};                     ///< The thread running the spin loop.
 
-  /**
-   * @brief Constructs a PublisherImpl with the given PubInfo, socket factory, and RIXHub endpoint.
-   * @param info The PubInfo message containing publisher details.
-   * @param factory The socket factory to create sockets.
-   * @param rixhub_endpoint The RIXHub endpoint.
-   */
-  PublisherImpl(const sys_msgs::PubInfo& info, Endpoint rixhub_endpoint);
-
   // Disable public spin methods (only Node can spin the PublisherImpl)
   using Spinner::spin;
   using Spinner::spin_once;
@@ -74,4 +73,5 @@ private:
   void on_spin() override;
 };
 
+} // namespace detail
 } // namespace rix

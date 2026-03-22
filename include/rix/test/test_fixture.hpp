@@ -42,7 +42,7 @@ public:
 
   ~TestFixture() {
     reset_transport_factory(Protocol::TCP);
-    NodeBase::set_id_factory(default_id_generator);
+    Node::set_id_factory(default_id_generator);
     if (enable_poller_) {
       Pollable::set_poller(nullptr);
     }
@@ -59,7 +59,7 @@ public:
   template <typename TNode = Node> void build(TestFunction<TNode> test_func) {
     static_assert(std::is_base_of_v<Node, TNode>, "TNode must be Node or derived from Node");
     set_transport_factory(Protocol::TCP, &transport_manager_.get_factory());
-    NodeBase::set_id_factory([this]() { return ++current_id_; });
+    Node::set_id_factory([this]() { return ++current_id_; });
     test_func(*this);
   }
 

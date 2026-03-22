@@ -2,7 +2,7 @@
 #include "rix/sys_msgs/Status.hpp"
 
 namespace rix {
-
+namespace detail {
 ServiceImpl::ServiceImpl(const sys_msgs::SrvInfo& info, const Endpoint& rixhub_endpoint)
     : info_(info), factory_(get_transport_factory(static_cast<Protocol>(info.protocol))),
       rixhub_endpoint_(rixhub_endpoint), registered_flag_(false), request_instance_(nullptr),
@@ -115,4 +115,5 @@ void ServiceImpl::set_callback(CallbackUntyped callback,
   response_instance_ = std::move(response_instance);
 }
 
+} // namespace detail
 } // namespace rix

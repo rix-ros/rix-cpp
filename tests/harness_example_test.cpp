@@ -9,10 +9,10 @@
  */
 
 // Include the harness and the node under test
-#include "rix/test/node_test_harness.hpp"
 #include "rix/std_msgs/Header.hpp"
 #include "rix/std_msgs/String.hpp"
 #include "rix/std_msgs/UInt32.hpp"
+#include "rix/test/node_test_harness.hpp"
 #include <gtest/gtest.h>
 
 /**
@@ -21,15 +21,19 @@
  */
 class DemoPublisher final : public rix::Node {
 public:
-  DemoPublisher(double rate)
-      : rix::Node("demo_publisher") {
-    if (!ok()) return;
+  DemoPublisher(double rate) : rix::Node("demo_publisher") {
+    if (!ok())
+      return;
     pub_ = create_publisher<rix::std_msgs::Header>("/chatter");
-    if (!pub_ || !pub_->ok()) { shutdown(); return; }
+    if (!pub_ || !pub_->ok()) {
+      shutdown();
+      return;
+    }
     msg_.frame_id = "Hello!";
     msg_.seq = 0;
-    timer_ = create_timer(rix::Duration(1.0 / rate), &DemoPublisher::on_timer, this);
+    timer_ = this->create_timer(rix::Duration(1.0 / rate), &DemoPublisher::on_timer, this);
   }
+
 private:
   void on_timer(const rix::TimerCallback::Event&) {
     msg_.seq += 1;
@@ -47,12 +51,16 @@ private:
  */
 class DemoService final : public rix::Node {
 public:
-  DemoService()
-      : rix::Node("demo_service") {
-    if (!ok()) return;
+  DemoService() : rix::Node("demo_service") {
+    if (!ok())
+      return;
     auto srv = create_service("/alphabet", &DemoService::callback, this);
-    if (!srv || !srv->ok()) { shutdown(); return; }
+    if (!srv || !srv->ok()) {
+      shutdown();
+      return;
+    }
   }
+
 private:
   void callback(const rix::std_msgs::UInt32& req, rix::std_msgs::String& res) {
     res.data = std::string(1, 'a' + (req.data % 26));
@@ -112,7 +120,7 @@ TEST(HarnessTest, PublisherNodeRegistrationFails) {
 
 TEST(HarnessTest, ServiceNodeCreatesSuccessfully) {
   NodeTestHarness harness;
-  harness.expect_service<rix::std_msgs::UInt32, rix::std_msgs::String>("/alphabet", 0);
+  harness.expect_service<rix::std_msgs::UInt32, rix::std_msgs::String>("/alphabet");
 
   auto& node = harness.create<DemoService>();
   EXPECT_TRUE(node.ok());

@@ -3,8 +3,10 @@
 #include "rix/core/timer_callback.hpp"
 
 namespace rix {
+namespace detail {
 
-TimerCallback::TimerCallback(const Duration& duration, Callback callback) : duration_(duration), callback_(callback) {
+TimerCallbackImpl::TimerCallbackImpl(const Duration& duration, Callback callback)
+    : duration_(duration), callback_(callback) {
   event_.current_real = Time::now();
   event_.current_expected = event_.last_expected = event_.last_real = Time(0.0);
   event_.last_duration = Duration(0.0);
@@ -14,7 +16,7 @@ TimerCallback::TimerCallback(const Duration& duration, Callback callback) : dura
   }
 }
 
-TimerCallback::~TimerCallback() {
+TimerCallbackImpl::~TimerCallbackImpl() {
   if (MULTITHREADED) {
     shutdown();
     if (spin_thread_.joinable()) {
@@ -23,7 +25,7 @@ TimerCallback::~TimerCallback() {
   }
 }
 
-void TimerCallback::on_spin() {
+void TimerCallbackImpl::on_spin() {
   static const Duration sleep_threshold = Duration(2e-3); // 2 ms
   static const Duration yield_threshold = Duration(1e-4); // 0.1 ms
   static const Duration margin = Duration(5e-4);          // 0.5 ms
@@ -61,8 +63,9 @@ void TimerCallback::on_spin() {
   return;
 }
 
-void TimerCallback::set_callback(Callback callback) { callback_ = callback; }
+void TimerCallbackImpl::set_callback(Callback callback) { callback_ = callback; }
 
-TimerCallback::Callback TimerCallback::get_callback() const { return callback_; }
+TimerCallbackImpl::Callback TimerCallbackImpl::get_callback() const { return callback_; }
 
+} // namespace detail
 } // namespace rix

@@ -26,12 +26,18 @@ private:
                             std::shared_ptr<Message> response_instance) = 0;
 };
 
-class Node; // Forward declaration
+namespace detail {
 
 class ServiceImpl final : public Service {
-  friend class Node;
-
 public:
+  /**
+   * @brief Constructs a ServiceImpl with the given SrvInfo, socket factory, and RIXHub endpoint.
+   * @param info The SrvInfo message containing service details.
+   * @param socket_factory The socket factory function.
+   * @param rixhub_endpoint The RIXHub endpoint.
+   */
+  ServiceImpl(const sys_msgs::SrvInfo& info, const Endpoint& rixhub_endpoint);
+
   // Disable copy and move semantics
   ServiceImpl(const ServiceImpl&) = delete;
   ServiceImpl& operator=(const ServiceImpl&) = delete;
@@ -55,14 +61,6 @@ private:
   std::shared_ptr<Message> response_instance_; ///< Prototype response message
   std::thread spin_thread_{};                  ///< Thread running the spin loop
 
-  /**
-   * @brief Constructs a ServiceImpl with the given SrvInfo, socket factory, and RIXHub endpoint.
-   * @param info The SrvInfo message containing service details.
-   * @param socket_factory The socket factory function.
-   * @param rixhub_endpoint The RIXHub endpoint.
-   */
-  ServiceImpl(const sys_msgs::SrvInfo& info, const Endpoint& rixhub_endpoint);
-
   // Disable public spin methods (only Node can spin the ServiceImpl)
   using Spinner::spin;
   using Spinner::spin_once;
@@ -76,6 +74,8 @@ private:
    */
   void on_spin() override;
 };
+
+} // namespace detail
 
 template <typename TRequest, typename TResponse> void Service::set_callback(Callback<TRequest, TResponse> callback) {
   static_assert(std::is_base_of_v<Message, TRequest>, "TRequest must be a subclass of Message.");
