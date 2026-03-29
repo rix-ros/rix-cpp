@@ -3,6 +3,8 @@
 #include <functional>
 #include <type_traits>
 
+// TODO: Seek an alternative to this file. The code here is confusing.
+
 namespace rix {
 
 // Type deduction helper for extracting message type from callback signature
