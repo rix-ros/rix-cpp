@@ -526,7 +526,7 @@ public:
     auto builder = StreamBuilder(client);
     if (enable_notifications_)
       builder.enable_operation_notifications();
-    builder.set_blocking(false).set_blocking(true);
+    builder.set_blocking(true);
     for (auto& msg : messages) {
       builder.recv_message(OPCODE::PUB_MESSAGE, *msg);
     }
@@ -604,6 +604,15 @@ public:
   TestFixture& accept_action_client(std::shared_ptr<TGoal> goal,
                                     std::vector<std::shared_ptr<TFeedback>> feedback,
                                     std::shared_ptr<TResult> result,
+                                    bool should_fail) {
+    std::shared_ptr<MockStream> unused;
+    return accept_action_client<TGoal, TFeedback, TResult>(goal, feedback, result, unused, should_fail);
+  }
+
+  template <typename TGoal, typename TFeedback, typename TResult>
+  TestFixture& accept_action_client(std::shared_ptr<TGoal> goal,
+                                    std::vector<std::shared_ptr<TFeedback>> feedback,
+                                    std::shared_ptr<TResult> result,
                                     std::shared_ptr<MockStream>& conn,
                                     bool should_fail = false) {
     conn = transport_manager_.create_stream();
@@ -635,6 +644,92 @@ public:
     return *this;
   }
 
+  /**
+   * @brief Mock an action client that connects and then sends a cancel after receiving the goal status.
+   */
+  template <typename TGoal, typename TFeedback>
+  TestFixture& accept_action_client_with_cancel(std::shared_ptr<TGoal> goal,
+                                                std::vector<std::shared_ptr<TFeedback>> feedback) {
+    std::shared_ptr<MockStream> unused;
+    return accept_action_client_with_cancel<TGoal, TFeedback>(goal, feedback, unused);
+  }
+
+  template <typename TGoal, typename TFeedback>
+  TestFixture& accept_action_client_with_cancel(std::shared_ptr<TGoal> goal,
+                                                std::vector<std::shared_ptr<TFeedback>> feedback,
+                                                std::shared_ptr<MockStream>& conn) {
+    conn = transport_manager_.create_stream();
+    if (enable_notifications_)
+      connection_streams_.push_back(conn);
+
+    auto builder = StreamBuilder(conn);
+    if (enable_notifications_)
+      builder.enable_operation_notifications();
+
+    sys_msgs::Operation goal_op;
+    goal_op.opcode = OPCODE::ACT_GOAL_MESSAGE;
+    goal_op.len = goal->size();
+    builder.recv_message(goal_op, goal_op.get_prefix_len());
+
+    sys_msgs::Status status;
+    status.error = 0;
+    builder.recv_message(*goal, goal->size()).send_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
+
+    // Expect a cancel message from the client
+    sys_msgs::Operation cancel_op;
+    cancel_op.opcode = OPCODE::ACT_CANCEL_MESSAGE;
+    cancel_op.len = 0;
+    builder.recv_message(cancel_op, cancel_op.get_prefix_len()).close();
+    return *this;
+  }
+
+  /**
+   * @brief Mock an action client that connects, gets preempted with new goals, and eventually completes.
+   */
+  template <typename TGoal, typename TFeedback, typename TResult>
+  TestFixture& accept_action_client_with_preempt(std::vector<std::shared_ptr<TGoal>> goals,
+                                                 std::vector<std::vector<std::shared_ptr<TFeedback>>> feedbacks,
+                                                 std::shared_ptr<TResult> result) {
+    std::shared_ptr<MockStream> unused;
+    return accept_action_client_with_preempt<TGoal, TFeedback, TResult>(goals, feedbacks, result, unused);
+  }
+
+  template <typename TGoal, typename TFeedback, typename TResult>
+  TestFixture& accept_action_client_with_preempt(std::vector<std::shared_ptr<TGoal>> goals,
+                                                 std::vector<std::vector<std::shared_ptr<TFeedback>>> feedbacks,
+                                                 std::shared_ptr<TResult> result,
+                                                 std::shared_ptr<MockStream>& conn) {
+    conn = transport_manager_.create_stream();
+    if (enable_notifications_)
+      connection_streams_.push_back(conn);
+
+    auto builder = StreamBuilder(conn);
+    if (enable_notifications_)
+      builder.enable_operation_notifications();
+
+    sys_msgs::Status status;
+    status.error = 0;
+
+    for (size_t i = 0; i < goals.size(); ++i) {
+      sys_msgs::Operation op;
+      if (i == 0) {
+        op.opcode = OPCODE::ACT_GOAL_MESSAGE;
+      } else {
+        op.opcode = OPCODE::ACT_PREEMPT_MESSAGE;
+      }
+      op.len = goals[i]->size();
+      builder.recv_message(op, op.get_prefix_len());
+      builder.recv_message(*goals[i], goals[i]->size());
+      builder.send_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
+
+      for (auto& fb : feedbacks[i]) {
+        builder.send_message(OPCODE::ACT_FEEDBACK_MESSAGE, *fb);
+      }
+    }
+    builder.send_message(OPCODE::ACT_RESULT_MESSAGE, *result).close();
+    return *this;
+  }
+
   // ---------------------------------------------------------------------------
   // Action client goal / feedback / result
   // ---------------------------------------------------------------------------
@@ -645,7 +740,7 @@ public:
                                 std::shared_ptr<TResult> result,
                                 bool should_fail = false) {
     std::shared_ptr<MockStream> unused;
-    return send_action_goal<TGoal, TFeedback, TResult>(goal, feedback, result, should_fail, unused);
+    return send_action_goal<TGoal, TFeedback, TResult>(goal, feedback, result, unused, should_fail);
   }
 
   template <typename TGoal, typename TFeedback, typename TResult>
@@ -677,6 +772,84 @@ public:
     builder.recv_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
     for (auto& fb : feedback) {
       builder.recv_message(OPCODE::ACT_FEEDBACK_MESSAGE, *fb);
+    }
+    builder.recv_message(OPCODE::ACT_RESULT_MESSAGE, *result).close();
+    return *this;
+  }
+
+  /**
+   * @brief Mock an action server that accepts a goal, sends feedback, then receives a cancel.
+   */
+  template <typename TGoal, typename TFeedback>
+  TestFixture& send_action_goal_with_cancel(std::shared_ptr<TGoal> goal,
+                                            std::vector<std::shared_ptr<TFeedback>> feedback) {
+    std::shared_ptr<MockStream> unused;
+    return send_action_goal_with_cancel<TGoal, TFeedback>(goal, feedback, unused);
+  }
+
+  template <typename TGoal, typename TFeedback>
+  TestFixture& send_action_goal_with_cancel(std::shared_ptr<TGoal> goal,
+                                            std::vector<std::shared_ptr<TFeedback>> feedback,
+                                            std::shared_ptr<MockStream>& client) {
+    client = transport_manager_.create_stream();
+    if (enable_notifications_)
+      client_streams_.push_back(client);
+
+    auto builder = StreamBuilder(client);
+    if (enable_notifications_)
+      builder.enable_operation_notifications();
+
+    builder.send_message(OPCODE::ACT_GOAL_MESSAGE, *goal);
+
+    sys_msgs::Status status;
+    status.error = 0;
+    builder.recv_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
+    for (auto& fb : feedback) {
+      builder.recv_message(OPCODE::ACT_FEEDBACK_MESSAGE, *fb);
+    }
+    // Client sends cancel
+    std_msgs::Void void_msg;
+    builder.send_message(OPCODE::ACT_CANCEL_MESSAGE, void_msg).close();
+    return *this;
+  }
+
+  /**
+   * @brief Mock an action server that accepts multiple goals via preempt, sends feedback/result.
+   */
+  template <typename TGoal, typename TFeedback, typename TResult>
+  TestFixture& send_action_goal_with_preempt(std::vector<std::shared_ptr<TGoal>> goals,
+                                             std::vector<std::vector<std::shared_ptr<TFeedback>>> feedbacks,
+                                             std::shared_ptr<TResult> result) {
+    std::shared_ptr<MockStream> unused;
+    return send_action_goal_with_preempt<TGoal, TFeedback, TResult>(goals, feedbacks, result, unused);
+  }
+
+  template <typename TGoal, typename TFeedback, typename TResult>
+  TestFixture& send_action_goal_with_preempt(std::vector<std::shared_ptr<TGoal>> goals,
+                                             std::vector<std::vector<std::shared_ptr<TFeedback>>> feedbacks,
+                                             std::shared_ptr<TResult> result,
+                                             std::shared_ptr<MockStream>& client) {
+    client = transport_manager_.create_stream();
+    if (enable_notifications_)
+      client_streams_.push_back(client);
+
+    auto builder = StreamBuilder(client);
+    if (enable_notifications_)
+      builder.enable_operation_notifications();
+
+    sys_msgs::Status status;
+    status.error = 0;
+
+    for (size_t i = 0; i < goals.size(); ++i) {
+      if (i == 0) {
+        builder.send_message(OPCODE::ACT_GOAL_MESSAGE, *goals[i]);
+      } else {
+        builder.send_message(OPCODE::ACT_PREEMPT_MESSAGE, *goals[i]);
+      }
+      builder.recv_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
+      for (auto& fb : feedbacks[i]) {
+        builder.recv_message(OPCODE::ACT_FEEDBACK_MESSAGE, *fb);
+      }
     }
     builder.recv_message(OPCODE::ACT_RESULT_MESSAGE, *result).close();
     return *this;
