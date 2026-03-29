@@ -36,9 +36,7 @@ public:
   const std::string& topic() const { return topic_; }
 
   /** Called by NodeTestHarness after the node is constructed. */
-  void add_observer(std::function<void(const Message&)> cb) {
-    observers_.push_back(std::move(cb));
-  }
+  void add_observer(std::function<void(const Message&)> cb) { observers_.push_back(std::move(cb)); }
 
   void set_subscriber_count(size_t n) { subscriber_count_ = n; }
 

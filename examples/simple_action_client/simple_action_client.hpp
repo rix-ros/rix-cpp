@@ -1,7 +1,7 @@
+#include "rix/rix.hpp"
 #include "rix/std_msgs/Double.hpp"
 #include "rix/std_msgs/Float.hpp"
 #include "rix/std_msgs/UInt32.hpp"
-#include "rix/rix.hpp"
 
 using namespace rix;
 

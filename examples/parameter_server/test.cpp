@@ -1,5 +1,5 @@
-#include "rix/test/node_test_harness.hpp"
 #include "parameter_server.hpp"
+#include "rix/test/node_test_harness.hpp"
 #include <gtest/gtest.h>
 
 using namespace rix;

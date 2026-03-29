@@ -23,7 +23,9 @@ struct TransportFactory {
 namespace detail {
 inline std::array<TransportFactory, 1> default_transport_factories = {
     {{[](const Endpoint& endpoint) -> std::shared_ptr<Acceptor> { return std::make_shared<TCPAcceptor>(endpoint); },
-      [](const Endpoint& endpoint, bool blocking) -> std::shared_ptr<Stream> { return std::make_shared<TCPStream>(endpoint, blocking); }}}};
+      [](const Endpoint& endpoint, bool blocking) -> std::shared_ptr<Stream> {
+        return std::make_shared<TCPStream>(endpoint, blocking);
+      }}}};
 
 inline std::array<TransportFactory*, 1> transport_overrides = {nullptr};
 } // namespace detail
@@ -42,7 +44,9 @@ inline const TransportFactory& get_transport_factory(Protocol protocol) {
 /**
  * @brief Override the transport factory for a given protocol (for testing).
  */
-inline void set_transport_factory(Protocol protocol, TransportFactory* factory) { detail::transport_overrides[protocol] = factory; }
+inline void set_transport_factory(Protocol protocol, TransportFactory* factory) {
+  detail::transport_overrides[protocol] = factory;
+}
 
 /**
  * @brief Reset the transport factory override for a given protocol.

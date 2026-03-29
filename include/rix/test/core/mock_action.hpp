@@ -48,12 +48,14 @@ public:
 
   /** Trigger the goal callback (simulates a new goal arriving). */
   void trigger_goal() {
-    if (goal_cb_) goal_cb_();
+    if (goal_cb_)
+      goal_cb_();
   }
 
   /** Trigger the preempt callback (simulates a preempt request). */
   void trigger_preempt() {
-    if (preempt_cb_) preempt_cb_();
+    if (preempt_cb_)
+      preempt_cb_();
   }
 
 protected:

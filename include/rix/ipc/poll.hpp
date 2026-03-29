@@ -68,7 +68,7 @@ public:
                    std::vector<std::shared_ptr<T>>& exception) {
 
     static_assert(std::is_base_of<Pollable, T>::value, "T must be derived from Pollable");
-    
+
     if (!poller_) {
       return false;
     }

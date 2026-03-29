@@ -29,17 +29,20 @@ public:
   // ActionClient interface -----------------------------------------------
 
   bool dispatch(const Message& goal) override {
-    if (dispatch_handler_) return dispatch_handler_(goal);
+    if (dispatch_handler_)
+      return dispatch_handler_(goal);
     return true;
   }
 
   bool cancel() override {
-    if (cancel_handler_) return cancel_handler_();
+    if (cancel_handler_)
+      return cancel_handler_();
     return true;
   }
 
   bool wait_for_result(const Duration& timeout) override {
-    if (wait_handler_) return wait_handler_(timeout);
+    if (wait_handler_)
+      return wait_handler_(timeout);
     return true;
   }
 
@@ -53,12 +56,14 @@ public:
 
   /** Deliver a feedback message to the registered feedback callback. */
   void inject_feedback(std::shared_ptr<Message> feedback) {
-    if (feedback_cb_ && feedback) feedback_cb_(*feedback);
+    if (feedback_cb_ && feedback)
+      feedback_cb_(*feedback);
   }
 
   /** Deliver a result message to the registered result callback. */
   void inject_result(std::shared_ptr<Message> result) {
-    if (result_cb_ && result) result_cb_(*result);
+    if (result_cb_ && result)
+      result_cb_(*result);
   }
 
 protected:
@@ -66,13 +71,11 @@ protected:
 
 private:
   // ActionClient private virtuals: store callbacks for later invocation.
-  void set_feedback_callback(CallbackUntyped cb,
-                             std::shared_ptr<Message> /*prototype*/) override {
+  void set_feedback_callback(CallbackUntyped cb, std::shared_ptr<Message> /*prototype*/) override {
     feedback_cb_ = std::move(cb);
   }
 
-  void set_result_callback(CallbackUntyped cb,
-                           std::shared_ptr<Message> /*prototype*/) override {
+  void set_result_callback(CallbackUntyped cb, std::shared_ptr<Message> /*prototype*/) override {
     result_cb_ = std::move(cb);
   }
 

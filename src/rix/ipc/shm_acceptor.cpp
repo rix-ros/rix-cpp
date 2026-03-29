@@ -23,7 +23,7 @@ ShmAcceptor::ShmAcceptor(const Endpoint& endpoint, int backlog = 64)
     return;
   }
 
-  struct sockaddr_un addr {};
+  struct sockaddr_un addr{};
   addr.sun_family = AF_UNIX;
   strncpy(addr.sun_path, shm_path_.c_str(), sizeof(addr.sun_path) - 1);
   int status = ::bind(posix_fd_, (struct sockaddr*)&addr, sizeof(addr));
@@ -50,7 +50,7 @@ std::shared_ptr<Stream> ShmAcceptor::accept(Endpoint& remote_endpoint) const {
   std::lock_guard<std::mutex> lock(accept_mutex_);
 
   // Accept the incoming connection
-  struct sockaddr_in addr {};
+  struct sockaddr_in addr{};
   socklen_t len = sizeof(addr);
   int sock_fd = ::accept(posix_fd_, (struct sockaddr*)&addr, &len);
   if (sock_fd < 0) {
@@ -76,7 +76,7 @@ std::shared_ptr<Stream> ShmAcceptor::accept(Endpoint& remote_endpoint) const {
     return nullptr;
   }
 
-  // Map shared memory 
+  // Map shared memory
   void* shm_addr = mmap(nullptr, shm_buffer_size_, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
   if (shm_addr == MAP_FAILED) {
     cout << "Failed to map shared memory: " << strerror(errno) << endl;
@@ -85,7 +85,7 @@ std::shared_ptr<Stream> ShmAcceptor::accept(Endpoint& remote_endpoint) const {
     shm_unlink(shm_name.c_str());
     return nullptr;
   }
-  
+
   return std::shared_ptr<TCPStream>(new TCPStream(sock_fd));
 }
 
@@ -113,7 +113,7 @@ bool ShmAcceptor::get_blocking() const {
 
 // Endpoint retrieval
 Endpoint ShmAcceptor::local_endpoint() const {
-  struct sockaddr_in addr {};
+  struct sockaddr_in addr{};
   socklen_t addrlen = sizeof(addr);
   if (getsockname(fd_, (struct sockaddr*)&addr, &addrlen) < 0) {
     return {};
@@ -127,7 +127,7 @@ Endpoint ShmAcceptor::local_endpoint() const {
 }
 
 Endpoint ShmAcceptor::remote_endpoint() const {
-  struct sockaddr_in addr {};
+  struct sockaddr_in addr{};
   socklen_t addrlen = sizeof(addr);
   if (getpeername(fd_, reinterpret_cast<struct sockaddr*>(&addr), &addrlen) < 0) {
     return {};
@@ -142,7 +142,7 @@ Endpoint ShmAcceptor::remote_endpoint() const {
 
 bool ShmAcceptor::wait_readable(const Duration& timeout) const {
   // Implement with poll
-  struct pollfd pfd {};
+  struct pollfd pfd{};
   pfd.fd = fd_;
   pfd.events = POLLIN;
   int timeout_ms = static_cast<int>(timeout.to_milliseconds());
@@ -151,7 +151,7 @@ bool ShmAcceptor::wait_readable(const Duration& timeout) const {
 }
 
 bool ShmAcceptor::wait_writable(const Duration& timeout) const {
-  struct pollfd pfd {};
+  struct pollfd pfd{};
   pfd.fd = fd_;
   pfd.events = POLLOUT;
 
@@ -161,7 +161,7 @@ bool ShmAcceptor::wait_writable(const Duration& timeout) const {
 }
 
 bool ShmAcceptor::wait_exception(const Duration& timeout) const {
-  struct pollfd pfd {};
+  struct pollfd pfd{};
   pfd.fd = fd_;
   pfd.events = 0;
 

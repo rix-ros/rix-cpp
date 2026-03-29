@@ -1,8 +1,8 @@
 #pragma once
 
 #include "rix/ipc/endpoint.hpp"
-#include "rix/ipc/stream.hpp"
 #include "rix/ipc/shm_acceptor.hpp"
+#include "rix/ipc/stream.hpp"
 
 namespace rix {
 

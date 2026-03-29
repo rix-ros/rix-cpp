@@ -14,7 +14,8 @@ TEST(SimpleActionClientTest, Create) {
 
 TEST(SimpleActionClientTest, SendMessages) {
   NodeTestHarness harness;
-  auto& capture = harness.expect_action_client<rix::std_msgs::Double, rix::std_msgs::Float, rix::std_msgs::Double>("/exponent");
+  auto& capture =
+      harness.expect_action_client<rix::std_msgs::Double, rix::std_msgs::Float, rix::std_msgs::Double>("/exponent");
   auto& node = harness.create<SimpleActionClient>(1.0);
   EXPECT_TRUE(node.ok());
 

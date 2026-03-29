@@ -24,7 +24,7 @@ TEST(SimpleActionTest, RequestResponse) {
   rix::std_msgs::Double req;
   req.data = 0;
   EXPECT_TRUE(capture.set_goal(req));
-  for (int i = 0; i < MAX_ITERS-1; ++i) {
+  for (int i = 0; i < MAX_ITERS - 1; ++i) {
     EXPECT_FALSE(capture.call());
     EXPECT_EQ(capture.feedback(i).data, (static_cast<float>(i) / static_cast<float>(MAX_ITERS)) * 100.0f);
   }
@@ -34,7 +34,7 @@ TEST(SimpleActionTest, RequestResponse) {
   req.data = 1;
   capture.clear();
   EXPECT_TRUE(capture.set_goal(req));
-  for (int i = 0; i < MAX_ITERS-1; ++i) {
+  for (int i = 0; i < MAX_ITERS - 1; ++i) {
     EXPECT_FALSE(capture.call());
     EXPECT_EQ(capture.feedback(i).data, (static_cast<float>(i) / static_cast<float>(MAX_ITERS)) * 100.0f);
   }
@@ -44,7 +44,7 @@ TEST(SimpleActionTest, RequestResponse) {
   req.data = 2;
   capture.clear();
   EXPECT_TRUE(capture.set_goal(req));
-  for (int i = 0; i < MAX_ITERS-1; ++i) {
+  for (int i = 0; i < MAX_ITERS - 1; ++i) {
     EXPECT_FALSE(capture.call());
     EXPECT_EQ(capture.feedback(i).data, (static_cast<float>(i) / static_cast<float>(MAX_ITERS)) * 100.0f);
   }

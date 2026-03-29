@@ -1,8 +1,8 @@
 #pragma once
 
+#include <map>
 #include <memory>
 #include <mutex>
-#include <map> 
 
 #include "rix/core/common.hpp"
 #include "rix/core/spinner.hpp"
@@ -63,10 +63,8 @@ private:
   void handle_param_get_request(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn);
   void handle_system_get_request(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn);
 
-  void notify_subscribers(const std::vector<sys_msgs::SubInfo>& subscribers,
-                          const sys_msgs::PubInfo& publisher);
-  void notify_subscribers(const sys_msgs::SubInfo& subscriber,
-                          const std::vector<sys_msgs::PubInfo>& publishers);
+  void notify_subscribers(const std::vector<sys_msgs::SubInfo>& subscribers, const sys_msgs::PubInfo& publisher);
+  void notify_subscribers(const sys_msgs::SubInfo& subscriber, const std::vector<sys_msgs::PubInfo>& publishers);
 
   bool validate_topic_info(const sys_msgs::TopicInfo& info);
   bool validate_service_info(const sys_msgs::SrvInfo& info);

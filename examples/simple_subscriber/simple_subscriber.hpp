@@ -1,5 +1,5 @@
-#include "rix/std_msgs/Header.hpp"
 #include "rix/rix.hpp"
+#include "rix/std_msgs/Header.hpp"
 
 #include <sstream>
 

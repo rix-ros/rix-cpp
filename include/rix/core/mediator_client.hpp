@@ -1,8 +1,8 @@
 #pragma once
 
-#include "rix/ipc.hpp"
-#include "rix/core/spinner.hpp"
 #include "rix/core/common.hpp"
+#include "rix/core/spinner.hpp"
+#include "rix/ipc.hpp"
 #include "rix/std_msgs/UInt64.hpp"
 #include "rix/sys_msgs/NodeInfo.hpp"
 #include "rix/sys_msgs/ParamInfo.hpp"

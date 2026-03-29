@@ -8,9 +8,9 @@
 #include <vector>
 
 #include "rix/geometry_msgs/TF.hpp"
-#include "rix/sensor_msgs/JS.hpp"
 #include "rix/rob/joint.hpp"
 #include "rix/rob/link.hpp"
+#include "rix/sensor_msgs/JS.hpp"
 #include "rix/util/log.hpp"
 
 namespace rix {

@@ -44,9 +44,7 @@ protected:
 
 private:
   // Subscriber's private virtual: stores the callback for later dispatch.
-  void set_callback(CallbackUntyped cb, std::shared_ptr<Message> /*prototype*/) override {
-    callback_ = std::move(cb);
-  }
+  void set_callback(CallbackUntyped cb, std::shared_ptr<Message> /*prototype*/) override { callback_ = std::move(cb); }
 
   std::string topic_;
   size_t publisher_count_;

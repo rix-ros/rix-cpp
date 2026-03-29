@@ -903,21 +903,22 @@ TEST(MessageTest, ActionClientDispatchPreempt) {
         std_msgs::UInt32 goal;
         std::vector<std_msgs::UInt32> feedback;
         std_msgs::Time result;
-        std::shared_ptr<ActionClient> actcli = node.create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
-            "test_action",
-            [&feedback, &actcli](const std_msgs::UInt32& fb) {
-              static bool first_feedback = true;
-              feedback.push_back(fb);
-              // Preempt after first feedback
-              if (first_feedback) {
-                first_feedback = false;
-                std_msgs::UInt32 preempt_goal;
-                preempt_goal.data = 2;
-                bool send_result = actcli->dispatch(preempt_goal);
-                EXPECT_TRUE(send_result);
-              }
-            },
-            [&result](const std_msgs::Time& res) { result = res; });
+        std::shared_ptr<ActionClient> actcli =
+            node.create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
+                "test_action",
+                [&feedback, &actcli](const std_msgs::UInt32& fb) {
+                  static bool first_feedback = true;
+                  feedback.push_back(fb);
+                  // Preempt after first feedback
+                  if (first_feedback) {
+                    first_feedback = false;
+                    std_msgs::UInt32 preempt_goal;
+                    preempt_goal.data = 2;
+                    bool send_result = actcli->dispatch(preempt_goal);
+                    EXPECT_TRUE(send_result);
+                  }
+                },
+                [&result](const std_msgs::Time& res) { result = res; });
         EXPECT_NE(actcli, nullptr);
         EXPECT_TRUE(actcli->ok());
 
