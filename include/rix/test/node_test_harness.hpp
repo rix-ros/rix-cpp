@@ -15,10 +15,6 @@
 namespace rix {
 namespace test {
 
-// ============================================================================
-// Handles — lightweight typed objects returned by expect_xxx()
-// ============================================================================
-
 /**
  * @brief Returned by expect_publisher().
  *        Automatically captures every message the publisher sends.
@@ -114,31 +110,57 @@ private:
  */
 template <typename TGoal, typename TFeedback, typename TResult> class ActionCapture {
 public:
-  size_t call_count() const { return goals_.size(); }
+  size_t call_count() const { return feedbacks_.size() + results_.size(); }
   const TGoal& goal(size_t i) const { return goals_.at(i); }
   const TFeedback& feedback(size_t i) const { return feedbacks_.at(i); }
   const TResult& result(size_t i) const { return results_.at(i); }
 
+  void clear() {
+    feedbacks_.clear();
+    results_.clear();
+  }
+
+  bool set_goal(const TGoal& goal) {
+    auto act = act_.lock();
+    if (!act)
+      return false;
+
+    if (processing_) {
+      act->trigger_preempt();
+    } else {
+      act->trigger_goal();
+    }
+    current_goal_ = goal;
+    processing_ = true;
+    goals_.push_back(goal);
+    return true;
+  }
+
   /** Invoke the action callback synchronously and record goal/feedback/result. */
-  bool call(const TGoal& goal) {
+  bool call() {
     TFeedback fb{};
     TResult res{};
     auto act = act_.lock();
     if (!act)
       return false;
-    bool ok = act->process(goal, fb, res);
-    goals_.push_back(goal);
-    feedbacks_.push_back(fb);
-    results_.push_back(res);
-    return ok;
+    bool done = act->process(current_goal_, fb, res);
+    if (done) {
+      processing_ = false;
+      results_.push_back(res);
+    } else {
+      feedbacks_.push_back(fb);
+    }
+    return done;
   }
 
 private:
   friend class NodeTestHarness;
   std::weak_ptr<MockAction> act_;
+  TGoal current_goal_;
   std::vector<TGoal> goals_;
   std::vector<TFeedback> feedbacks_;
   std::vector<TResult> results_;
+  bool processing_;
 };
 
 /**
@@ -202,7 +224,7 @@ private:
  */
 class NodeTestHarness {
 public:
-  NodeTestHarness() {
+  NodeTestHarness() : factory_(std::make_shared<MockComponentFactoryImpl>()) {
     if (MULTITHREADED) {
       throw std::runtime_error(
           "NodeTestHarness does not support multithreaded tests. Run 'export RIX_MULTITHREADED=0' and try again.");
@@ -218,10 +240,6 @@ public:
     rix::Time::set_clock(std::make_shared<rix::Clock>());
     Node::set_component_factory(std::make_shared<detail::ComponentFactoryImpl>());
   }
-
-  // -------------------------------------------------------------------------
-  // Phase 1: Declare expected node topology
-  // -------------------------------------------------------------------------
 
   /**
    * @brief Declare that the node will create a publisher on @p topic.
@@ -359,6 +377,10 @@ public:
     return *cap;
   }
 
+  void preset_parameter(const std::string& name, const Message& parameter) {
+    factory_->preset_parameter(name, parameter);
+  }
+
   /**
    * @brief Make the next Node constructor call shutdown(), so ok() == false.
    *
@@ -368,10 +390,6 @@ public:
     MockComponentFactoryImpl::set_should_fail();
     return *this;
   }
-
-  // -------------------------------------------------------------------------
-  // Phase 2: Create the node
-  // -------------------------------------------------------------------------
 
   /**
    * @brief Construct the node-under-test and wire up all declared handles.
@@ -396,10 +414,6 @@ public:
 
     return *ptr;
   }
-
-  // -------------------------------------------------------------------------
-  // Phase 3: Drive execution
-  // -------------------------------------------------------------------------
 
   /**
    * @brief Spin the node @p n times, processing one cycle per call.
@@ -427,7 +441,7 @@ public:
 private:
   std::shared_ptr<MockClock> clock_;
   std::unique_ptr<Node> node_;
-  std::shared_ptr<MockComponentFactoryImpl> factory_ = std::make_shared<MockComponentFactoryImpl>();
+  std::shared_ptr<MockComponentFactoryImpl> factory_;
 
   // Wire-up closures executed after create()
   std::vector<std::function<void(Node*)>> wire_fns_;

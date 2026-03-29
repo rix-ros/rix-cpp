@@ -105,6 +105,10 @@ public:
     return cli;
   }
 
+  void preset_parameter(const std::string& name, const Message& parameter) {
+    parameter.serialize(preset_parameters_[name]);
+  }
+
   std::shared_ptr<MockPublisher> get_publisher(const std::string& topic) const {
     auto it = publishers_.find(topic);
     return it != publishers_.end() ? it->second : nullptr;
@@ -142,6 +146,7 @@ private:
   std::map<std::string, std::shared_ptr<MockServiceClient>> service_clients_;
   std::map<std::string, std::shared_ptr<MockAction>> actions_;
   std::map<std::string, std::shared_ptr<MockActionClient>> action_clients_;
+  std::map<std::string, std::vector<uint8_t>> preset_parameters_;
   static inline bool should_fail_{false};
 };
 

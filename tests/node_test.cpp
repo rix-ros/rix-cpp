@@ -22,8 +22,6 @@
 
 using namespace rix;
 
-// TODO: Create feature parity with message_test.cpp
-
 TEST(NodeTestNew, RegisterAndDeregisterNode) {
   sys_msgs::NodeInfo node_info;
   TestFixture().create_node("test_node", node_info).destroy_node(node_info).build<Node>([](const TestFixture&) {
@@ -39,8 +37,6 @@ TEST(NodeTestNew, RegisterNodeFailure) {
     EXPECT_FALSE(node.ok());
   });
 }
-
-// TODO: Create feature parity with message_test.cpp
 
 TEST(NodeTestNew, RegisterAndDeregisterPublisher) {
   sys_msgs::NodeInfo node_info;
@@ -77,8 +73,6 @@ TEST(NodeTestNew, RegisterPublisherFailure) {
       });
 }
 
-// TODO: Create feature parity with message_test.cpp
-
 TEST(NodeTestNew, RegisterAndDeregisterSubscriber) {
   sys_msgs::NodeInfo node_info;
   sys_msgs::SubInfo sub_info;
@@ -96,8 +90,6 @@ TEST(NodeTestNew, RegisterAndDeregisterSubscriber) {
         EXPECT_TRUE(sub->ok());
       });
 }
-
-// TODO: Create feature parity with message_test.cpp
 
 TEST(NodeTestNew, RegisterAndDeregisterService) {
   sys_msgs::NodeInfo node_info;
@@ -117,8 +109,6 @@ TEST(NodeTestNew, RegisterAndDeregisterService) {
       });
 }
 
-// TODO: Create feature parity with message_test.cpp
-
 TEST(NodeTestNew, RequestServiceClient) {
   sys_msgs::NodeInfo node_info;
   TestFixture()
@@ -134,8 +124,6 @@ TEST(NodeTestNew, RequestServiceClient) {
         EXPECT_TRUE(srv_cli->ok());
       });
 }
-
-// TODO: Create feature parity with message_test.cpp
 
 TEST(NodeTestNew, RegisterAndDeregisterAction) {
   sys_msgs::NodeInfo node_info;
@@ -155,8 +143,6 @@ TEST(NodeTestNew, RegisterAndDeregisterAction) {
         EXPECT_TRUE(act->ok());
       });
 }
-
-// TODO: Create feature parity with message_test.cpp
 
 TEST(NodeTestNew, PublisherSendsMessages) {
   // Prepare expected messages
@@ -206,8 +192,6 @@ TEST(NodeTestNew, PublisherSendsMessages) {
         }
       });
 }
-
-// TODO: Create feature parity with message_test.cpp
 
 TEST(NodeTestNew, RegisterMultipleComponents) {
   sys_msgs::NodeInfo node_info;
@@ -269,8 +253,6 @@ TEST(NodeTestNew, RegisterMultipleComponents) {
       });
 }
 
-// TODO: Create feature parity with message_test.cpp
-
 TEST(NodeTestNew, PingNode) {
   sys_msgs::NodeInfo node_info;
   TestFixture()
@@ -283,8 +265,6 @@ TEST(NodeTestNew, PingNode) {
         node.spin_once();
       });
 }
-
-// TODO: Create feature parity with message_test.cpp
 
 TEST(NodeTestNew, RegisterComponentsAfterNodeShutdown) {
   sys_msgs::NodeInfo node_info;
@@ -347,8 +327,6 @@ TEST(NodeTestNew, RegisterComponentsAfterManualNodeShutdown) {
   });
 }
 
-// TODO: Create feature parity with message_test.cpp
-
 TEST(NodeTestNew, RegisterAndDeregisterPublisherFromShutdown) {
   sys_msgs::NodeInfo node_info;
   sys_msgs::PubInfo pub_info;
@@ -372,8 +350,6 @@ TEST(NodeTestNew, RegisterAndDeregisterPublisherFromShutdown) {
         EXPECT_TRUE(node.ok());
       });
 }
-
-// TODO: Create feature parity with message_test.cpp
 
 TEST(NodeTestNew, RegisterSubscriberFailure) {
   sys_msgs::NodeInfo node_info;
@@ -415,8 +391,6 @@ TEST(NodeTestNew, RegisterAndDeregisterSubscriberFromShutdown) {
       });
 }
 
-// TODO: Create feature parity with message_test.cpp
-
 TEST(NodeTestNew, RegisterServiceFailure) {
   sys_msgs::NodeInfo node_info;
   sys_msgs::SrvInfo srv_info;
@@ -457,8 +431,6 @@ TEST(NodeTestNew, RegisterAndDeregisterServiceFromShutdown) {
       });
 }
 
-// TODO: Create feature parity with message_test.cpp
-
 TEST(NodeTestNew, RequestServiceClientFailure) {
   sys_msgs::NodeInfo node_info;
   TestFixture()
@@ -495,8 +467,6 @@ TEST(NodeTestNew, RequestServiceClientShutdown) {
         EXPECT_TRUE(node.ok());
       });
 }
-
-// TODO: Create feature parity with message_test.cpp
 
 TEST(NodeTestNew, RegisterActionFailure) {
   sys_msgs::NodeInfo node_info;
@@ -539,8 +509,6 @@ TEST(NodeTestNew, RegisterAndDeregisterActionFromShutdown) {
         EXPECT_TRUE(node.ok());
       });
 }
-
-// TODO: Create feature parity with message_test.cpp
 
 TEST(NodeTestNew, RequestActionClientFailure) {
   sys_msgs::NodeInfo node_info;
@@ -597,8 +565,6 @@ TEST(NodeTestNew, RequestActionClientShutdown) {
         EXPECT_TRUE(node.ok());
       });
 }
-
-// TODO: Create feature parity with message_test.cpp
 
 TEST(NodeTestNew, RegisterAndDeregisterMultipleOfAll) {
   sys_msgs::NodeInfo node_info;
@@ -759,8 +725,6 @@ TEST(NodeTestNew, RegisterAndDeregisterMultipleOfAll) {
       });
 }
 
-// TODO: Create feature parity with message_test.cpp
-
 TEST(NodeTestNew, PreserveComponentOrderOnDeregistration) {
   sys_msgs::NodeInfo node_info;
   sys_msgs::PubInfo pub_info, pub_info2;
@@ -859,8 +823,6 @@ TEST(NodeTestNew, PreserveComponentOrderOnDeregistration) {
         other_act_cli = nullptr;
       });
 }
-
-// TODO: Create feature parity with message_test.cpp
 
 TEST(NodeTestNew, ShutdownFromSignal) {
   sys_msgs::NodeInfo node_info;
@@ -971,8 +933,6 @@ TEST(NodeTestNew, ShutdownFromSignal) {
       });
 }
 
-// TODO: Create feature parity with message_test.cpp
-
 TEST(NodeTestNew, ParameterSetRequest) {
   auto param = std::make_shared<std_msgs::String>();
   param->data = "test_value";
@@ -1047,8 +1007,6 @@ TEST(NodeTestNew, ParameterGetRequestFailure) {
         EXPECT_FALSE(status);
       });
 }
-
-// TODO: Create feature parity with message_test.cpp
 
 TEST(NodeTestNew, SystemInfoGetRequest) {
   sys_msgs::SystemInfo sys_info;

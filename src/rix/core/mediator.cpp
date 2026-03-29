@@ -517,6 +517,9 @@ void Mediator::handle_system_get_request(const sys_msgs::Operation& operation, s
   for (const auto& service : services_) {
     info.services.push_back(service.second);
   }
+  for (const auto& action : actions_) {
+    info.actions.push_back(action.second);
+  }
   for (const auto& topic : topic_hashes_) {
     sys_msgs::TopicInfo topic_info;
     topic_info.name = topic.first;
