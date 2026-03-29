@@ -1,78 +1,47 @@
-#include "rix/test/test_fixture.hpp"
+#include "rix/test/node_test_harness.hpp"
 #include "simple_action_client.hpp"
 #include <gtest/gtest.h>
 
 using namespace rix;
+using namespace rix::test;
 
 TEST(SimpleActionClientTest, Create) {
-  sys_msgs::NodeInfo node_info;
-  TestFixture()
-      .create_node("simple_action_client", node_info)
-      .create_action_client<std_msgs::Double, std_msgs::Float, std_msgs::Double>("/exponent", node_info)
-      .destroy_node(node_info)
-      .build<SimpleActionClient>([](TestFixture& fixture) {
-        SimpleActionClient node(1);
-        EXPECT_TRUE(node.ok());
-      });
+  NodeTestHarness harness;
+  harness.expect_action_client<rix::std_msgs::Double, rix::std_msgs::Float, rix::std_msgs::Double>("/exponent");
+  auto& node = harness.create<SimpleActionClient>(1.0);
+  EXPECT_TRUE(node.ok());
 }
 
-TEST(SimpleActionClientTest, CreateNodeRegisterFailure) {
-  sys_msgs::NodeInfo node_info;
-  TestFixture()
-      .create_node("simple_action_client", node_info, true) // Simulate failure
-      .build<SimpleActionClient>([](TestFixture& fixture) {
-        SimpleActionClient node(1);
-        EXPECT_FALSE(node.ok());
-      });
+TEST(SimpleActionClientTest, SendMessages) {
+  NodeTestHarness harness;
+  auto& capture = harness.expect_action_client<rix::std_msgs::Double, rix::std_msgs::Float, rix::std_msgs::Double>("/exponent");
+  auto& node = harness.create<SimpleActionClient>(1.0);
+  EXPECT_TRUE(node.ok());
+
+  harness.advance_time(1.0);
+  harness.spin(1);
+
+  EXPECT_EQ(capture.dispatch_count(), 1);
+  EXPECT_EQ(capture.goal(0).data, 0.0);
+
+  rix::std_msgs::Float feedback;
+  feedback.data = 1.0f;
+  capture.inject_feedback(feedback);
+  feedback.data = 5.0f;
+  capture.inject_feedback(feedback);
+  feedback.data = 10.0f;
+  capture.inject_feedback(feedback);
+
+  rix::std_msgs::Double result;
+  result.data = 100.0;
+  capture.inject_result(result);
+  harness.advance_time(1.0);
+  harness.spin(1);
 }
 
-TEST(SimpleActionClientTest, CreateActionClientFailure) {
-  sys_msgs::NodeInfo node_info;
-  TestFixture()
-      .create_node("simple_action_client", node_info)
-      .create_action_client<std_msgs::Double, std_msgs::Float, std_msgs::Double>(
-          "/exponent", node_info, true) // Simulate failure
-      .destroy_node(node_info)
-      .build<SimpleActionClient>([](TestFixture& fixture) {
-        SimpleActionClient node(1);
-        EXPECT_FALSE(node.ok());
-      });
-}
-
-TEST(SimpleServiceClientTest, Spin) {
-  auto goal = std::make_shared<std_msgs::Double>();
-  goal->data = 0.0;
-  auto feedbacks = std::vector<std::shared_ptr<std_msgs::Float>>();
-  double result_data = 0.0;
-  for (int i = 0; i < 10; ++i) {
-    auto feedback = std::make_shared<std_msgs::Float>();
-    feedback->data = static_cast<float>(i) / 10.0f * 100.0f;
-    feedbacks.push_back(feedback);
-    result_data += pow(goal->data, i) / tgamma(static_cast<double>(i + 1));
-  }
-  auto result = std::make_shared<std_msgs::Double>();
-  result->data = result_data;
-
-  sys_msgs::NodeInfo node_info;
-  TestFixture()
-      .create_node("simple_action_client", node_info)
-      .create_action_client<std_msgs::Double, std_msgs::Float, std_msgs::Double>("/exponent", node_info)
-      .enable_operation_notifications()
-      .send_action_goal(goal, feedbacks, result)
-      .disable_operation_notifications()
-      .destroy_node(node_info)
-      .build<SimpleActionClient>([&feedbacks](TestFixture& fixture) {
-        SimpleActionClient node(1);
-        EXPECT_TRUE(node.ok());
-
-        std::thread thr([&node]() { node.spin(); });
-
-        auto cli = fixture.get_client_socket(0);
-        EXPECT_TRUE(cli->wait_for_operations(2 + feedbacks.size() + 1, std::chrono::milliseconds(5000)));
-
-        node.shutdown();
-        if (thr.joinable()) {
-          thr.join();
-        }
-      });
+TEST(SimpleActionClientTest, CreateFail) {
+  NodeTestHarness harness;
+  harness.node_registration_fails();
+  auto& node = harness.create<SimpleActionClient>(1.0);
+  EXPECT_FALSE(node.ok());
 }

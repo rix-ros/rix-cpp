@@ -36,16 +36,16 @@ bool SimpleAction::callback(const rix::std_msgs::Double& goal,
     Log::info << "Starting new goal: e^" << goal.data << " with max iters: " << max_iters_ << std::endl;
     new_goal_ = false;
   }
+  value_ += pow(goal.data, i_) / tgamma(static_cast<double>(i_ + 1));
+  feedback.data = (static_cast<float>(i_) / static_cast<float>(max_iters_)) * 100.0f;
+  Log::info << "Goal progress: " << feedback.data << "\% after " << i_ << " iterations." << std::endl;
+  i_++;
   if (i_ >= max_iters_) {
     result.data = value_;
     Log::info << "Goal complete: e^" << goal.data << " ~= " << result.data << " after " << i_ << " iterations."
               << std::endl;
     return true;
   }
-  value_ += pow(goal.data, i_) / tgamma(static_cast<double>(i_ + 1));
-  feedback.data = (static_cast<float>(i_) / static_cast<float>(max_iters_)) * 100.0f;
-  Log::info << "Goal progress: " << feedback.data << "\% after " << i_ << " iterations." << std::endl;
-  i_++;
   Time::sleep_for(Duration(0.001)); // Simulate work being done
   return false;
 }

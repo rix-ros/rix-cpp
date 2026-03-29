@@ -18,6 +18,8 @@
 
 using namespace rix;
 
+// TODO: Create feature parity with message_test.cpp
+
 // =============================================================================
 // Basic Node registration / deregistration
 // =============================================================================

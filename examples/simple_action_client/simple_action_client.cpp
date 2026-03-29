@@ -16,7 +16,6 @@ SimpleActionClient::SimpleActionClient(double rate) : Node(NAME) {
     return;
   }
 
-  std::shared_ptr<double> i_ptr = std::make_shared<double>(0.0);
   auto timer = create_timer(Duration(1.0 / rate), &SimpleActionClient::timer_callback, this);
   if (!timer->ok()) {
     shutdown();
