@@ -5,8 +5,53 @@ IndentWidth: 2
 TabWidth: 2
 UseTab: Never
 
-AlignArrayOfStructures: Right
+# Pointer/reference alignment
+PointerAlignment: Left
+ReferenceAlignment: Left
+DerivePointerAlignment: false
+
+# Packing
 BinPackParameters: false
 BinPackArguments: false
-PointerAlignment: Left
-SortIncludes: true
+
+# Short constructs
+AllowShortFunctionsOnASingleLine: All
+AllowShortBlocksOnASingleLine: Empty
+AllowShortLambdasOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+
+# Alignment
+AlignArrayOfStructures: Right
+AlignAfterOpenBracket: Align
+AlignTrailingComments: true
+AlignOperands: Align
+
+# Templates & constructors
+AlwaysBreakTemplateDeclarations: Yes
+BreakConstructorInitializers: BeforeColon
+BreakInheritanceList: BeforeColon
+
+# Namespaces
+NamespaceIndentation: None
+FixNamespaceComments: true
+
+# Includes
+SortIncludes: CaseSensitive
+IncludeBlocks: Regroup
+IncludeCategories:
+  # Standard library headers (e.g., <vector>)
+  - Regex: "^<[a-z_]+>"
+    Priority: 1
+  # Other angle-bracket headers (e.g., <gtest/gtest.h>, <Eigen/...>)
+  - Regex: "^<.*>"
+    Priority: 2
+  # Project headers (e.g., "rix/...")
+  - Regex: "^\".*\""
+    Priority: 3
+
+# Misc
+MaxEmptyLinesToKeep: 1
+ReflowComments: true
+SortUsingDeclarations: true
+Standard: c++17

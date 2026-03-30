@@ -1,0 +1,244 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+# Cancel in-flight runs for the same branch/PR when a new commit arrives.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Shared dependency installation logic lives in a reusable composite action
+# defined inline via scripts. Each job calls the same steps so the matrix
+# stays DRY.
+# ──────────────────────────────────────────────────────────────────────────────
+
+jobs:
+  # ────────────────────────────────────────────────────────────────────────────
+  # Job 1 – Format check (clang-format)
+  # ────────────────────────────────────────────────────────────────────────────
+  format-check:
+    name: Format Check
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install clang-format
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends clang-format-18
+
+      - name: Check formatting
+        run: |
+          find include src tests -type f \( -name '*.cpp' -o -name '*.hpp' -o -name '*.h' \) \
+            | xargs clang-format-18 --dry-run --Werror --style=file
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Job 2 – Build & Test (multi-platform / multi-compiler matrix)
+  # ────────────────────────────────────────────────────────────────────────────
+  build-and-test:
+    name: Build & Test (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # ── Linux / GCC 13 ──────────────────────────────────────────────────
+          - name: "Linux / GCC 13"
+            os: ubuntu-24.04
+            cc: gcc-13
+            cxx: g++-13
+            extra_apt: "gcc-13 g++-13"
+
+          # ── Linux / GCC 14 ──────────────────────────────────────────────────
+          - name: "Linux / GCC 14"
+            os: ubuntu-24.04
+            cc: gcc-14
+            cxx: g++-14
+            extra_apt: ""          # gcc-14 is the default on ubuntu-24.04
+
+          # ── Linux / Clang 18 ────────────────────────────────────────────────
+          - name: "Linux / Clang 18"
+            os: ubuntu-24.04
+            cc: clang-18
+            cxx: clang++-18
+            extra_apt: "clang-18"
+
+          # ── macOS / AppleClang ──────────────────────────────────────────────
+          - name: "macOS / AppleClang"
+            os: macos-15
+            cc: clang
+            cxx: clang++
+            extra_apt: ""
+
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
+      RIX_INSTALL_DIR: ${{ github.workspace }}/.rix
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Cache installed dependencies ────────────────────────────────────────
+      - name: Cache dependencies
+        id: cache-deps
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.RIX_INSTALL_DIR }}
+          key: deps-${{ matrix.os }}-${{ hashFiles('install.bash') }}
+
+      # ── Install system packages (Linux) ────────────────────────────────────
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build \
+            libeigen3-dev \
+            nlohmann-json3-dev \
+            libgtest-dev \
+            ${{ matrix.extra_apt }}
+
+      # ── Install system packages (macOS) ────────────────────────────────────
+      - name: Install system dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install cmake ninja eigen nlohmann-json googletest
+
+      # ── Install rix-msg (message definitions) ──────────────────────────────
+      - name: Install rix-msg
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth=1 https://github.com/rix-ros/rix-msg.git
+          cd rix-msg
+          HOME=${{ github.workspace }} bash install.bash
+          cd ..
+          rm -rf rix-msg
+
+      # ── Configure ──────────────────────────────────────────────────────────
+      - name: Configure CMake
+        run: |
+          cmake -S . -B build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="${{ env.RIX_INSTALL_DIR }}" \
+            -DCMAKE_INSTALL_PREFIX="${{ env.RIX_INSTALL_DIR }}" \
+            -DBUILD_TESTS=ON
+
+      # ── Build ──────────────────────────────────────────────────────────────
+      - name: Build
+        run: cmake --build build --parallel
+
+      # ── Install (needed so tests can find the shared library) ──────────────
+      - name: Install
+        run: cmake --install build
+
+      # ── Test ───────────────────────────────────────────────────────────────
+      - name: Run node_test
+        working-directory: build
+        run: ./node_test
+
+      - name: Run mediator_test
+        working-directory: build
+        run: ./mediator_test
+
+      - name: Run log_test
+        working-directory: build
+        run: ./log_test
+
+      - name: Run tf_tests
+        working-directory: build
+        run: ./tf_tests
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Job 3 – Static Analysis (clang-tidy)
+  # Runs on Linux/Clang so clang-tidy and the compiler diagnostics align.
+  # ────────────────────────────────────────────────────────────────────────────
+  static-analysis:
+    name: Static Analysis (clang-tidy)
+    runs-on: ubuntu-24.04
+    # Allow clang-tidy findings to be reported without blocking the build.
+    # Change to `false` once the codebase is clean.
+    continue-on-error: true
+
+    env:
+      RIX_INSTALL_DIR: ${{ github.workspace }}/.rix
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Cache installed dependencies ────────────────────────────────────────
+      - name: Cache dependencies
+        id: cache-deps
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.RIX_INSTALL_DIR }}
+          key: deps-ubuntu-24.04-${{ hashFiles('install.bash') }}
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build \
+            clang-18 clang-tidy-18 \
+            libeigen3-dev \
+            nlohmann-json3-dev \
+            libgtest-dev
+
+      - name: Install rix-msg
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth=1 https://github.com/rix-ros/rix-msg.git
+          cd rix-msg
+          HOME=${{ github.workspace }} bash install.bash
+          cd ..
+          rm -rf rix-msg
+
+      - name: Configure CMake (with compile_commands.json)
+        run: |
+          cmake -S . -B build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_PREFIX_PATH="${{ env.RIX_INSTALL_DIR }}" \
+            -DCMAKE_INSTALL_PREFIX="${{ env.RIX_INSTALL_DIR }}" \
+            -DBUILD_TESTS=ON \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DCMAKE_C_COMPILER=clang-18 \
+            -DCMAKE_CXX_COMPILER=clang++-18
+
+      # Build first so generated headers (if any) are available to clang-tidy.
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Run clang-tidy
+        run: |
+          # run-clang-tidy is provided by the clang-18 package on Ubuntu 24.04
+          run-clang-tidy-18 \
+            -p build \
+            -clang-tidy-binary clang-tidy-18 \
+            -header-filter='include/rix/.*' \
+            $(find src -name '*.cpp' | sort) \
+            2>&1 | tee clang-tidy-report.txt
+          # Fail if clang-tidy reported any warnings/errors
+          if grep -qE "^.*:\s*(warning|error):" clang-tidy-report.txt; then
+            echo ""
+            echo "clang-tidy found issues. See report above."
+            exit 1
+          fi
+
+      - name: Upload clang-tidy report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clang-tidy-report
+          path: clang-tidy-report.txt
+          retention-days: 7
