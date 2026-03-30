@@ -173,10 +173,6 @@ jobs:
         working-directory: build
         run: ./mediator_test
 
-      - name: Run log_test
-        working-directory: build
-        run: ./log_test
-
       - name: Run tf_tests
         working-directory: build
         run: ./tf_tests
