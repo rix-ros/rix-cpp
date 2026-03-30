@@ -1967,6 +1967,9 @@ TEST(NodeTestNew, ActionClientDispatchPreempt) {
         std_msgs::UInt32 goal;
         std::vector<std_msgs::UInt32> feedback;
         std_msgs::Time result;
+        std::mutex result_mutex;
+        std::condition_variable result_cv;
+        bool result_received = false;
         std::shared_ptr<ActionClient> actcli =
             node.create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
                 "test_action",
@@ -1982,7 +1985,12 @@ TEST(NodeTestNew, ActionClientDispatchPreempt) {
                     EXPECT_TRUE(send_result);
                   }
                 },
-                [&result](const std_msgs::Time& res) { result = res; });
+                [&result, &result_mutex, &result_cv, &result_received](const std_msgs::Time& res) {
+                  std::lock_guard<std::mutex> lock(result_mutex);
+                  result = res;
+                  result_received = true;
+                  result_cv.notify_one();
+                });
         EXPECT_NE(actcli, nullptr);
         EXPECT_TRUE(actcli->ok());
 
@@ -1993,7 +2001,11 @@ TEST(NodeTestNew, ActionClientDispatchPreempt) {
         bool send_result = actcli->dispatch(goal);
         EXPECT_TRUE(send_result);
 
-        EXPECT_TRUE(actcli->wait_for_result(Duration(5.0)));
+        {
+          std::unique_lock<std::mutex> lock(result_mutex);
+          EXPECT_TRUE(
+              result_cv.wait_for(lock, std::chrono::seconds(5), [&result_received]() { return result_received; }));
+        }
         EXPECT_EQ(feedback.size(), 4);
         EXPECT_EQ(feedback[0].data, 11); // From first goal
         EXPECT_EQ(feedback[1].data, 21); // From preempted goal

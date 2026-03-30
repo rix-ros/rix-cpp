@@ -165,17 +165,29 @@ jobs:
         run: cmake --install build
 
       # ── Test ───────────────────────────────────────────────────────────────
-      - name: Run node_test
+      - name: Run node_test (multithreaded on)
         working-directory: build
-        run: ./node_test
+        run: RIX_MULTITHREADED=1 ./node_test
 
-      - name: Run mediator_test
+      - name: Run node_test (multithreaded off)
         working-directory: build
-        run: ./mediator_test
+        run: RIX_MULTITHREADED=0 ./node_test
 
-      - name: Run tf_tests
+      - name: Run mediator_test (multithreaded on)
         working-directory: build
-        run: ./tf_tests
+        run: RIX_MULTITHREADED=1 ./mediator_test
+
+      - name: Run mediator_test (multithreaded off)
+        working-directory: build
+        run: RIX_MULTITHREADED=0 ./mediator_test
+
+      - name: Run tf_tests (multithreaded on)
+        working-directory: build
+        run: RIX_MULTITHREADED=1 ./tf_tests
+
+      - name: Run tf_tests (multithreaded off)
+        working-directory: build
+        run: RIX_MULTITHREADED=0 ./tf_tests
 
   # ────────────────────────────────────────────────────────────────────────────
   # Job 3 – Static Analysis (clang-tidy)
