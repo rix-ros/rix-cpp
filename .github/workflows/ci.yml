@@ -105,8 +105,6 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
             cmake ninja-build \
-            libeigen3-dev \
-            nlohmann-json3-dev \
             libgtest-dev libgmock-dev \
             ${{ matrix.extra_apt }}
 
@@ -114,7 +112,27 @@ jobs:
       - name: Install system dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install cmake ninja eigen nlohmann-json googletest
+          brew install cmake ninja googletest
+
+      # ── Install Eigen into ~/.rix ───────────────────────────────────────────
+      - name: Install Eigen
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz -o eigen-3.4.0.tar.gz
+          tar -xzf eigen-3.4.0.tar.gz
+          cmake -S eigen-3.4.0 -B eigen-3.4.0/build -DCMAKE_INSTALL_PREFIX="$HOME/.rix"
+          cmake --install eigen-3.4.0/build
+          rm -rf eigen-3.4.0 eigen-3.4.0.tar.gz
+      
+      # ── Install nlohmann/json into ~/.rix ───────────────────────────────────────────
+      - name: Install nlohmann/json
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.tar.gz -o v3.11.3.tar.gz
+          tar -xzf v3.11.3.tar.gz
+          cmake -S json-3.11.3 -B json-3.11.3/build -DJSON_BuildTests=OFF -DCMAKE_INSTALL_PREFIX="$HOME/.rix"
+          cmake --install json-3.11.3/build
+          rm -rf json-3.11.3 v3.11.3.tar.gz
 
       # ── Install rix-msg (message definitions) ──────────────────────────────
       - name: Install rix-msg
@@ -122,12 +140,9 @@ jobs:
         run: |
           git clone --depth=1 https://github.com/rix-ros/rix-msg.git
           cd rix-msg
-          # install.bash may exit non-zero when chmod-ing the optional Python CLI
-          # tool (rixmsg). Ignore that failure and verify only the C++ headers.
           bash install.bash || true
           cd ..
           rm -rf rix-msg
-          # Verify the generated C++ headers we actually need are present.
           test -d "$HOME/.rix/include/rix/sys_msgs" || \
             { echo "ERROR: rix/sys_msgs headers not found after rix-msg install"; exit 1; }
 
@@ -199,9 +214,25 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             cmake ninja-build \
             clang-18 clang-tidy-18 \
-            libeigen3-dev \
-            nlohmann-json3-dev \
             libgtest-dev libgmock-dev
+
+      - name: Install Eigen
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz -o eigen-3.4.0.tar.gz
+          tar -xzf eigen-3.4.0.tar.gz
+          cmake -S eigen-3.4.0 -B eigen-3.4.0/build -DCMAKE_INSTALL_PREFIX="$HOME/.rix"
+          cmake --install eigen-3.4.0/build
+          rm -rf eigen-3.4.0 eigen-3.4.0.tar.gz
+
+      - name: Install nlohmann/json
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.tar.gz -o v3.11.3.tar.gz
+          tar -xzf v3.11.3.tar.gz
+          cmake -S json-3.11.3 -B json-3.11.3/build -DJSON_BuildTests=OFF -DCMAKE_INSTALL_PREFIX="$HOME/.rix"
+          cmake --install json-3.11.3/build
+          rm -rf json-3.11.3 v3.11.3.tar.gz
 
       - name: Install rix-msg
         if: steps.cache-deps.outputs.cache-hit != 'true'

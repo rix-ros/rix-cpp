@@ -145,7 +145,7 @@ Eigen::MatrixXd KinematicsSolver::get_jacobian(const std::vector<std::shared_ptr
   Eigen::Vector3d ol = ee_transform.translation(); // link origin
 
   // Assemble Jacobian
-  for (int i = 0; i < chain.size(); ++i) {
+  for (size_t i = 0; i < chain.size(); ++i) {
     auto& j = chain[i];
     Eigen::Vector3d oj = Tj[i].translation();
     Eigen::Vector3d zj = Tj[i].linear() * msg_to_eigen(j->axis());
