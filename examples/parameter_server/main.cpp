@@ -1,35 +1,27 @@
-#include "rix/std_msgs/Header.hpp"
-#include "rix/rix.hpp"
+#include "parameter_server.hpp"
 
 using namespace rix;
-
-const std::string NAME = "param_server_example";
 
 int main(int argc, char** argv) {
   Log::init(NAME);
   Log::set_log_level(Log::Level::DEBUG);
 
-  Node node(NAME);
-  if (!node.ok()) {
-    Log::error << "Failed to initialize node" << std::endl;
+  auto parser = ArgumentParser(NAME, "A simple subscriber example.");
+  parser.add<int>("port", "The port for the subscriber server.", 'p', 8002);
+
+  if (!parser.parse(argc, argv)) {
+    Log::error << "Failed to parse arguments.";
     return 1;
   }
 
-  rix::std_msgs::Header header;
-  header.frame_id = "test";
-  header.seq = 1234;
-  header.stamp = Time::now().to_msg();
-  if (!node.set_parameter("test_param", header)) {
-    Log::error << "Failed to set parameter" << std::endl;
-    return 1;
-  }
+  int port;
+  parser.get<int>("port", port);
 
-  rix::std_msgs::Header retrieved_header;
-  if (!node.get_parameter("test_param", retrieved_header)) {
-    Log::error << "Failed to get parameter" << std::endl;
+  auto simple_service = std::make_shared<ParameterServer>(port);
+  if (!simple_service->ok()) {
+    Log::error << "Failed to create parameter_server.";
     return 1;
   }
-  Log::info << "Retrieved parameter: " << retrieved_header.frame_id << ", " << retrieved_header.seq << std::endl;
 
   return 0;
 }

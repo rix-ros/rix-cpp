@@ -2,16 +2,15 @@
 #include "rix/sys_msgs/Status.hpp"
 
 namespace rix {
+namespace detail {
 
-Action::~Action() {
+ActionImpl::~ActionImpl() {
   if (registered_flag_) {
-    auto client = socket_factory_();
+    auto client = factory_.create_stream(rixhub_endpoint_, true);
     if (!client) {
       return;
     }
-    if (client->connect(rixhub_endpoint_)) {
-      client->send_message(OPCODE::ACT_DEREGISTER, info_);
-    }
+    client->send_message(OPCODE::ACT_DEREGISTER, info_);
   }
   if (MULTITHREADED) {
     acceptor_.shutdown();
@@ -25,33 +24,21 @@ Action::~Action() {
   }
 }
 
-void Action::set_goal_callback(std::function<void()> callback) {
+void ActionImpl::set_goal_callback(std::function<void()> callback) {
   std::lock_guard<std::mutex> guard(mutex_);
   goal_callback_ = callback;
 }
 
-void Action::set_preempt_callback(std::function<void()> callback) {
+void ActionImpl::set_preempt_callback(std::function<void()> callback) {
   std::lock_guard<std::mutex> guard(mutex_);
   preempt_callback_ = callback;
 }
 
-Action::Action(const sys_msgs::ActInfo& info, SocketFactory socket_factory, const Endpoint& rixhub_endpoint)
-    : info_(info), socket_factory_(socket_factory), rixhub_endpoint_(rixhub_endpoint) {
-  server_ = socket_factory_();
+ActionImpl::ActionImpl(const sys_msgs::ActInfo& info, const Endpoint& rixhub_endpoint)
+    : info_(info), factory_(get_transport_factory(static_cast<Protocol>(info.protocol))),
+      rixhub_endpoint_(rixhub_endpoint) {
+  server_ = factory_.create_acceptor(Endpoint(info_.endpoint.address, info_.endpoint.port));
   if (!server_) {
-    shutdown();
-    return;
-  }
-
-  if (!server_->set_reuse_address(true)) {
-    shutdown();
-    return;
-  }
-  if (!server_->bind(Endpoint(info_.endpoint.address, info_.endpoint.port))) {
-    shutdown();
-    return;
-  }
-  if (!server_->listen(MAX_CONN)) {
     shutdown();
     return;
   }
@@ -68,11 +55,7 @@ Action::Action(const sys_msgs::ActInfo& info, SocketFactory socket_factory, cons
   info_.endpoint.port = server_endpoint.port;
 
   // Register publisher with rixhub
-  auto client = socket_factory_();
-  if (!client->connect(rixhub_endpoint_)) {
-    shutdown();
-    return;
-  }
+  auto client = factory_.create_stream(rixhub_endpoint_, true);
   if (!client->send_message(OPCODE::ACT_REGISTER, info_)) {
     shutdown();
     return;
@@ -91,7 +74,7 @@ Action::Action(const sys_msgs::ActInfo& info, SocketFactory socket_factory, cons
 
   registered_flag_ = true;
 
-  Log::debug << "Action created for \"" << info_.name << "\"." << std::endl;
+  Log::debug << "Action created for \"" << info_.name << "\".";
 
   if (MULTITHREADED) {
     acceptor_.spin_thread = std::thread([this]() { this->acceptor_.spin(); });
@@ -99,9 +82,9 @@ Action::Action(const sys_msgs::ActInfo& info, SocketFactory socket_factory, cons
   }
 }
 
-Action::ActAcceptor::ActAcceptor(Action& parent) : parent(parent) {}
+ActionImpl::ActAcceptor::ActAcceptor(ActionImpl& parent) : parent(parent) {}
 
-void Action::ActAcceptor::on_spin() {
+void ActionImpl::ActAcceptor::on_spin() {
   std::lock_guard<std::mutex> guard(parent.mutex_);
   if (!parent.ok() || !parent.callback_) {
     return;
@@ -128,7 +111,7 @@ void Action::ActAcceptor::on_spin() {
     status.error = -1;
     conn->send_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
     Log::debug << "Rejected ActionClient connection for \"" << parent.info_.name << "\" (already connected)."
-               << std::endl;
+              ;
     return;
   }
 
@@ -136,7 +119,7 @@ void Action::ActAcceptor::on_spin() {
   if (operation.opcode != OPCODE::ACT_GOAL_MESSAGE) {
     status.error = -1;
     conn->send_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
-    Log::debug << "Rejected ActionClient connection for \"" << parent.info_.name << "\" (invalid opcode)." << std::endl;
+    Log::debug << "Rejected ActionClient connection for \"" << parent.info_.name << "\" (invalid opcode).";
     return;
   }
 
@@ -145,7 +128,7 @@ void Action::ActAcceptor::on_spin() {
     status.error = -1;
     conn->send_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
     Log::debug << "Rejected ActionClient connection for \"" << parent.info_.name << "\" (invalid goal message)."
-               << std::endl;
+              ;
     return;
   }
 
@@ -156,14 +139,14 @@ void Action::ActAcceptor::on_spin() {
   }
 
   parent.connection_ = conn;
-  Log::debug << "Accepted ActionClient connection for \"" << parent.info_.name << "\"." << std::endl;
+  Log::debug << "Accepted ActionClient connection for \"" << parent.info_.name << "\".";
 
   if (parent.goal_callback_) {
     parent.goal_callback_();
   }
 }
 
-void Action::on_spin() {
+void ActionImpl::on_spin() {
   if (!MULTITHREADED) {
     acceptor_.spin_once();
   }
@@ -186,7 +169,7 @@ void Action::on_spin() {
     case OPCODE::ACT_CANCEL_MESSAGE: {
       // Handle cancel message
       connection_ = nullptr;
-      Log::debug << "Received cancel for action \"" << info_.name << "\"." << std::endl;
+      Log::debug << "Received cancel for action \"" << info_.name << "\".";
       return;
     }
     case OPCODE::ACT_PREEMPT_MESSAGE: {
@@ -200,7 +183,7 @@ void Action::on_spin() {
         connection_ = nullptr;
         return;
       }
-      Log::debug << "Received preempt for action \"" << info_.name << "\"." << std::endl;
+      Log::debug << "Received preempt for action \"" << info_.name << "\".";
       if (preempt_callback_) {
         preempt_callback_();
       }
@@ -211,7 +194,7 @@ void Action::on_spin() {
       connection_->send_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
       // Invalid opcode, close connection
       connection_ = nullptr;
-      Log::debug << "Received invalid opcode for action \"" << info_.name << "\"." << std::endl;
+      Log::debug << "Received invalid opcode for action \"" << info_.name << "\".";
       return;
     }
     }
@@ -225,7 +208,7 @@ void Action::on_spin() {
       connection_ = nullptr;
       return;
     }
-    Log::debug << "Sent result for action \"" << info_.name << "\"." << std::endl;
+    Log::debug << "Sent result for action \"" << info_.name << "\".";
     // Close the connection after sending the result
     connection_ = nullptr;
   } else {
@@ -234,8 +217,25 @@ void Action::on_spin() {
       connection_ = nullptr;
       return;
     }
-    Log::debug << "Sent feedback for action \"" << info_.name << "\"." << std::endl;
+    Log::debug << "Sent feedback for action \"" << info_.name << "\".";
   }
 }
 
+void ActionImpl::set_callback(CallbackUntyped callback,
+                              std::shared_ptr<Message> goal_instance,
+                              std::shared_ptr<Message> feedback_instance,
+                              std::shared_ptr<Message> result_instance) {
+  if (goal_instance->hash() != info_.goal_hash || feedback_instance->hash() != info_.feedback_hash ||
+      result_instance->hash() != info_.result_hash) {
+    Log::warn << "Message type mismatch in set_callback.";
+    return;
+  }
+  std::lock_guard<std::mutex> guard(mutex_);
+  callback_ = std::move(callback);
+  goal_instance_ = std::move(goal_instance);
+  feedback_instance_ = std::move(feedback_instance);
+  result_instance_ = std::move(result_instance);
+}
+
+} // namespace detail
 } // namespace rix

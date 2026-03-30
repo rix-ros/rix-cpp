@@ -21,7 +21,7 @@ TransformListener::TransformListener(Node& node,
           topic,
           [this](const geometry_msgs::TF& msg) {
             if (!graph_.update(msg)) {
-              Log::warn << "Failed to update transform from TF message." << std::endl;
+              Log::warn << "Failed to update transform from TF message.";
             }
           },
           endpoint)),

@@ -5,8 +5,8 @@
 
 #include "rix/geometry_msgs/Transform.hpp"
 #include "rix/geometry_msgs/Vector3.hpp"
-#include "rix/sensor_msgs/JointState.hpp"
 #include "rix/rob/msg_util.hpp"
+#include "rix/sensor_msgs/JointState.hpp"
 
 namespace rix {
 

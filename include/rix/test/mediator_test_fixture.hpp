@@ -8,16 +8,43 @@
 #include "rix/sys_msgs/SrvResponse.hpp"
 #include "rix/sys_msgs/Status.hpp"
 #include "rix/sys_msgs/SubNotify.hpp"
-#include "rix/test/socket_builder.hpp"
-#include "rix/test/socket_manager.hpp"
+#include "rix/test/acceptor_builder.hpp"
+#include "rix/test/stream_builder.hpp"
+#include "rix/test/transport_manager.hpp"
 #include <gtest/gtest.h>
 
 namespace rix {
 
-// High-level test fixture for Node tests
+/**
+ * @brief Updated MediatorTestFixture for testing the Mediator (rixhub).
+ *
+ * Uses the new Acceptor/Stream interfaces. The Mediator's server acceptor
+ * is a MockAcceptor whose accept() calls pop MockStreams from the queue.
+ * Each MockStream is pre-programmed with the message sequence for one
+ * command (register, deregister, request, etc.).
+ */
 class MediatorTestFixture {
 public:
-  explicit MediatorTestFixture(const Endpoint& endpoint = Endpoint("127.0.0.1", 0)) : endpoint_(endpoint) {}
+  explicit MediatorTestFixture(const Endpoint& endpoint = Endpoint("127.0.0.1", 0))
+      : endpoint_(endpoint), accept_count_(0) {}
+
+  ~MediatorTestFixture() { reset_transport_factory(Protocol::TCP); }
+
+  // ---------------------------------------------------------------------------
+  // Server setup
+  // ---------------------------------------------------------------------------
+
+  MediatorTestFixture& create_server(const Endpoint& endpoint = Endpoint("127.0.0.1", 0),
+                                     const Endpoint& bound_endpoint = Endpoint("127.0.0.1", 48104),
+                                     int accept_count = 0) {
+    accept_count_ = accept_count;
+    bound_endpoint_ = bound_endpoint;
+    return *this;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Ping
+  // ---------------------------------------------------------------------------
 
   MediatorTestFixture& ping() {
     sys_msgs::Operation operation;
@@ -27,15 +54,18 @@ public:
     sys_msgs::Status status;
     status.error = 0;
 
-    auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket)
+    auto stream = transport_manager_.create_stream();
+    StreamBuilder(stream)
         .recv_message(operation, operation.get_prefix_len())
         .send_message(OPCODE::STATUS_RESPONSE, status)
         .close();
     return *this;
   }
 
-  // Configure node registration to succeed
+  // ---------------------------------------------------------------------------
+  // Node registration / deregistration
+  // ---------------------------------------------------------------------------
+
   MediatorTestFixture& register_node(const std::string& node_name, uint64_t node_id, bool should_fail = false) {
     sys_msgs::NodeInfo node_info;
     node_info.name = node_name;
@@ -45,26 +75,28 @@ public:
     status.error = should_fail ? -1 : 0;
     status.id = node_info.id;
 
-    auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket)
+    auto stream = transport_manager_.create_stream();
+    StreamBuilder(stream)
         .recv_message(OPCODE::NODE_REGISTER, node_info)
         .send_message(OPCODE::STATUS_RESPONSE, status)
         .close();
     return *this;
   }
 
-  // Configure node deregistration
   MediatorTestFixture& deregister_node(const std::string& node_name, uint64_t node_id) {
     sys_msgs::NodeInfo node_info;
     node_info.name = node_name;
     node_info.id = node_id;
 
-    auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket).recv_message(OPCODE::NODE_DEREGISTER, node_info).close();
+    auto stream = transport_manager_.create_stream();
+    StreamBuilder(stream).recv_message(OPCODE::NODE_DEREGISTER, node_info).close();
     return *this;
   }
 
-  // Configure publisher registration
+  // ---------------------------------------------------------------------------
+  // Publisher registration / deregistration
+  // ---------------------------------------------------------------------------
+
   MediatorTestFixture& register_publisher(uint64_t id,
                                           uint64_t node_id,
                                           const std::string& topic,
@@ -83,17 +115,14 @@ public:
     status.error = should_fail ? -1 : 0;
     status.id = pub_info.id;
 
-    // Registration socket
-    auto reg_socket = socket_manager_.create_socket();
-    SocketBuilder(reg_socket)
+    auto stream = transport_manager_.create_stream();
+    StreamBuilder(stream)
         .recv_message(OPCODE::PUB_REGISTER, pub_info)
         .send_message(OPCODE::STATUS_RESPONSE, status)
         .close();
-
     return *this;
   }
 
-  // Configure publisher deregistration
   MediatorTestFixture& deregister_publisher(uint64_t id,
                                             uint64_t node_id,
                                             const std::string& topic,
@@ -106,12 +135,16 @@ public:
     pub_info.topic_info.message_hash = message_hash;
     pub_info.endpoint.address = endpoint.address;
     pub_info.endpoint.port = endpoint.port;
-    auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket).recv_message(OPCODE::PUB_DEREGISTER, pub_info).close();
+
+    auto stream = transport_manager_.create_stream();
+    StreamBuilder(stream).recv_message(OPCODE::PUB_DEREGISTER, pub_info).close();
     return *this;
   }
 
-  // Configure subscriber registration
+  // ---------------------------------------------------------------------------
+  // Subscriber registration / deregistration
+  // ---------------------------------------------------------------------------
+
   MediatorTestFixture& register_subscriber(uint64_t id,
                                            uint64_t node_id,
                                            const std::string& topic,
@@ -130,17 +163,14 @@ public:
     status.error = should_fail ? -1 : 0;
     status.id = sub_info.id;
 
-    // Registration socket
-    auto reg_socket = socket_manager_.create_socket();
-    SocketBuilder(reg_socket)
+    auto stream = transport_manager_.create_stream();
+    StreamBuilder(stream)
         .recv_message(OPCODE::SUB_REGISTER, sub_info)
         .send_message(OPCODE::STATUS_RESPONSE, status)
         .close();
-
     return *this;
   }
 
-  // Configure subscriber deregistration
   MediatorTestFixture& deregister_subscriber(uint64_t id,
                                              uint64_t node_id,
                                              const std::string& topic,
@@ -154,12 +184,15 @@ public:
     sub_info.endpoint.address = endpoint.address;
     sub_info.endpoint.port = endpoint.port;
 
-    auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket).recv_message(OPCODE::SUB_DEREGISTER, sub_info).close();
+    auto stream = transport_manager_.create_stream();
+    StreamBuilder(stream).recv_message(OPCODE::SUB_DEREGISTER, sub_info).close();
     return *this;
   }
 
-  // Configure service registration
+  // ---------------------------------------------------------------------------
+  // Service registration / deregistration / request
+  // ---------------------------------------------------------------------------
+
   MediatorTestFixture& register_service(uint64_t id,
                                         uint64_t node_id,
                                         const std::string& service,
@@ -180,17 +213,14 @@ public:
     status.error = should_fail ? -1 : 0;
     status.id = srv_info.id;
 
-    // Registration socket
-    auto reg_socket = socket_manager_.create_socket();
-    SocketBuilder(reg_socket)
+    auto stream = transport_manager_.create_stream();
+    StreamBuilder(stream)
         .recv_message(OPCODE::SRV_REGISTER, srv_info)
         .send_message(OPCODE::STATUS_RESPONSE, status)
         .close();
-
     return *this;
   }
 
-  // Configure service deregistration
   MediatorTestFixture& deregister_service(uint64_t id,
                                           uint64_t node_id,
                                           const std::string& service,
@@ -206,12 +236,11 @@ public:
     srv_info.endpoint.address = endpoint.address;
     srv_info.endpoint.port = endpoint.port;
 
-    auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket).recv_message(OPCODE::SRV_DEREGISTER, srv_info).close();
+    auto stream = transport_manager_.create_stream();
+    StreamBuilder(stream).recv_message(OPCODE::SRV_DEREGISTER, srv_info).close();
     return *this;
   }
 
-  // Configure service client request
   MediatorTestFixture& request_service_client(uint64_t node_id,
                                               const std::string& service,
                                               std::array<uint64_t, 2> request_hash,
@@ -237,17 +266,18 @@ public:
       srv_res.srv_info.endpoint.port = endpoint.port;
     }
 
-    // Registration socket
-    auto reg_socket = socket_manager_.create_socket();
-    SocketBuilder(reg_socket)
+    auto stream = transport_manager_.create_stream();
+    StreamBuilder(stream)
         .recv_message(OPCODE::SRV_REQUEST, srv_req)
         .send_message(OPCODE::SRV_RESPONSE, srv_res)
         .close();
-
     return *this;
   }
 
-  // Configure action registration
+  // ---------------------------------------------------------------------------
+  // Action registration / deregistration / request
+  // ---------------------------------------------------------------------------
+
   MediatorTestFixture& register_action(uint64_t id,
                                        uint64_t node_id,
                                        const std::string& action,
@@ -270,16 +300,14 @@ public:
     status.error = should_fail ? -1 : 0;
     status.id = act_info.id;
 
-    // Registration socket
-    auto reg_socket = socket_manager_.create_socket();
-    SocketBuilder(reg_socket)
+    auto stream = transport_manager_.create_stream();
+    StreamBuilder(stream)
         .recv_message(OPCODE::ACT_REGISTER, act_info)
         .send_message(OPCODE::STATUS_RESPONSE, status)
         .close();
     return *this;
   }
 
-  // Configure action deregistration
   MediatorTestFixture& deregister_action(uint64_t id,
                                          uint64_t node_id,
                                          const std::string& action,
@@ -292,12 +320,11 @@ public:
     act_info.endpoint.address = endpoint.address;
     act_info.endpoint.port = endpoint.port;
 
-    auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket).recv_message(OPCODE::ACT_DEREGISTER, act_info).close();
+    auto stream = transport_manager_.create_stream();
+    StreamBuilder(stream).recv_message(OPCODE::ACT_DEREGISTER, act_info).close();
     return *this;
   }
 
-  // Configure action client request
   MediatorTestFixture& request_action_client(uint64_t node_id,
                                              const std::string& action,
                                              std::array<uint64_t, 2> goal_hash,
@@ -325,16 +352,43 @@ public:
       act_res.act_info.endpoint.address = endpoint.address;
       act_res.act_info.endpoint.port = endpoint.port;
     }
-    // Registration socket
-    auto reg_socket = socket_manager_.create_socket();
-    SocketBuilder(reg_socket)
+
+    auto stream = transport_manager_.create_stream();
+    StreamBuilder(stream)
         .recv_message(OPCODE::ACT_REQUEST, act_req)
         .send_message(OPCODE::ACT_RESPONSE, act_res)
         .close();
     return *this;
   }
 
-  // Configure parameter get request
+  // ---------------------------------------------------------------------------
+  // Parameters and system info
+  // ---------------------------------------------------------------------------
+
+  MediatorTestFixture& request_parameter_set(uint64_t node_id,
+                                             const std::string& name,
+                                             std::shared_ptr<Message> value,
+                                             bool should_fail = false) {
+    sys_msgs::ParamInfo param_info;
+    param_info.id = node_id;
+    param_info.name = name;
+    param_info.message_hash = value->hash();
+    param_info.data.resize(value->size());
+    size_t offset = 0;
+    value->serialize(param_info.data.data(), offset);
+
+    sys_msgs::Status status;
+    status.error = should_fail ? -1 : 0;
+    status.id = param_info.id;
+
+    auto stream = transport_manager_.create_stream();
+    StreamBuilder(stream)
+        .recv_message(OPCODE::PARAM_SET_REQUEST, param_info)
+        .send_message(OPCODE::STATUS_RESPONSE, status)
+        .close();
+    return *this;
+  }
+
   MediatorTestFixture& request_parameter_get(uint64_t node_id,
                                              const std::string& name,
                                              std::shared_ptr<Message> value,
@@ -354,78 +408,61 @@ public:
       value->serialize(response.data.data(), offset);
     }
 
-    auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket)
+    auto stream = transport_manager_.create_stream();
+    StreamBuilder(stream)
         .recv_message(OPCODE::PARAM_GET_REQUEST, request)
         .send_message(OPCODE::PARAM_GET_RESPONSE, response)
         .close();
     return *this;
   }
 
-  // Configure parameter set request
-  MediatorTestFixture& request_parameter_set(uint64_t node_id,
-                                             const std::string& name,
-                                             std::shared_ptr<Message> value,
-                                             bool should_fail = false) {
-    sys_msgs::ParamInfo param_info;
-    param_info.id = node_id;
-    param_info.name = name;
-    param_info.message_hash = value->hash();
-    param_info.data.resize(value->size());
-    size_t offset = 0;
-    value->serialize(param_info.data.data(), offset);
-
-    sys_msgs::Status status;
-    status.error = should_fail ? -1 : 0;
-    status.id = param_info.id;
-
-    auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket)
-        .recv_message(OPCODE::PARAM_SET_REQUEST, param_info)
-        .send_message(OPCODE::STATUS_RESPONSE, status)
-        .close();
-    return *this;
-  }
-
-  // Configure system info get request
   MediatorTestFixture& request_system_info(uint64_t node_id, const sys_msgs::SystemInfo& info) {
-    auto socket = socket_manager_.create_socket();
     std_msgs::UInt64 id;
     id.data = node_id;
-    SocketBuilder(socket)
+
+    auto stream = transport_manager_.create_stream();
+    StreamBuilder(stream)
         .recv_message(OPCODE::SYSTEM_GET_REQUEST, id)
         .send_message(OPCODE::SYSTEM_GET_RESPONSE, info)
         .close();
     return *this;
   }
 
-  // Configure subscriber notification
+  // ---------------------------------------------------------------------------
+  // Subscriber notification (Mediator sends to subscriber endpoint)
+  // ---------------------------------------------------------------------------
+
   MediatorTestFixture& notify_subscriber(uint64_t id,
                                          const Endpoint& endpoint,
                                          const std::string& topic,
                                          std::array<uint64_t, 2> message_hash,
                                          const sys_msgs::SubNotify& notify) {
-    auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket).connect(endpoint).send_message(OPCODE::SUB_NOTIFY, notify).close();
+    auto stream = transport_manager_.create_stream();
+    StreamBuilder(stream).send_message(OPCODE::SUB_NOTIFY, notify).close();
     return *this;
   }
 
-  // Configure server
-  MediatorTestFixture& create_server(const Endpoint& endpoint = Endpoint("127.0.0.1", 0),
-                                     const Endpoint& bound_endpoint = Endpoint("127.0.0.1", 8001),
-                                     int accept_count = 0) {
-    auto socket = socket_manager_.create_socket();
-    SocketBuilder(socket).as_server(
-        endpoint, bound_endpoint, [this]() { return this->socket_manager_.get_factory()(); }, accept_count);
-    return *this;
-  }
+  // ---------------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------------
 
-  // Build and return the configured node
-  std::unique_ptr<Mediator> build() { return std::make_unique<Mediator>(endpoint_, socket_manager_.get_factory()); }
+  std::unique_ptr<Mediator> build() {
+    // Create the server acceptor and wire it up
+    auto acceptor = transport_manager_.create_acceptor();
+    AcceptorBuilder(acceptor).as_server(bound_endpoint_, accept_count_, [this]() {
+      return transport_manager_.get_factory().create_stream(Endpoint{}, true);
+    });
+
+    // Inject mock transport
+    set_transport_factory(Protocol::TCP, &transport_manager_.get_factory());
+    return std::make_unique<Mediator>(endpoint_);
+  }
 
 private:
-  SocketManager socket_manager_;
+  TransportManager transport_manager_;
   Endpoint endpoint_;
+  Endpoint bound_endpoint_{Endpoint("127.0.0.1", 48104)};
+  int accept_count_ = 0;
 };
 
 } // namespace rix

@@ -1,6 +1,6 @@
+#include "rix/rix.hpp"
 #include "rix/std_msgs/String.hpp"
 #include "rix/std_msgs/UInt32.hpp"
-#include "rix/rix.hpp"
 
 using namespace rix;
 

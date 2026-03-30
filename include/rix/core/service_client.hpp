@@ -9,32 +9,58 @@
 
 namespace rix {
 
-class Node; // Forward declaration
-
-class ServiceClient final : public Spinner {
-  friend class Node;
-
+class ServiceClient : public Spinner {
 public:
-  ServiceClient(const ServiceClient&) = delete;
-  ServiceClient& operator=(const ServiceClient&) = delete;
-  ServiceClient(ServiceClient&&) = delete;
-  ServiceClient& operator=(ServiceClient&&) = delete;
-
-  ~ServiceClient() override;
-
-  bool call(const Message& request, Message& response);
-
-private:
-  sys_msgs::SrvRequest request_;
-  SocketFactory socket_factory_;
-  Endpoint endpoint_;
-  std::thread spin_thread_{};
-
-  using Spinner::spin;
-  using Spinner::spin_once;
-  void on_spin() override;
-
-  ServiceClient(const sys_msgs::SrvRequest& request, SocketFactory factory, const Endpoint& rixhub_endpoint);
+  virtual ~ServiceClient() = default;
+  virtual bool call(const Message& request, Message& response) = 0;
 };
 
+namespace detail {
+
+class ServiceClientImpl final : public ServiceClient {
+public:
+  /**
+   * @brief Constructs a ServiceClientImpl with the given SrvRequest, socket factory, and RIXHub endpoint.
+   * @param request The SrvRequest message containing service request details.
+   * @param factory The socket factory to create sockets.
+   * @param rixhub_endpoint The RIXHub endpoint.
+   */
+  ServiceClientImpl(const sys_msgs::SrvRequest& request, const Endpoint& rixhub_endpoint);
+
+  // Disable copy and move semantics
+  ServiceClientImpl(const ServiceClientImpl&) = delete;
+  ServiceClientImpl& operator=(const ServiceClientImpl&) = delete;
+  ServiceClientImpl(ServiceClientImpl&&) = delete;
+  ServiceClientImpl& operator=(ServiceClientImpl&&) = delete;
+
+  /**
+   * @brief Destructor. Cleans up the ServiceClientImpl.
+   */
+  ~ServiceClientImpl() override;
+
+  /**
+   * @brief Calls the service with the given request and fills the response.
+   * @param request The request message.
+   * @param response The response message to be filled.
+   * @return true if the call was successful, false otherwise.
+   */
+  bool call(const Message& request, Message& response) override;
+
+private:
+  sys_msgs::SrvRequest request_; ///< The service request information.
+  TransportFactory factory_;     ///< Socket factory function.
+  Endpoint endpoint_;            ///< Endpoint of the service.
+  std::thread spin_thread_{};    ///< Thread running the spin loop.
+
+  // Disable public spin methods (only Node can spin the ServiceClientImpl)
+  using Spinner::spin;
+  using Spinner::spin_once;
+
+  /**
+   * @brief Internal spin implementation for the ServiceClientImpl.
+   */
+  void on_spin() override;
+};
+
+} // namespace detail
 } // namespace rix

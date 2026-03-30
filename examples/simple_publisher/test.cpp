@@ -1,115 +1,38 @@
-#include "rix/test/test_fixture.hpp"
+#include "rix/test/node_test_harness.hpp"
 #include "simple_publisher.hpp"
 #include <gtest/gtest.h>
 
 using namespace rix;
+using namespace rix::test;
 
 TEST(SimplePublisherTest, Create) {
-  sys_msgs::NodeInfo node_info;
-  sys_msgs::PubInfo pub_info;
-  TestFixture()
-      .create_node("simple_publisher", node_info)
-      .create_publisher<std_msgs::Header>("/chatter", pub_info, node_info)
-      .destroy_node(node_info)
-      .destroy_publisher(pub_info)
-      .build<SimplePublisher>([](TestFixture& fixture) {
-        SimplePublisher node(1.0, 0);
-        EXPECT_TRUE(node.ok());
-      });
+  NodeTestHarness harness;
+  harness.expect_publisher<rix::std_msgs::Header>("/chatter", 0);
+  auto& node = harness.create<SimplePublisher>(1.0);
+  EXPECT_TRUE(node.ok());
 }
 
-TEST(SimplePublisherTest, CreateNodeRegisterFailure) {
-  sys_msgs::NodeInfo node_info;
-  TestFixture()
-      .create_node("simple_publisher", node_info, true) // Simulate failure
-      .build<SimplePublisher>([](TestFixture& fixture) {
-        SimplePublisher node(1.0, 0);
-        EXPECT_FALSE(node.ok());
-      });
-}
+TEST(SimplePublisherTest, SendMessages) {
+  NodeTestHarness harness;
+  auto& capture = harness.expect_publisher<rix::std_msgs::Header>("/chatter", 1);
+  auto& node = harness.create<SimplePublisher>(1.0);
+  EXPECT_TRUE(node.ok());
 
-TEST(SimplePublisherTest, CreatePublisherRegisterFailure) {
-  sys_msgs::NodeInfo node_info;
-  sys_msgs::PubInfo pub_info;
-  TestFixture()
-      .create_node("simple_publisher", node_info)
-      .create_publisher<std_msgs::Header>("/chatter", pub_info, node_info, true) // Simulate failure
-      .destroy_node(node_info)
-      .build<SimplePublisher>([](TestFixture& fixture) {
-        SimplePublisher node(1.0, 0);
-        EXPECT_FALSE(node.ok());
-      });
-}
-
-TEST(SimplePublisherTest, SpinWithOperationNotifications) {
-  std::vector<std::shared_ptr<std_msgs::Header>> messages;
-  for (int i = 0; i < 5; i++) {
-    auto msg = std::make_shared<std_msgs::Header>();
-    msg->seq = i + 1;
-    msg->frame_id = "Hello, world!";
-    msg->stamp.sec = i + 1;
-    msg->stamp.nsec = 0;
-    messages.push_back(msg);
+  for (int i = 0; i < 3; i++) {
+    harness.advance_time(1.0);
+    harness.spin(1);
   }
 
-  std::shared_ptr<MockClock> clock;
-  sys_msgs::NodeInfo node_info;
-  sys_msgs::PubInfo pub_info;
-  TestFixture()
-      .enable_clock(clock)
-      .create_node("simple_publisher", node_info)
-      .create_publisher<std_msgs::Header>("/chatter", pub_info, node_info, false, 1)
-      .enable_operation_notifications()
-      .accept_subscriber(messages)
-      .disable_operation_notifications()
-      .destroy_node(node_info)
-      .destroy_publisher(pub_info)
-      .build<SimplePublisher>([clock](TestFixture& fixture) {
-        SimplePublisher node(1.0, 0);
-        auto conn = fixture.get_connection_socket(0);
-
-        EXPECT_TRUE(node.ok());
-        for (int i = 0; i < 5; i++) {
-          clock->sleep_for(Duration(1.0));
-          node.spin_once();
-          EXPECT_TRUE(conn->wait_for_operations(1, std::chrono::milliseconds(1250)));
-        }
-      });
+  EXPECT_EQ(capture.message_count(), 3u);
+  for (size_t i = 0; i < capture.message_count(); i++) {
+    EXPECT_EQ(capture.message(i).seq, static_cast<uint32_t>(i + 1));
+    EXPECT_EQ(capture.message(i).frame_id, "Hello!");
+  }
 }
 
-// Recommended way to run tests for multithreaded nodes that use poller
-TEST(SimplePublisherTest, SpinWithPollerAndOperationNotifications) {
-  std::vector<std::shared_ptr<std_msgs::Header>> messages;
-  for (int i = 0; i < 5; i++) {
-    auto msg = std::make_shared<std_msgs::Header>();
-    msg->seq = i + 1;
-    msg->frame_id = "Hello, world!";
-    msg->stamp.sec = i + 1;
-    msg->stamp.nsec = 0;
-    messages.push_back(msg);
-  }
-
-  std::shared_ptr<MockClock> clock;
-  sys_msgs::NodeInfo node_info;
-  sys_msgs::PubInfo pub_info;
-  TestFixture()
-      .enable_clock(clock)
-      .enable_poller(5)
-      .enable_operation_notifications()
-      .create_node("simple_publisher", node_info)
-      .create_publisher<std_msgs::Header>("/chatter", pub_info, node_info, false, 1)
-      .accept_subscriber(messages)
-      .destroy_node(node_info)
-      .destroy_publisher(pub_info)
-      .build<SimplePublisher>([clock](TestFixture& fixture) {
-        SimplePublisher node(1.0, 0);
-        auto conn = fixture.get_connection_socket(0);
-
-        EXPECT_TRUE(node.ok());
-        for (int i = 0; i < 5; i++) {
-          clock->sleep_for(Duration(1.0));
-          node.spin_once();
-          EXPECT_TRUE(conn->wait_for_operations(1, std::chrono::milliseconds(1250)));
-        }
-      });
+TEST(SimplePublisherTest, CreateFail) {
+  NodeTestHarness harness;
+  harness.node_registration_fails();
+  auto& node = harness.create<SimplePublisher>(1.0);
+  EXPECT_FALSE(node.ok());
 }

@@ -9,7 +9,7 @@ int main(int argc, char** argv) {
   parser.add<int>("port", "The port for the subscriber server.", 'p', 8003);
 
   if (!parser.parse(argc, argv)) {
-    Log::error << "Failed to parse arguments." << std::endl;
+    Log::error << "Failed to parse arguments.";
     return 1;
   }
 
@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
 
   auto simple_action = std::make_shared<SimpleAction>(max_iters, port);
   if (!simple_action->ok()) {
-    Log::error << "Failed to create simple_action." << std::endl;
+    Log::error << "Failed to create simple_action.";
     return 1;
   }
 

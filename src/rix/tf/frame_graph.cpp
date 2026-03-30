@@ -26,7 +26,6 @@ bool FrameGraph::exists(const std::string& name) const { return name_to_index_.f
 
 FrameGraph::Iterator FrameGraph::get_root() const { return Iterator(*this, 0); }
 
-/**< TODO: Implement the get_leaves method. */
 std::vector<std::string> FrameGraph::get_leaves() const {
   std::vector<std::string> leaves;
   for (size_t i = 1; i < graph_.size(); ++i) {
@@ -45,7 +44,6 @@ bool FrameGraph::update(const geometry_msgs::TF& tf) {
   return true;
 }
 
-/**< TODO: Implement the update method. */
 bool FrameGraph::update(const geometry_msgs::TransformStamped& transform) {
   // If the parent frame does not exist, return false because there is no connection to the graph
   auto parent_it = name_to_index_.find(transform.header.frame_id);
@@ -80,7 +78,6 @@ bool FrameGraph::update(const geometry_msgs::TransformStamped& transform) {
   return true;
 }
 
-/**< TODO: Implement the get_transform method. */
 bool FrameGraph::get_transform(const std::string& target_frame,
                                const std::string& source_frame,
                                const Time& time,
@@ -150,7 +147,6 @@ FrameGraph::Iterator FrameGraph::find(const std::string& name) const {
   return end();
 }
 
-/**< TODO: Implement the find_nearest_ancestor method. */
 FrameGraph::Iterator FrameGraph::find_nearest_ancestor(Iterator frame_a, Iterator frame_b) {
   while (frame_a != frame_b) {
     if (frame_a < frame_b) {

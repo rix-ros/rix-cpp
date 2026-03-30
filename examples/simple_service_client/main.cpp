@@ -9,7 +9,7 @@ int main(int argc, char** argv) {
   parser.add<double>("rate", "The publish rate in Hz.", 'r', 1.0);
 
   if (!parser.parse(argc, argv)) {
-    Log::error << "Failed to parse arguments." << std::endl;
+    Log::error << "Failed to parse arguments.";
     return 1;
   }
 
@@ -18,7 +18,7 @@ int main(int argc, char** argv) {
 
   SimpleServiceClient node(rate);
   if (!node.ok()) {
-    Log::error << "Failed to create node." << std::endl;
+    Log::error << "Failed to create node.";
     return 1;
   }
   node.spin();

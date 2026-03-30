@@ -2,28 +2,24 @@
 
 SimpleActionClient::SimpleActionClient(double rate) : Node(NAME) {
   if (!ok()) {
-    Log::error << "Failed to create node." << std::endl;
+    Log::error << "Failed to create node.";
     return;
   }
 
-  act_cli_ = create_action_client<std_msgs::Double, std_msgs::Float, std_msgs::Double>("/exponent");
+  act_cli_ = create_action_client<std_msgs::Double, std_msgs::Float, std_msgs::Double>(
+      "/exponent",
+      [](const std_msgs::Float& feedback) { Log::info << "Received feedback: " << feedback.data << "\%"; },
+      [](const std_msgs::Double& result) { Log::info << "Received result: " << result.data; });
   if (!act_cli_->ok()) {
     shutdown();
-    Log::error << "Failed to create action client." << std::endl;
+    Log::error << "Failed to create action client.";
     return;
   }
 
-  act_cli_->set_feedback_callback<std_msgs::Float>([](const std_msgs::Float& feedback) {
-    Log::info << "Received feedback: " << feedback.data << "\%" << std::endl;
-  });
-  act_cli_->set_result_callback<std_msgs::Double>(
-      [](const std_msgs::Double& result) { Log::info << "Received result: " << result.data << std::endl; });
-
-  std::shared_ptr<double> i_ptr = std::make_shared<double>(0.0);
   auto timer = create_timer(Duration(1.0 / rate), &SimpleActionClient::timer_callback, this);
   if (!timer->ok()) {
     shutdown();
-    Log::error << "Failed to create timer." << std::endl;
+    Log::error << "Failed to create timer.";
     return;
   }
 }
@@ -35,5 +31,5 @@ void SimpleActionClient::timer_callback(const TimerCallback::Event& event) {
   if (!act_cli_->dispatch(goal)) {
     return;
   }
-  Log::info << "Sent request: " << goal.data << std::endl;
+  Log::info << "Sent request: " << goal.data;
 }
