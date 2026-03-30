@@ -107,7 +107,7 @@ jobs:
             cmake ninja-build \
             libeigen3-dev \
             nlohmann-json3-dev \
-            libgtest-dev \
+            libgtest-dev libgmock-dev \
             ${{ matrix.extra_apt }}
 
       # ── Install system packages (macOS) ────────────────────────────────────
@@ -201,7 +201,7 @@ jobs:
             clang-18 clang-tidy-18 \
             libeigen3-dev \
             nlohmann-json3-dev \
-            libgtest-dev
+            libgtest-dev libgmock-dev
 
       - name: Install rix-msg
         if: steps.cache-deps.outputs.cache-hit != 'true'
