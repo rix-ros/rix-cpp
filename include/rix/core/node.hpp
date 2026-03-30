@@ -345,7 +345,7 @@ std::shared_ptr<Publisher>
 Node::create_publisher(const std::string& topic, const Endpoint& endpoint, Protocol protocol) {
   static_assert(std::is_base_of<Message, TMsg>::value, "TMsg must be a subclass of Message.");
   if (!ok()) {
-    Log::error << "Node is shutdown, cannot create publisher." << std::endl;
+    Log::error << "Node is shutdown, cannot create publisher.";
     return nullptr;
   }
   // Get topic information
@@ -376,7 +376,7 @@ std::shared_ptr<Subscriber> Node::create_subscriber(const std::string& topic,
                                                     Protocol protocol) {
   static_assert(std::is_base_of<Message, TMsg>::value, "TMsg must be a subclass of Message.");
   if (!ok()) {
-    Log::error << "Node is shutdown, cannot create subscriber." << std::endl;
+    Log::error << "Node is shutdown, cannot create subscriber.";
     return nullptr;
   }
 
@@ -438,7 +438,7 @@ std::shared_ptr<Service> Node::create_service(const std::string& service,
   static_assert(std::is_base_of<Message, TResponse>::value, "TResponse must be a subclass of Message.");
 
   if (!ok()) {
-    Log::error << "Node is shutdown, cannot create service." << std::endl;
+    Log::error << "Node is shutdown, cannot create service.";
     return nullptr;
   }
 
@@ -495,7 +495,7 @@ std::shared_ptr<Action> Node::create_action(const std::string& action,
   static_assert(std::is_base_of<Message, TResult>::value, "TResult must be a subclass of Message.");
 
   if (!ok()) {
-    Log::error << "Node is shutdown, cannot create action." << std::endl;
+    Log::error << "Node is shutdown, cannot create action.";
     return nullptr;
   }
 
@@ -553,7 +553,7 @@ std::shared_ptr<ServiceClient> Node::create_service_client(const std::string& se
   static_assert(std::is_base_of<Message, TResponse>::value, "TResponse must be a subclass of Message.");
 
   if (!ok()) {
-    Log::error << "Node is shutdown, cannot create service client." << std::endl;
+    Log::error << "Node is shutdown, cannot create service client.";
     return nullptr;
   }
 
@@ -578,7 +578,7 @@ std::shared_ptr<ActionClient> Node::create_action_client(const std::string& acti
   static_assert(std::is_base_of<Message, TFeedback>::value, "TFeedback must be a subclass of Message.");
   static_assert(std::is_base_of<Message, TResult>::value, "TResult must be a subclass of Message.");
   if (!ok()) {
-    Log::error << "Node is shutdown, cannot create action client." << std::endl;
+    Log::error << "Node is shutdown, cannot create action client.";
     return nullptr;
   }
   sys_msgs::ActRequest action_request;

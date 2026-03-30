@@ -17,7 +17,7 @@ Mediator::Mediator(const Endpoint& rixhub_endpoint) : socket_factory_(get_transp
     return;
   }
 
-  Log::info << "rixhub started on " << server_->local_endpoint() << std::endl;
+  Log::info << "rixhub started on " << server_->local_endpoint();
 }
 
 Mediator::~Mediator() {}
@@ -37,7 +37,7 @@ void Mediator::on_spin() {
     return;
   }
 
-  Log::debug << "Received opcode: " << static_cast<int>(operation.opcode) << std::endl;
+  Log::debug << "Received opcode: " << static_cast<int>(operation.opcode);
 
   switch (operation.opcode) {
   case OPCODE::PING: {
@@ -105,7 +105,7 @@ void Mediator::on_spin() {
     break;
   }
   default: {
-    Log::warn << "Received invalid opcode: " << operation.opcode << std::endl;
+    Log::warn << "Received invalid opcode: " << operation.opcode;
     return;
   }
   }
@@ -137,7 +137,7 @@ void Mediator::handle_node_register(const sys_msgs::Operation& operation, std::s
 
   if (status.error == 0) {
     nodes_.insert({info.id, info});
-    Log::info << "Registered node \"" << info.name << "\"." << std::endl;
+    Log::info << "Registered node \"" << info.name << "\".";
   }
   conn->send_message(OPCODE::STATUS_RESPONSE, status);
 }
@@ -175,7 +175,7 @@ void Mediator::handle_pub_register(const sys_msgs::Operation& operation, std::sh
   }
 
   publishers_.insert({info.id, info});
-  Log::info << "Registered publisher on \"" << info.topic_info.name << "\"." << std::endl;
+  Log::info << "Registered publisher on \"" << info.topic_info.name << "\".";
 
   // Notify all subscribers of the new publisher on the
   // same topic
@@ -223,7 +223,7 @@ void Mediator::handle_sub_register(const sys_msgs::Operation& operation, std::sh
   }
 
   subscribers_.insert({info.id, info});
-  Log::info << "Registered subscriber on \"" << info.topic_info.name << "\"." << std::endl;
+  Log::info << "Registered subscriber on \"" << info.topic_info.name << "\".";
 
   // Notify the new subscriber of all publishers on the
   // same topic
@@ -270,7 +270,7 @@ void Mediator::handle_srv_register(const sys_msgs::Operation& operation, std::sh
   }
 
   services_.insert({info.id, info});
-  Log::info << "Registered service \"" << info.name << "\"." << std::endl;
+  Log::info << "Registered service \"" << info.name << "\".";
   conn->send_message(OPCODE::STATUS_RESPONSE, status);
 }
 
@@ -307,7 +307,7 @@ void Mediator::handle_act_register(const sys_msgs::Operation& operation, std::sh
   }
 
   actions_.insert({info.id, info});
-  Log::info << "Registered action \"" << info.name << "\"." << std::endl;
+  Log::info << "Registered action \"" << info.name << "\".";
   conn->send_message(OPCODE::STATUS_RESPONSE, status);
 }
 
@@ -320,7 +320,7 @@ void Mediator::handle_node_deregister(const sys_msgs::Operation& operation, std:
     return;
   }
   nodes_.erase(info.id);
-  Log::info << "Deregistered node \"" << info.name << "\"." << std::endl;
+  Log::info << "Deregistered node \"" << info.name << "\".";
 }
 
 void Mediator::handle_pub_deregister(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn) {
@@ -332,7 +332,7 @@ void Mediator::handle_pub_deregister(const sys_msgs::Operation& operation, std::
     return;
   }
   publishers_.erase(info.id);
-  Log::info << "Deregistered publisher on \"" << info.topic_info.name << "\"." << std::endl;
+  Log::info << "Deregistered publisher on \"" << info.topic_info.name << "\".";
 }
 
 void Mediator::handle_sub_deregister(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn) {
@@ -344,7 +344,7 @@ void Mediator::handle_sub_deregister(const sys_msgs::Operation& operation, std::
     return;
   }
   subscribers_.erase(info.id);
-  Log::info << "Deregistered subscriber on \"" << info.topic_info.name << "\"." << std::endl;
+  Log::info << "Deregistered subscriber on \"" << info.topic_info.name << "\".";
 }
 
 void Mediator::handle_srv_deregister(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn) {
@@ -356,7 +356,7 @@ void Mediator::handle_srv_deregister(const sys_msgs::Operation& operation, std::
     return;
   }
   services_.erase(info.id);
-  Log::info << "Deregistered service \"" << info.name << "\"." << std::endl;
+  Log::info << "Deregistered service \"" << info.name << "\".";
 }
 
 void Mediator::handle_act_deregister(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn) {
@@ -368,7 +368,7 @@ void Mediator::handle_act_deregister(const sys_msgs::Operation& operation, std::
     return;
   }
   actions_.erase(info.id);
-  Log::info << "Deregistered action \"" << info.name << "\"." << std::endl;
+  Log::info << "Deregistered action \"" << info.name << "\".";
 }
 
 void Mediator::handle_srv_request(const sys_msgs::Operation& operation, std::shared_ptr<Stream> conn) {

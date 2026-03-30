@@ -8,7 +8,7 @@ int main(int argc, char** argv) {
   parser.add<int>("port", "The port for the subscriber server.", 'p', 8001);
 
   if (!parser.parse(argc, argv)) {
-    Log::error << "Failed to parse arguments." << std::endl;
+    Log::error << "Failed to parse arguments.";
     return 1;
   }
 
@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
 
   auto simple_subscriber = std::make_shared<SimpleSubscriber>(port);
   if (!simple_subscriber->ok()) {
-    Log::error << "Failed to create simple_subscriber." << std::endl;
+    Log::error << "Failed to create simple_subscriber.";
     return 1;
   }
 

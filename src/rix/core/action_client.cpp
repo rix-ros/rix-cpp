@@ -171,7 +171,7 @@ void ActionClientImpl::on_spin() {
 
 void ActionClientImpl::set_feedback_callback(CallbackUntyped callback, std::shared_ptr<Message> feedback_instance) {
   if (feedback_instance->hash() != request_.feedback_hash) {
-    Log::warn << "Message type mismatch in set_callback." << std::endl;
+    Log::warn << "Message type mismatch in set_callback.";
     return;
   }
   std::lock_guard<std::mutex> guard(mutex_);
@@ -181,7 +181,7 @@ void ActionClientImpl::set_feedback_callback(CallbackUntyped callback, std::shar
 
 void ActionClientImpl::set_result_callback(CallbackUntyped callback, std::shared_ptr<Message> result_instance) {
   if (result_instance->hash() != request_.result_hash) {
-    Log::warn << "Message type mismatch in set_callback." << std::endl;
+    Log::warn << "Message type mismatch in set_callback.";
     return;
   }
   std::lock_guard<std::mutex> guard(mutex_);

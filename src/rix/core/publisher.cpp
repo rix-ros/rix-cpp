@@ -48,7 +48,7 @@ PublisherImpl::PublisherImpl(const sys_msgs::PubInfo& info, Endpoint rixhub_endp
 
   registered_flag_ = true;
 
-  Log::debug << "PublisherImpl created on topic \"" << info_.topic_info.name << "\"." << std::endl;
+  Log::debug << "PublisherImpl created on topic \"" << info_.topic_info.name << "\".";
 
   if (MULTITHREADED) {
     spin_thread_ = std::thread([this]() { this->spin(); });
@@ -64,7 +64,7 @@ PublisherImpl::~PublisherImpl() {
     }
     client->send_message(OPCODE::PUB_DEREGISTER, info_);
   }
-  Log::debug << "PublisherImpl on topic \"" << info_.topic_info.name << "\" destroyed." << std::endl;
+  Log::debug << "PublisherImpl on topic \"" << info_.topic_info.name << "\" destroyed.";
 
   if (MULTITHREADED) {
     shutdown();
@@ -81,7 +81,7 @@ void PublisherImpl::publish(const Message& msg) {
   // Ensure that the message hash matches the one that the publisher
   // was created with
   if (msg.hash() != info_.topic_info.message_hash) {
-    Log::warn << "Message type mismatch in publish." << std::endl;
+    Log::warn << "Message type mismatch in publish.";
     return;
   }
 
@@ -108,7 +108,7 @@ void PublisherImpl::publish(const Message& msg) {
   // Remove any clients that have exceptions
   for (const auto& conn : exceptional) {
     connections_.erase(conn);
-    Log::debug << "Removed exceptional subscriber from topic \"" << info_.topic_info.name << "\"." << std::endl;
+    Log::debug << "Removed exceptional subscriber from topic \"" << info_.topic_info.name << "\".";
   }
 
   // Send the message to each current connection
@@ -120,12 +120,12 @@ void PublisherImpl::publish(const Message& msg) {
     if (!conn->send_message(OPCODE::PUB_MESSAGE, msg)) {
       connections_.erase(conn);
       it++;
-      Log::debug << "Removed exceptional subscriber from topic \"" << info_.topic_info.name << "\"." << std::endl;
+      Log::debug << "Removed exceptional subscriber from topic \"" << info_.topic_info.name << "\".";
       continue;
     }
     it++;
   }
-  Log::debugv << "Published message on topic \"" << info_.topic_info.name << "\"." << std::endl;
+  Log::debugv << "Published message on topic \"" << info_.topic_info.name << "\".";
 }
 
 size_t PublisherImpl::get_subscriber_count() const {
@@ -151,7 +151,7 @@ void PublisherImpl::on_spin() {
   // Store the connection
   std::lock_guard<std::mutex> guard(connections_mutex_);
   Log::debug << "Accepted new subscriber at \"" << remote_endpoint.address << ":" << remote_endpoint.port
-             << "\" on topic \"" << info_.topic_info.name << "\"." << std::endl;
+             << "\" on topic \"" << info_.topic_info.name << "\".";
   connections_.insert(conn);
 }
 

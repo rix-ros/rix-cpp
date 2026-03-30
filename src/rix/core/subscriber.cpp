@@ -46,7 +46,7 @@ SubscriberImpl::SubscriberImpl(const sys_msgs::SubInfo& info, const Endpoint& ri
 
   registered_flag_ = true;
 
-  Log::debug << "SubscriberImpl created on topic \"" << info_.topic_info.name << "\"." << std::endl;
+  Log::debug << "SubscriberImpl created on topic \"" << info_.topic_info.name << "\".";
 
   if (MULTITHREADED) {
     sub_notify_acceptor_.spin_thread = std::thread([this]() { this->sub_notify_acceptor_.spin(); });
@@ -62,7 +62,7 @@ SubscriberImpl::~SubscriberImpl() {
     }
     client->send_message(OPCODE::SUB_DEREGISTER, info_);
   }
-  Log::debug << "SubscriberImpl on topic \"" << info_.topic_info.name << "\" destroyed." << std::endl;
+  Log::debug << "SubscriberImpl on topic \"" << info_.topic_info.name << "\" destroyed.";
 
   if (MULTITHREADED) {
     sub_notify_acceptor_.shutdown();
@@ -112,7 +112,7 @@ void SubscriberImpl::on_spin() {
   // Remove any clients that have exceptions
   for (const auto& client : exceptional) {
     clients_.erase(client);
-    Log::debug << "Removed exceptional publisher from topic \"" << info_.topic_info.name << "\"." << std::endl;
+    Log::debug << "Removed exceptional publisher from topic \"" << info_.topic_info.name << "\".";
   }
 
   auto it = readable.begin();
@@ -124,18 +124,18 @@ void SubscriberImpl::on_spin() {
     if (!client->recv_message(operation, *msg_instance_)) {
       clients_.erase(client);
       it++;
-      Log::debug << "Removed exceptional publisher from topic \"" << info_.topic_info.name << "\"." << std::endl;
+      Log::debug << "Removed exceptional publisher from topic \"" << info_.topic_info.name << "\".";
       continue;
     }
 
     if (operation.opcode != OPCODE::PUB_MESSAGE) {
       clients_.erase(client);
       it++;
-      Log::debug << "Removed exceptional publisher from topic \"" << info_.topic_info.name << "\"." << std::endl;
+      Log::debug << "Removed exceptional publisher from topic \"" << info_.topic_info.name << "\".";
       continue;
     }
 
-    Log::debugv << "Received message on topic \"" << info_.topic_info.name << "\"." << std::endl;
+    Log::debugv << "Received message on topic \"" << info_.topic_info.name << "\".";
     // Invoke the callback
     callback_(*msg_instance_);
     it++;
@@ -165,7 +165,7 @@ void SubscriberImpl::SubNotifyAcceptor::on_spin() {
     return;
   }
   if (operation.opcode != OPCODE::SUB_NOTIFY) {
-    Log::warn << "Received invalid opcode from rixhub." << std::endl;
+    Log::warn << "Received invalid opcode from rixhub.";
     return;
   }
 
@@ -179,13 +179,13 @@ void SubscriberImpl::SubNotifyAcceptor::on_spin() {
     client->set_blocking(true);
     parent.clients_.insert(client);
     Log::debug << "Connected to publisher at \"" << pub.endpoint.address << ":" << pub.endpoint.port << "\" on topic \""
-               << pub.topic_info.name << "\"." << std::endl;
+               << pub.topic_info.name << "\".";
   }
 }
 
 void SubscriberImpl::set_callback(CallbackUntyped callback, std::shared_ptr<Message> message) {
   if (message->hash() != info_.topic_info.message_hash) {
-    Log::warn << "Message type mismatch in set_callback." << std::endl;
+    Log::warn << "Message type mismatch in set_callback.";
     return;
   }
   std::lock_guard<std::mutex> guard(callback_mutex_);

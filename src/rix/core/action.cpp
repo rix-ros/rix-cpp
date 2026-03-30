@@ -74,7 +74,7 @@ ActionImpl::ActionImpl(const sys_msgs::ActInfo& info, const Endpoint& rixhub_end
 
   registered_flag_ = true;
 
-  Log::debug << "Action created for \"" << info_.name << "\"." << std::endl;
+  Log::debug << "Action created for \"" << info_.name << "\".";
 
   if (MULTITHREADED) {
     acceptor_.spin_thread = std::thread([this]() { this->acceptor_.spin(); });
@@ -111,7 +111,7 @@ void ActionImpl::ActAcceptor::on_spin() {
     status.error = -1;
     conn->send_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
     Log::debug << "Rejected ActionClient connection for \"" << parent.info_.name << "\" (already connected)."
-               << std::endl;
+              ;
     return;
   }
 
@@ -119,7 +119,7 @@ void ActionImpl::ActAcceptor::on_spin() {
   if (operation.opcode != OPCODE::ACT_GOAL_MESSAGE) {
     status.error = -1;
     conn->send_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
-    Log::debug << "Rejected ActionClient connection for \"" << parent.info_.name << "\" (invalid opcode)." << std::endl;
+    Log::debug << "Rejected ActionClient connection for \"" << parent.info_.name << "\" (invalid opcode).";
     return;
   }
 
@@ -128,7 +128,7 @@ void ActionImpl::ActAcceptor::on_spin() {
     status.error = -1;
     conn->send_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
     Log::debug << "Rejected ActionClient connection for \"" << parent.info_.name << "\" (invalid goal message)."
-               << std::endl;
+              ;
     return;
   }
 
@@ -139,7 +139,7 @@ void ActionImpl::ActAcceptor::on_spin() {
   }
 
   parent.connection_ = conn;
-  Log::debug << "Accepted ActionClient connection for \"" << parent.info_.name << "\"." << std::endl;
+  Log::debug << "Accepted ActionClient connection for \"" << parent.info_.name << "\".";
 
   if (parent.goal_callback_) {
     parent.goal_callback_();
@@ -169,7 +169,7 @@ void ActionImpl::on_spin() {
     case OPCODE::ACT_CANCEL_MESSAGE: {
       // Handle cancel message
       connection_ = nullptr;
-      Log::debug << "Received cancel for action \"" << info_.name << "\"." << std::endl;
+      Log::debug << "Received cancel for action \"" << info_.name << "\".";
       return;
     }
     case OPCODE::ACT_PREEMPT_MESSAGE: {
@@ -183,7 +183,7 @@ void ActionImpl::on_spin() {
         connection_ = nullptr;
         return;
       }
-      Log::debug << "Received preempt for action \"" << info_.name << "\"." << std::endl;
+      Log::debug << "Received preempt for action \"" << info_.name << "\".";
       if (preempt_callback_) {
         preempt_callback_();
       }
@@ -194,7 +194,7 @@ void ActionImpl::on_spin() {
       connection_->send_message(OPCODE::ACT_RESPONSE_MESSAGE, status);
       // Invalid opcode, close connection
       connection_ = nullptr;
-      Log::debug << "Received invalid opcode for action \"" << info_.name << "\"." << std::endl;
+      Log::debug << "Received invalid opcode for action \"" << info_.name << "\".";
       return;
     }
     }
@@ -208,7 +208,7 @@ void ActionImpl::on_spin() {
       connection_ = nullptr;
       return;
     }
-    Log::debug << "Sent result for action \"" << info_.name << "\"." << std::endl;
+    Log::debug << "Sent result for action \"" << info_.name << "\".";
     // Close the connection after sending the result
     connection_ = nullptr;
   } else {
@@ -217,7 +217,7 @@ void ActionImpl::on_spin() {
       connection_ = nullptr;
       return;
     }
-    Log::debug << "Sent feedback for action \"" << info_.name << "\"." << std::endl;
+    Log::debug << "Sent feedback for action \"" << info_.name << "\".";
   }
 }
 
@@ -227,7 +227,7 @@ void ActionImpl::set_callback(CallbackUntyped callback,
                               std::shared_ptr<Message> result_instance) {
   if (goal_instance->hash() != info_.goal_hash || feedback_instance->hash() != info_.feedback_hash ||
       result_instance->hash() != info_.result_hash) {
-    Log::warn << "Message type mismatch in set_callback." << std::endl;
+    Log::warn << "Message type mismatch in set_callback.";
     return;
   }
   std::lock_guard<std::mutex> guard(mutex_);

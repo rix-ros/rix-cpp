@@ -90,7 +90,7 @@ using namespace rix;
 int main() {
   Node node("timer_node");
   node.create_timer(Duration(1.0), [&](const TimerCallback::Event event) {
-    Log::info << "Timer tick!" << std::endl;
+    Log::info << "Timer tick!";
   });
   node.spin();
 }
@@ -139,7 +139,7 @@ using namespace rix;
 using rix::std_msgs::Header;
 
 void subscriber_callback(const Header &msg) {
-  Log::info << msg.frame_id << ", " << msg.seq << std::endl;
+  Log::info << msg.frame_id << ", " << msg.seq;
 }
 
 int main() {
@@ -163,7 +163,7 @@ using rix::std_msgs::UInt32;
 using rix::std_msgs::Header;
 
 void service_callback(const UInt32 &req, Header &res) {
-  Log::info << "Received request: " << req.data << std::endl;
+  Log::info << "Received request: " << req.data;
   res.frame_id = "Hello from service!";
   res.seq = req.data;
 }
@@ -195,7 +195,7 @@ int main() {
   req.data = 5;
   Header res;
   if (service_client->call(req, res)) {
-    Log::info << "Response: " << res.frame_id << ", " << res.seq << std::endl;
+    Log::info << "Response: " << res.frame_id << ", " << res.seq;
   }
   return 0;
 }
@@ -216,7 +216,7 @@ using rix::std_msgs::Header;
 
 bool action_callback(const UInt32 &goal, const Header &feedback, Header &result) {
   static int count = 0;
-  Log::info << "Received goal!" << std::endl;
+  Log::info << "Received goal!";
   count++;
   if (count < goal.data) {
     Header fb;
@@ -262,8 +262,8 @@ void timer_callback(const TimerCallback::Event &event) {
 int main() {
   Node node("action_client_node");
   act_cli = node.create_action_client<UInt32, Header, Header>("/my_action");
-  act_cli->set_feedback_callback([](const Header &msg) { Log::info << "Feedback: " << msg.seq << std::endl; });
-  act_cli->set_result_callback([](const Header &msg) { Log::info << "Result: " << msg.seq << std::endl; });
+  act_cli->set_feedback_callback([](const Header &msg) { Log::info << "Feedback: " << msg.seq; });
+  act_cli->set_result_callback([](const Header &msg) { Log::info << "Result: " << msg.seq; });
   node.create_timer(Duration(1.0), timer_callback);
   node.spin();
 }

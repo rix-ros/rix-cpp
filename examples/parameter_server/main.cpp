@@ -10,7 +10,7 @@ int main(int argc, char** argv) {
   parser.add<int>("port", "The port for the subscriber server.", 'p', 8002);
 
   if (!parser.parse(argc, argv)) {
-    Log::error << "Failed to parse arguments." << std::endl;
+    Log::error << "Failed to parse arguments.";
     return 1;
   }
 
@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
 
   auto simple_service = std::make_shared<ParameterServer>(port);
   if (!simple_service->ok()) {
-    Log::error << "Failed to create parameter_server." << std::endl;
+    Log::error << "Failed to create parameter_server.";
     return 1;
   }
 

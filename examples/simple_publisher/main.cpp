@@ -11,7 +11,7 @@ int main(int argc, char** argv) {
   parser.add<double>("rate", "The publish rate in Hz.", 'r', 1.0);
 
   if (!parser.parse(argc, argv)) {
-    Log::error << "Failed to parse arguments." << std::endl;
+    Log::error << "Failed to parse arguments.";
     return 1;
   }
 
@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
 
   auto simple_publisher = std::make_shared<SimplePublisher>(rate, port);
   if (!simple_publisher->ok()) {
-    Log::error << "Failed to create simple_publisher." << std::endl;
+    Log::error << "Failed to create simple_publisher.";
     return 1;
   }
 

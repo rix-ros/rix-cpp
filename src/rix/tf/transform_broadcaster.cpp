@@ -9,7 +9,7 @@ TransformBroadcaster::TransformBroadcaster(const std::shared_ptr<Node>& node,
 TransformBroadcaster::TransformBroadcaster(Node& node, const std::string& topic, const Endpoint& endpoint)
     : publisher_(node.create_publisher<geometry_msgs::TF>(topic, endpoint)) {
   if (!publisher_->ok()) {
-    Log::error << "TransformBroadcaster: Failed to create publisher" << std::endl;
+    Log::error << "TransformBroadcaster: Failed to create publisher";
   }
 }
 

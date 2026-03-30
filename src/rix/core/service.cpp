@@ -42,7 +42,7 @@ ServiceImpl::ServiceImpl(const sys_msgs::SrvInfo& info, const Endpoint& rixhub_e
 
   registered_flag_ = true;
 
-  Log::debug << "Service created for \"" << info_.name << "\"." << std::endl;
+  Log::debug << "Service created for \"" << info_.name << "\".";
 
   if (MULTITHREADED) {
     spin_thread_ = std::thread([this]() { this->spin(); });
@@ -65,7 +65,7 @@ ServiceImpl::~ServiceImpl() {
     }
   }
 
-  Log::debug << "ServiceImpl for \"" << info_.name << "\" destroyed." << std::endl;
+  Log::debug << "ServiceImpl for \"" << info_.name << "\" destroyed.";
 }
 
 void ServiceImpl::on_spin() {
@@ -99,14 +99,14 @@ void ServiceImpl::on_spin() {
   // Send response back
   conn->send_message(OPCODE::SRV_RESPONSE_MESSAGE, *response_instance_);
 
-  Log::debug << "Processed service request for \"" << info_.name << "\"." << std::endl;
+  Log::debug << "Processed service request for \"" << info_.name << "\".";
 }
 
 void ServiceImpl::set_callback(CallbackUntyped callback,
                                std::shared_ptr<Message> request_instance,
                                std::shared_ptr<Message> response_instance) {
   if (request_instance->hash() != info_.request_hash || response_instance->hash() != info_.response_hash) {
-    Log::warn << "Message type mismatch in set_callback." << std::endl;
+    Log::warn << "Message type mismatch in set_callback.";
     return;
   }
   std::lock_guard<std::mutex> guard(callback_mutex_);

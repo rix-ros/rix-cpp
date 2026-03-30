@@ -5,14 +5,14 @@
 
 SimplePublisher::SimplePublisher(double rate, int port) : rix::Node(NAME) {
   if (!this->ok()) {
-    rix::Log::error << "Failed to create node." << std::endl;
+    rix::Log::error << "Failed to create node.";
     return;
   }
 
   pub_ = this->template create_publisher<rix::std_msgs::Header>("/chatter", rix::Endpoint(rix::DEFAULT_IP, port));
 
   if (!pub_ || !pub_->ok()) {
-    rix::Log::error << "Failed to create publisher." << std::endl;
+    rix::Log::error << "Failed to create publisher.";
     this->shutdown();
     return;
   }

@@ -137,7 +137,7 @@ bool MediatorClientImpl::get_system_info(sys_msgs::SystemInfo& info) {
   if (operation.opcode != OPCODE::SYSTEM_GET_RESPONSE) {
     return false;
   }
-  Log::debug << "Retrieved system info from RIXHub." << std::endl;
+  Log::debug << "Retrieved system info from RIXHub.";
   return true;
 }
 

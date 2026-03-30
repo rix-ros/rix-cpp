@@ -57,7 +57,7 @@ void Node::on_spin() {
 
 std::shared_ptr<TimerCallback> Node::create_timer(const Duration& d, const TimerCallback::Callback& callback) {
   if (!ok()) {
-    Log::error << "Node is shutdown, cannot create timer." << std::endl;
+    Log::error << "Node is shutdown, cannot create timer.";
     return nullptr;
   }
 
@@ -70,7 +70,7 @@ std::shared_ptr<TimerCallback> Node::create_timer(const Duration& d, const Timer
 
 bool Node::get_system_info(sys_msgs::SystemInfo& info) {
   if (!ok()) {
-    Log::error << "Node is shutdown, cannot get system info." << std::endl;
+    Log::error << "Node is shutdown, cannot get system info.";
     return false;
   }
   return mediator_client_->get_system_info(info);
@@ -78,7 +78,7 @@ bool Node::get_system_info(sys_msgs::SystemInfo& info) {
 
 bool Node::set_parameter(const std::string& name, const Message& parameter) const {
   if (!ok()) {
-    Log::error << "Node is shutdown, cannot set parameter." << std::endl;
+    Log::error << "Node is shutdown, cannot set parameter.";
     return false;
   }
   return mediator_client_->set_parameter(name, parameter);
@@ -86,7 +86,7 @@ bool Node::set_parameter(const std::string& name, const Message& parameter) cons
 
 bool Node::get_parameter(const std::string& name, Message& parameter) const {
   if (!ok()) {
-    Log::error << "Node is shutdown, cannot get parameter." << std::endl;
+    Log::error << "Node is shutdown, cannot get parameter.";
     return false;
   }
   return mediator_client_->get_parameter(name, parameter);

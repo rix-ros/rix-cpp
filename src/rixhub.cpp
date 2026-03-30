@@ -13,7 +13,7 @@ int main(const int argc, char** argv) {
   parser.add<std::string>("default_ip", "The default IP address for servers to bind to.", DEFAULT_IP);
 
   if (!parser.parse(argc, argv)) {
-    Log::error << "Failed to parse arguments." << std::endl;
+    Log::error << "Failed to parse arguments.";
     return 1;
   }
 
@@ -22,7 +22,7 @@ int main(const int argc, char** argv) {
 
   const auto mediator = std::make_shared<Mediator>(endpoint);
   if (!mediator->ok()) {
-    Log::error << "Failed to create mediator." << std::endl;
+    Log::error << "Failed to create mediator.";
     return 1;
   }
 

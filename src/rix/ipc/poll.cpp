@@ -102,7 +102,7 @@ bool PollPoller::poll(const std::vector<std::shared_ptr<Pollable>>& pollables,
     }
   }
 
-  // Log::info << "Fd: " << fd_pollables.size() << ", Non-fd: " << non_fd_pollables.size() << std::endl;
+  // Log::info << "Fd: " << fd_pollables.size() << ", Non-fd: " << non_fd_pollables.size();
 
   // For non-fd pollables, check them with zero timeout
   for (const auto& pollable : non_fd_pollables) {
@@ -117,7 +117,7 @@ bool PollPoller::poll(const std::vector<std::shared_ptr<Pollable>>& pollables,
   if (!poll_fds.empty()) {
     int timeout_ms = static_cast<int>(duration.to_milliseconds());
     int ret = ::poll(poll_fds.data(), poll_fds.size(), timeout_ms);
-    // Log::info << "ret: " << ret << std::endl;
+    // Log::info << "ret: " << ret;
     if (ret > 0) {
       for (size_t i = 0; i < poll_fds.size(); ++i) {
         if (poll_fds[i].revents & (POLLIN | POLLOUT)) {
