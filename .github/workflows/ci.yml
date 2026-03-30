@@ -81,18 +81,21 @@ jobs:
     env:
       CC: ${{ matrix.cc }}
       CXX: ${{ matrix.cxx }}
-      RIX_INSTALL_DIR: ${{ github.workspace }}/.rix
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # ── Resolve install dir at runtime so $HOME is correct per platform ────
+      - name: Set RIX install directory
+        run: echo "RIX_INSTALL_DIR=$HOME/.rix" >> $GITHUB_ENV
 
       # ── Cache installed dependencies ────────────────────────────────────────
       - name: Cache dependencies
         id: cache-deps
         uses: actions/cache@v4
         with:
-          path: ${{ env.RIX_INSTALL_DIR }}
+          path: ~/.rix
           key: deps-${{ matrix.os }}-${{ hashFiles('install.bash') }}
 
       # ── Install system packages (Linux) ────────────────────────────────────
@@ -119,7 +122,7 @@ jobs:
         run: |
           git clone --depth=1 https://github.com/rix-ros/rix-msg.git
           cd rix-msg
-          HOME=${{ github.workspace }} bash install.bash
+          bash install.bash
           cd ..
           rm -rf rix-msg
 
@@ -169,19 +172,20 @@ jobs:
     # Change to `false` once the codebase is clean.
     continue-on-error: true
 
-    env:
-      RIX_INSTALL_DIR: ${{ github.workspace }}/.rix
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # ── Resolve install dir at runtime so $HOME is correct ─────────────────
+      - name: Set RIX install directory
+        run: echo "RIX_INSTALL_DIR=$HOME/.rix" >> $GITHUB_ENV
 
       # ── Cache installed dependencies ────────────────────────────────────────
       - name: Cache dependencies
         id: cache-deps
         uses: actions/cache@v4
         with:
-          path: ${{ env.RIX_INSTALL_DIR }}
+          path: ~/.rix
           key: deps-ubuntu-24.04-${{ hashFiles('install.bash') }}
 
       - name: Install system dependencies
@@ -199,7 +203,7 @@ jobs:
         run: |
           git clone --depth=1 https://github.com/rix-ros/rix-msg.git
           cd rix-msg
-          HOME=${{ github.workspace }} bash install.bash
+          bash install.bash
           cd ..
           rm -rf rix-msg
 
