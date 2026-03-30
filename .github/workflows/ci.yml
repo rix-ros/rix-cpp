@@ -122,9 +122,14 @@ jobs:
         run: |
           git clone --depth=1 https://github.com/rix-ros/rix-msg.git
           cd rix-msg
-          bash install.bash
+          # install.bash may exit non-zero when chmod-ing the optional Python CLI
+          # tool (rixmsg). Ignore that failure and verify only the C++ headers.
+          bash install.bash || true
           cd ..
           rm -rf rix-msg
+          # Verify the generated C++ headers we actually need are present.
+          test -d "$HOME/.rix/include/rix/sys_msgs" || \
+            { echo "ERROR: rix/sys_msgs headers not found after rix-msg install"; exit 1; }
 
       # ── Configure ──────────────────────────────────────────────────────────
       - name: Configure CMake
@@ -203,9 +208,11 @@ jobs:
         run: |
           git clone --depth=1 https://github.com/rix-ros/rix-msg.git
           cd rix-msg
-          bash install.bash
+          bash install.bash || true
           cd ..
           rm -rf rix-msg
+          test -d "$HOME/.rix/include/rix/sys_msgs" || \
+            { echo "ERROR: rix/sys_msgs headers not found after rix-msg install"; exit 1; }
 
       - name: Configure CMake (with compile_commands.json)
         run: |
