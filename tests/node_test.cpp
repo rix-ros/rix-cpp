@@ -7,6 +7,12 @@
  * and MockStream instead of the deleted GenericSocket/MockSocket.
  */
 
+#include <condition_variable>
+#include <mutex>
+#include <thread>
+
+#include <gtest/gtest.h>
+
 #include "rix/core/spinner.hpp"
 #include "rix/std_msgs/Header.hpp"
 #include "rix/std_msgs/String.hpp"
@@ -15,10 +21,6 @@
 #include "rix/sys_msgs/SubNotify.hpp"
 #include "rix/sys_msgs/SystemInfo.hpp"
 #include "rix/test/test_fixture.hpp"
-#include <condition_variable>
-#include <gtest/gtest.h>
-#include <mutex>
-#include <thread>
 
 using namespace rix;
 
@@ -1127,6 +1129,13 @@ TEST(NodeTestNew, PublisherAcceptConnectionsAndPublish) {
           // Wait for all 3 connections to be accepted (with timeout)
           EXPECT_TRUE(acceptors[0]->wait_for_operations(3, std::chrono::milliseconds(5000)));
           EXPECT_TRUE(pub->ok());
+          // TODO: The acceptor notification fires inside accept(), before on_spin() stores the connection.
+          //       We must poll until the publisher has finished inserting all accepted connections. Need to improve
+          //       this in the future to avoid the race condition.
+          auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(5000);
+          while (pub->get_subscriber_count() < 3 && std::chrono::steady_clock::now() < deadline) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+          }
           EXPECT_EQ(pub->get_subscriber_count(), 3);
         }
 
