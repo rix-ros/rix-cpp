@@ -1,5 +1,7 @@
 #pragma once
 
+#include <gtest/gtest.h>
+
 #include "rix/core/mediator.hpp"
 #include "rix/std_msgs/UInt64.hpp"
 #include "rix/sys_msgs/ActRequest.hpp"
@@ -11,7 +13,6 @@
 #include "rix/test/acceptor_builder.hpp"
 #include "rix/test/stream_builder.hpp"
 #include "rix/test/transport_manager.hpp"
-#include <gtest/gtest.h>
 
 namespace rix {
 

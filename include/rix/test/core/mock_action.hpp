@@ -1,9 +1,9 @@
 #pragma once
 
-#include "rix/core/action.hpp"
-
 #include <functional>
 #include <string>
+
+#include "rix/core/action.hpp"
 
 namespace rix {
 namespace test {

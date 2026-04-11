@@ -3,9 +3,10 @@
 #include <condition_variable>
 #include <mutex>
 
+#include <gmock/gmock.h>
+
 #include "rix/ipc/stream.hpp"
 #include "rix/sys_msgs/Operation.hpp"
-#include <gmock/gmock.h>
 
 namespace rix {
 

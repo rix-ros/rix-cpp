@@ -1,10 +1,10 @@
 #pragma once
 
-#include "rix/core/subscriber.hpp"
-
 #include <deque>
 #include <memory>
 #include <string>
+
+#include "rix/core/subscriber.hpp"
 
 namespace rix {
 namespace test {

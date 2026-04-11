@@ -1,10 +1,10 @@
+#include "rix/util/time.hpp"
+
 #include <chrono>
 #include <cmath>
 #include <iomanip>
 #include <sstream>
 #include <thread>
-
-#include "rix/util/time.hpp"
 
 namespace rix {
 

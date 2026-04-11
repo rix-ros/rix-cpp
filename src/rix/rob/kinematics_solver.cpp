@@ -1,8 +1,9 @@
 #include "rix/rob/kinematics_solver.hpp"
 
-#include <eigen3/Eigen/Geometry>
 #include <random>
 #include <utility>
+
+#include <eigen3/Eigen/Geometry>
 
 #include "rix/rob/eigen_util.hpp"
 

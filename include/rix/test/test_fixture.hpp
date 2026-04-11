@@ -1,5 +1,7 @@
 #pragma once
 
+#include <gtest/gtest.h>
+
 #include "rix/core/node.hpp"
 #include "rix/std_msgs/UInt64.hpp"
 #include "rix/std_msgs/Void.hpp"
@@ -11,7 +13,6 @@
 #include "rix/test/mock_poller.hpp"
 #include "rix/test/stream_builder.hpp"
 #include "rix/test/transport_manager.hpp"
-#include <gtest/gtest.h>
 
 namespace rix {
 
@@ -51,12 +52,14 @@ public:
     }
   }
 
-  template <typename TNode> using TestFunction = std::function<void(const TestFixture&)>;
+  template <typename TNode>
+  using TestFunction = std::function<void(const TestFixture&)>;
 
   /**
    * @brief Inject mock transport, set ID factory, and invoke the test function.
    */
-  template <typename TNode = Node> void build(TestFunction<TNode> test_func) {
+  template <typename TNode = Node>
+  void build(TestFunction<TNode> test_func) {
     static_assert(std::is_base_of_v<Node, TNode>, "TNode must be Node or derived from Node");
     set_transport_factory(Protocol::TCP, &transport_manager_.get_factory());
     Node::set_id_factory([this]() { return ++current_id_; });
@@ -450,7 +453,8 @@ public:
   // Publisher connection handling
   // ---------------------------------------------------------------------------
 
-  template <typename TMsg> TestFixture& accept_subscriber(const std::vector<std::shared_ptr<TMsg>>& messages) {
+  template <typename TMsg>
+  TestFixture& accept_subscriber(const std::vector<std::shared_ptr<TMsg>>& messages) {
     std::shared_ptr<MockStream> unused;
     return accept_subscriber<TMsg>(messages, unused);
   }

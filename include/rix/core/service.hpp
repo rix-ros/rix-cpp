@@ -13,9 +13,11 @@ namespace rix {
 
 class Service : public Spinner {
 public:
-  template <typename TRequest, typename TResponse> using Callback = std::function<void(const TRequest&, TResponse&)>;
+  template <typename TRequest, typename TResponse>
+  using Callback = std::function<void(const TRequest&, TResponse&)>;
   virtual ~Service() = default;
-  template <typename TRequest, typename TResponse> void set_callback(Callback<TRequest, TResponse> callback);
+  template <typename TRequest, typename TResponse>
+  void set_callback(Callback<TRequest, TResponse> callback);
 
 protected:
   using CallbackUntyped = std::function<void(const Message&, Message&)>;
@@ -77,7 +79,8 @@ private:
 
 } // namespace detail
 
-template <typename TRequest, typename TResponse> void Service::set_callback(Callback<TRequest, TResponse> callback) {
+template <typename TRequest, typename TResponse>
+void Service::set_callback(Callback<TRequest, TResponse> callback) {
   static_assert(std::is_base_of_v<Message, TRequest>, "TRequest must be a subclass of Message.");
   static_assert(std::is_base_of_v<Message, TResponse>, "TResponse must be a subclass of Message.");
 

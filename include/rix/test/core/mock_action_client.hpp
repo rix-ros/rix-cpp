@@ -1,10 +1,10 @@
 #pragma once
 
-#include "rix/core/action_client.hpp"
-
 #include <functional>
 #include <memory>
 #include <string>
+
+#include "rix/core/action_client.hpp"
 
 namespace rix {
 namespace test {

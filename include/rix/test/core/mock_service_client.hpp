@@ -1,9 +1,9 @@
 #pragma once
 
-#include "rix/core/service_client.hpp"
-
 #include <functional>
 #include <string>
+
+#include "rix/core/service_client.hpp"
 
 namespace rix {
 namespace test {

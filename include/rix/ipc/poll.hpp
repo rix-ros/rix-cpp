@@ -1,9 +1,10 @@
 #pragma once
 
 #include <memory>
+#include <vector>
+
 #include <sys/poll.h>
 #include <sys/select.h>
-#include <vector>
 
 #include "rix/util/time.hpp"
 

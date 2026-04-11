@@ -1,4 +1,5 @@
 #include "rix/core/subscriber.hpp"
+
 #include "rix/sys_msgs/Status.hpp"
 #include "rix/sys_msgs/SubNotify.hpp"
 

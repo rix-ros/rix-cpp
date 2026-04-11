@@ -1,7 +1,8 @@
 #include "rix/rob/joint.hpp"
 
-#include <eigen3/Eigen/Geometry>
 #include <utility>
+
+#include <eigen3/Eigen/Geometry>
 
 #include "rix/rob/eigen_util.hpp"
 #include "rix/util/log.hpp"

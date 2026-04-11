@@ -1,5 +1,10 @@
 #pragma once
 
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "rix/core/node.hpp"
 #include "rix/sys_msgs/ActInfo.hpp"
 #include "rix/sys_msgs/ActRequest.hpp"
@@ -16,11 +21,6 @@
 #include "rix/test/core/mock_subscriber.hpp"
 #include "rix/test/core/mock_timer_callback.hpp"
 #include "rix/util/time.hpp"
-
-#include <map>
-#include <memory>
-#include <string>
-#include <vector>
 
 namespace rix {
 namespace test {

@@ -1,7 +1,8 @@
 #pragma once
 
-#include "rix/ipc/poll.hpp"
 #include <gmock/gmock.h>
+
+#include "rix/ipc/poll.hpp"
 
 namespace rix {
 

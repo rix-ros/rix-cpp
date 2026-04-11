@@ -1,4 +1,5 @@
 #include "rix/ipc/poll.hpp"
+
 #include "rix/util/log.hpp"
 
 namespace rix {

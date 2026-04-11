@@ -1,8 +1,9 @@
 #pragma once
 
+#include <memory>
+
 #include "rix/ipc/generic_signal.hpp"
 #include "rix/ipc/posix_signal.hpp"
-#include <memory>
 
 namespace rix {
 using Signal = POSIXSignal;

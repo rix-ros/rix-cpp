@@ -1,6 +1,7 @@
+#include "rix/tf/frame_graph.hpp"
+
 #include <algorithm>
 
-#include "rix/tf/frame_graph.hpp"
 #include "rix/rob/eigen_util.hpp"
 #include "rix/rob/msg_util.hpp"
 

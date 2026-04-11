@@ -1,7 +1,8 @@
 #include "rix/ipc/tcp_stream.hpp"
 
-#include <arpa/inet.h>
 #include <cstring>
+
+#include <arpa/inet.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <sys/poll.h>

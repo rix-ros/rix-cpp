@@ -1,6 +1,7 @@
+#include "rix/core/mediator.hpp"
+
 #include <algorithm>
 
-#include "rix/core/mediator.hpp"
 #include "rix/std_msgs/UInt64.hpp"
 #include "rix/sys_msgs/ActRequest.hpp"
 #include "rix/sys_msgs/ActResponse.hpp"

@@ -1,7 +1,8 @@
+#include <gtest/gtest.h>
+
 #include "rix/std_msgs/String.hpp"
 #include "rix/std_msgs/UInt32.hpp"
 #include "rix/test/mediator_test_fixture.hpp"
-#include <gtest/gtest.h>
 
 using namespace rix;
 

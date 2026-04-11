@@ -1,12 +1,12 @@
 #pragma once
 
+#include <memory>
+
 #include "rix/ipc/endpoint.hpp"
 #include "rix/ipc/poll.hpp"
 #include "rix/msg/message.hpp"
 #include "rix/sys_msgs/Operation.hpp"
 #include "rix/util/time.hpp"
-
-#include <memory>
 
 namespace rix {
 

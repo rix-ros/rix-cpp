@@ -1,10 +1,10 @@
 #pragma once
 
-#include "rix/core/timer_callback.hpp"
-
 #include <functional>
 #include <string>
 #include <vector>
+
+#include "rix/core/timer_callback.hpp"
 
 namespace rix {
 namespace test {

@@ -5,7 +5,6 @@
 #include "print_helper.hpp"
 #include "rix/rob/robot_model.hpp"
 #include "rix/tf/frame_graph.hpp"
-
 #include "robots.hpp"
 
 using namespace rix;

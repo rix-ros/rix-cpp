@@ -1,9 +1,9 @@
 #include "rix/rob/kinematics_solver.hpp"
 
-#include <gtest/gtest.h>
-
 #include <cmath>
 #include <random>
+
+#include <gtest/gtest.h>
 
 #include "rix/rob/robot_model.hpp"
 #include "robots.hpp"
