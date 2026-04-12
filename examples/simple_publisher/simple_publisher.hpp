@@ -9,20 +9,8 @@
 
 const std::string NAME = "simple_publisher";
 
-/**
- * @brief Example publisher node, templated on TNode so it can be swapped with
- *        MockNode in unit tests.
- *
- * Production use:  SimplePublisher<>          (defaults to rix::Node)
- * Test use:        SimplePublisher<MockNode>
- */
 class SimplePublisher final : public rix::Node {
 public:
-  /**
-   * @param rate   Publish rate in Hz.
-   * @param port   Bind port for the publisher socket (0 = ephemeral, unused
-   *               when TNode is MockNode).
-   */
   SimplePublisher(double rate, int port = 0);
 
 private:

@@ -9,7 +9,6 @@ const std::string NAME = "simple_subscriber";
 
 class SimpleSubscriber final : public Node {
 public:
-  // Initialize the Node with a name and the RixHub endpoint
   SimpleSubscriber(int port);
 
 private:

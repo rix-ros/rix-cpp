@@ -6,7 +6,6 @@ SimpleAction::SimpleAction(int max_iters, int port) : Node(NAME), i_(0), max_ite
     return;
   }
 
-  // Pass member function pointer and 'this' - no lambda or std::bind needed!
   auto act = create_action("/exponent", &SimpleAction::callback, this, Endpoint(DEFAULT_IP, port));
   if (!act->ok()) {
     Log::error << "Failed to create service." << std::endl;
