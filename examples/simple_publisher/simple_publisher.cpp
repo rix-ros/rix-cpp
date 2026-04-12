@@ -1,6 +1,3 @@
-// Implementation is defined inline in simple_publisher.hpp (template class).
-// This file provides an explicit instantiation for the default rix::Node base
-// so that the non-test executable links without duplicate symbols.
 #include "simple_publisher.hpp"
 
 SimplePublisher::SimplePublisher(double rate, int port) : rix::Node(NAME) {

@@ -6,9 +6,9 @@ namespace rix {
 bool Stream::send_message(uint8_t opcode, const Message& msg) const {
   // Get the message prefix
   const size_t prefix_len = msg.get_prefix_len();
-  uint8_t* prefix_buffer = new uint8_t[prefix_len];
+  auto prefix_buffer = std::make_unique<uint8_t[]>(prefix_len);
   size_t offset = 0;
-  msg.get_prefix(prefix_buffer, offset);
+  msg.get_prefix(prefix_buffer.get(), offset);
 
   // Serialize the message
   sys_msgs::Operation operation;
@@ -18,7 +18,7 @@ bool Stream::send_message(uint8_t opcode, const Message& msg) const {
   std::vector<ConstMessageSegment> segments(segment_count);
   offset = 0;
   operation.get_segments(segments.data(), segments.size(), offset);
-  segments[offset++] = ConstMessageSegment(prefix_buffer, prefix_len);
+  segments[offset++] = ConstMessageSegment(prefix_buffer.get(), prefix_len);
   msg.get_segments(segments.data(), segments.size(), offset);
 
   // Send the serialized message
@@ -30,16 +30,14 @@ bool Stream::recv_message(Message& msg, size_t prefix_len) const {
   ssize_t bytes = 0;
   if (prefix_len > 0) {
     // Read the prefix first
-    uint8_t* prefix_buffer = new uint8_t[prefix_len];
-    bytes = recv(prefix_buffer, prefix_len, 0);
+    auto prefix_buffer = std::make_unique<uint8_t[]>(prefix_len);
+    bytes = recv(prefix_buffer.get(), prefix_len, 0);
 
     // Resize the message
     size_t offset = 0;
-    if (!msg.resize(prefix_buffer, bytes, offset)) {
-      delete[] prefix_buffer;
+    if (!msg.resize(prefix_buffer.get(), bytes, offset)) {
       return false;
     }
-    delete[] prefix_buffer;
   }
 
   // Read the segments
@@ -82,15 +80,14 @@ bool Stream::send_all(const ConstMessageSegment* segments, size_t segment_count)
 
   // If writev returns false, it is not implemented
   if (!writev(segments, segment_count, bytes_sent)) {
-    uint8_t* buffer = new uint8_t[total_len];
+    auto buffer = std::make_unique<uint8_t[]>(total_len);
     size_t bytes_copied = 0;
     for (size_t i = 0; i < segment_count; ++i) {
       size_t len = segments[i].len();
-      memcpy(buffer + bytes_copied, segments[i].ptr(), len);
+      memcpy(buffer.get() + bytes_copied, segments[i].ptr(), len);
       bytes_copied += len;
     }
-    bytes_sent = send(buffer, total_len, 0);
-    delete[] buffer;
+    bytes_sent = send(buffer.get(), total_len, 0);
   }
 
   return bytes_sent == total_len;
@@ -105,16 +102,15 @@ bool Stream::recv_all(MessageSegment* segments, size_t segment_count) const {
 
   // If readv returns false, it is not implemented
   if (!readv(segments, segment_count, bytes_read)) {
-    uint8_t* buffer = new uint8_t[total_len];
-    bytes_read = recv(buffer, total_len, 0);
+    auto buffer = std::make_unique<uint8_t[]>(total_len);
+    bytes_read = recv(buffer.get(), total_len, 0);
     if (bytes_read == total_len) {
       size_t bytes_copied = 0;
       for (size_t i = 0; i < segment_count; ++i) {
         size_t len = segments[i].len();
-        memcpy(segments[i].ptr(), buffer + bytes_copied, len);
+        memcpy(segments[i].ptr(), buffer.get() + bytes_copied, len);
         bytes_copied += len;
       }
-      delete[] buffer;
     }
   }
 
