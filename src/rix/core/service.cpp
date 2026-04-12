@@ -2,24 +2,13 @@
 #include "rix/sys_msgs/Status.hpp"
 
 namespace rix {
+namespace detail {
+ServiceImpl::ServiceImpl(const sys_msgs::SrvInfo& info, const Endpoint& rixhub_endpoint)
+    : info_(info), factory_(get_transport_factory(static_cast<Protocol>(info.protocol))),
+      rixhub_endpoint_(rixhub_endpoint), registered_flag_(false), request_instance_(nullptr),
+      response_instance_(nullptr) {
 
-Service::Service(const sys_msgs::SrvInfo& info, SocketFactory socket_factory, const Endpoint& rixhub_endpoint)
-    : info_(info), socket_factory_(socket_factory), rixhub_endpoint_(rixhub_endpoint), registered_flag_(false),
-      request_instance_(nullptr), response_instance_(nullptr) {
-
-  server_ = socket_factory_();
-  if (!server_->set_reuse_address(true)) {
-    shutdown();
-    return;
-  }
-  if (!server_->bind(Endpoint(info_.endpoint.address, info_.endpoint.port))) {
-    shutdown();
-    return;
-  }
-  if (!server_->listen(MAX_CONN)) {
-    shutdown();
-    return;
-  }
+  server_ = factory_.create_acceptor(Endpoint(info_.endpoint.address, info_.endpoint.port));
 
   // Ensure server was intitialized properly
   if (server_->is_exception()) {
@@ -33,11 +22,7 @@ Service::Service(const sys_msgs::SrvInfo& info, SocketFactory socket_factory, co
   info_.endpoint.port = server_endpoint.port;
 
   // Register service with rixhub
-  auto client = socket_factory_();
-  if (!client->connect(rixhub_endpoint_)) {
-    shutdown();
-    return;
-  }
+  auto client = factory_.create_stream(rixhub_endpoint_, true);
 
   if (!client->send_message(OPCODE::SRV_REGISTER, info_)) {
     shutdown();
@@ -64,15 +49,13 @@ Service::Service(const sys_msgs::SrvInfo& info, SocketFactory socket_factory, co
   }
 }
 
-Service::~Service() {
+ServiceImpl::~ServiceImpl() {
   if (registered_flag_) {
-    auto client = socket_factory_();
+    auto client = factory_.create_stream(rixhub_endpoint_, true);
     if (!client) {
       return;
     }
-    if (client->connect(rixhub_endpoint_)) {
-      client->send_message(OPCODE::SRV_DEREGISTER, info_);
-    }
+    client->send_message(OPCODE::SRV_DEREGISTER, info_);
   }
 
   if (MULTITHREADED) {
@@ -82,14 +65,14 @@ Service::~Service() {
     }
   }
 
-  Log::debug << "Service for \"" << info_.name << "\" destroyed." << std::endl;
+  Log::debug << "ServiceImpl for \"" << info_.name << "\" destroyed." << std::endl;
 }
 
-void Service::on_spin() {
+void ServiceImpl::on_spin() {
   if (!callback_) {
     return;
   }
-  std::lock_guard lock(callback_mutex_);
+  std::lock_guard<std::mutex> lock(callback_mutex_);
 
   // Check to see if a subscriber has made a connection
   if (!server_->is_readable())
@@ -119,4 +102,18 @@ void Service::on_spin() {
   Log::debug << "Processed service request for \"" << info_.name << "\"." << std::endl;
 }
 
+void ServiceImpl::set_callback(CallbackUntyped callback,
+                               std::shared_ptr<Message> request_instance,
+                               std::shared_ptr<Message> response_instance) {
+  if (request_instance->hash() != info_.request_hash || response_instance->hash() != info_.response_hash) {
+    Log::warn << "Message type mismatch in set_callback." << std::endl;
+    return;
+  }
+  std::lock_guard<std::mutex> guard(callback_mutex_);
+  callback_ = std::move(callback);
+  request_instance_ = std::move(request_instance);
+  response_instance_ = std::move(response_instance);
+}
+
+} // namespace detail
 } // namespace rix

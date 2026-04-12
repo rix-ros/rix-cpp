@@ -6,7 +6,7 @@
 #include <random>
 #include <string>
 
-#include "rix/ipc/socket.hpp"
+#include "rix/ipc/transport_factory.hpp"
 #include "rix/util/environment.hpp"
 #include "rix/util/log.hpp"
 #include <thread>
@@ -26,48 +26,48 @@ static inline const std::string DEFAULT_IP{get_env("RIX_DEFAULT_IP", "127.0.0.1"
 static inline const bool MULTITHREADED{get_env("RIX_MULTITHREADED", "0") != "0"};
 
 enum OPCODE : uint8_t {
-  STATUS_RESPONSE = 0,
-  PING,
-
-  NODE_REGISTER = 80,
-  SUB_REGISTER,
-  PUB_REGISTER,
-  SRV_REGISTER,
-  ACT_REGISTER,
-
-  SUB_NOTIFY = 90,
-
-  NODE_DEREGISTER = 100,
-  SUB_DEREGISTER,
-  PUB_DEREGISTER,
-  SRV_DEREGISTER,
-  ACT_DEREGISTER,
-
-  PUB_MESSAGE = 120,
-  SRV_REQUEST_MESSAGE,
-  SRV_RESPONSE_MESSAGE,
-  ACT_GOAL_MESSAGE,     ///< Sent to Action server to request action
-  ACT_PREEMPT_MESSAGE,  ///< Sent to Action server to preempt current action
-  ACT_CANCEL_MESSAGE,   ///< Sent to Action server to cancel current action
-  ACT_RESPONSE_MESSAGE, ///< Sent from Action server to Action client as response to goal/preempt/cancel
-  ACT_FEEDBACK_MESSAGE, ///< Sent from Action server to Action client as feedback during action execution
-  ACT_RESULT_MESSAGE,   ///< Sent from Action server to Action client as result of action execution
-
-  SRV_REQUEST = 140,
-  ACT_REQUEST,
-  PARAM_SET_REQUEST,
-  PARAM_GET_REQUEST,
-  SYSTEM_GET_REQUEST,
-
-  SRV_RESPONSE = 160,
-  ACT_RESPONSE,
-  PARAM_GET_RESPONSE,
-  SYSTEM_GET_RESPONSE,
+  STATUS_RESPONSE = 0,   ///< Sent as response to various requests
+  PING,                  ///< Sent to check connectivity
+  NODE_REGISTER = 80,    ///< Sent to RIXHub to register a node
+  SUB_REGISTER,          ///< Sent to RIXHub to register a subscriber
+  PUB_REGISTER,          ///< Sent to RIXHub to register a publisher
+  SRV_REGISTER,          ///< Sent to RIXHub to register a service
+  ACT_REGISTER,          ///< Sent to RIXHub to register an action
+  SUB_NOTIFY = 90,       ///< Sent to notify subscriber of new publishers
+  NODE_DEREGISTER = 100, ///< Sent to RIXHub to deregister a node
+  SUB_DEREGISTER,        ///< Sent to RIXHub to deregister a subscriber
+  PUB_DEREGISTER,        ///< Sent to RIXHub to deregister a publisher
+  SRV_DEREGISTER,        ///< Sent to RIXHub to deregister a service
+  ACT_DEREGISTER,        ///< Sent to RIXHub to deregister an action
+  PUB_MESSAGE = 120,     ///< Sent from Publisher to Subscriber
+  SRV_REQUEST_MESSAGE,   ///< Sent from Service client to Service server
+  SRV_RESPONSE_MESSAGE,  ///< Sent from Service server to Service client
+  ACT_GOAL_MESSAGE,      ///< Sent to Action server to request action
+  ACT_PREEMPT_MESSAGE,   ///< Sent to Action server to preempt current action
+  ACT_CANCEL_MESSAGE,    ///< Sent to Action server to cancel current action
+  ACT_RESPONSE_MESSAGE,  ///< Sent from Action server to Action client as response to goal/preempt/cancel
+  ACT_FEEDBACK_MESSAGE,  ///< Sent from Action server to Action client as feedback during action execution
+  ACT_RESULT_MESSAGE,    ///< Sent from Action server to Action client as result of action execution
+  SRV_REQUEST = 140,     ///< Sent from ServiceClient to RIXHub to request information about a Service
+  ACT_REQUEST,           ///< Sent from ActionClient to RIXHub to request information about an Action
+  PARAM_SET_REQUEST,     ///< Sent from Node to RIXHub to set a parameter value
+  PARAM_GET_REQUEST,     ///< Sent from Node to RIXHub to get a parameter value
+  SYSTEM_GET_REQUEST,    ///< Sent from Node to RIXHub to get system information
+  SRV_RESPONSE = 160,    ///< Sent from RIXHub as response to SRV_REQUEST
+  ACT_RESPONSE,          ///< Sent from RIXHub as response to ACT_REQUEST
+  PARAM_GET_RESPONSE,    ///< Sent from RIXHub as response to PARAM_GET_REQUEST
+  SYSTEM_GET_RESPONSE,   ///< Sent from RIXHub as response to SYSTEM_GET_REQUEST
 };
 
-using SocketFactory = std::function<std::shared_ptr<GenericSocket>(void)>;
+/**
+ * @brief Type alias for ID factory function.
+ */
 using IDFactory = std::function<uint64_t(void)>;
 
+/**
+ * @brief Default ID generator using random number generation.
+ * @return A randomly generated uint64_t ID.
+ */
 static inline uint64_t default_id_generator() {
   static std::mutex mutex;
   static std::random_device rd;

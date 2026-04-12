@@ -10,186 +10,339 @@
 #include "rix/core/action_client.hpp"
 #include "rix/core/callback_traits.hpp"
 #include "rix/core/common.hpp"
+#include "rix/core/component_factory.hpp"
+#include "rix/core/mediator_client.hpp"
 #include "rix/core/publisher.hpp"
 #include "rix/core/service.hpp"
 #include "rix/core/service_client.hpp"
 #include "rix/core/subscriber.hpp"
 #include "rix/core/timer_callback.hpp"
-#include "rix/ipc/socket.hpp"
+#include "rix/ipc.hpp"
 #include "rix/sys_msgs/NodeInfo.hpp"
 #include "rix/sys_msgs/ParamInfo.hpp"
 #include "rix/sys_msgs/Status.hpp"
 #include "rix/sys_msgs/SystemInfo.hpp"
-#include "rix/util/log.hpp"
+#include "rix/util.hpp"
 
 namespace rix {
 
 class Node : public Spinner {
 public:
+  /**
+   * @brief Constructs a Node with the given name and endpoint.
+   * @param name The name of the node.
+   * @param endpoint The endpoint of the node.
+   */
   explicit Node(const std::string& name, const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0));
 
-  Node(const Node&) = delete;
-  Node& operator=(const Node&) = delete;
-  Node(Node&&) = delete;
-  Node& operator=(Node&&) = delete;
+  virtual ~Node();
 
-  ~Node() override;
+  // TODO: Create private helper methods that do not require template parameters to call from header file to hide
+  //       the implementation details.
 
+  /**
+   * @brief Creates a Publisher for the given topic.
+   * @param topic The name of the topic.
+   * @param endpoint The endpoint for the publisher.
+   * @return A shared pointer to the created Publisher.
+   */
   template <typename TMsg>
   std::shared_ptr<Publisher> create_publisher(const std::string& topic,
-                                              const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0));
+                                              const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
+                                              Protocol protocol = Protocol::TCP);
 
-  // Legacy API with explicit template parameter (for backward compatibility)
+  /**
+   * @brief Creates a Subscriber for the given topic with the specified callback.
+   * @param topic The name of the topic.
+   * @param callback The callback function to be invoked on message receipt.
+   * @param endpoint The endpoint for the subscriber.
+   * @return A shared pointer to the created Subscriber.
+   */
   template <typename TMsg>
   std::shared_ptr<Subscriber> create_subscriber(const std::string& topic,
                                                 Subscriber::Callback<TMsg> callback,
-                                                const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0));
+                                                const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
+                                                Protocol protocol = Protocol::TCP);
 
-  // New API with automatic type deduction from callback
+  /**
+   * @brief Creates a Subscriber for the given topic with the specified callback.
+   * @param topic The name of the topic.
+   * @param callback The callback function to be invoked on message receipt.
+   * @param endpoint The endpoint for the subscriber.
+   *
+   * @details This allows the deduction of the message type from the callback function.
+   *
+   * @return A shared pointer to the created Subscriber.
+   */
   template <typename Callback>
-  auto
-  create_subscriber(const std::string& topic, Callback&& callback, const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0))
+  auto create_subscriber(const std::string& topic,
+                         Callback&& callback,
+                         const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
+                         Protocol protocol = Protocol::TCP)
       -> std::enable_if_t<
           !std::is_same<
               std::decay_t<Callback>,
               Subscriber::Callback<typename SubscriberCallbackTraits<std::decay_t<Callback>>::MessageType>>::value,
-          std::shared_ptr<Subscriber>> {
-    using TMsg = typename SubscriberCallbackTraits<std::decay_t<Callback>>::MessageType;
-    return create_subscriber<TMsg>(topic, std::forward<Callback>(callback), endpoint);
-  }
+          std::shared_ptr<Subscriber>>;
 
-  // Member function pointer API - bind member function to object instance
+  /**
+   * @brief Creates a Subscriber for the given topic with the specified member function callback.
+   * @param topic The name of the topic.
+   * @param callback The member function callback to be invoked on message receipt.
+   * @param instance The instance of the class containing the member function.
+   * @param endpoint The endpoint for the subscriber.
+   *
+   * @details This is a convenience method to create subscribers using class member functions as callbacks.
+   *
+   * @return A shared pointer to the created Subscriber.
+   */
   template <typename TMsg, typename Class>
   std::shared_ptr<Subscriber> create_subscriber(const std::string& topic,
                                                 void (Class::*callback)(const TMsg&),
                                                 Class* instance,
-                                                const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0)) {
-    return create_subscriber<TMsg>(
-        topic, [instance, callback](const TMsg& msg) { (instance->*callback)(msg); }, endpoint);
-  }
+                                                const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
+                                                Protocol protocol = Protocol::TCP);
 
+  /**
+   * @brief Creates a TimerCallback with the specified duration and callback function.
+   * @param d The duration for the timer.
+   * @param callback The callback function to be invoked on timer events.
+   * @return A shared pointer to the created TimerCallback.
+   */
   std::shared_ptr<TimerCallback> create_timer(const Duration& d, const TimerCallback::Callback& callback);
 
+  /**
+   * @brief Creates a TimerCallback with the specified duration and member function callback.
+   * @param d The duration for the timer.
+   * @param callback The member function callback to be invoked on timer events.
+   * @param instance The instance of the class containing the member function.
+   *
+   * @details This is a convenience method to create timer callbacks using class member functions.
+   *
+   * @return A shared pointer to the created TimerCallback.
+   */
   template <typename Class>
   std::shared_ptr<TimerCallback>
-  create_timer(const Duration& d, void (Class::*callback)(const TimerCallback::Event&), Class* instance) {
-    return create_timer(d, [instance, callback](const TimerCallback::Event& event) { (instance->*callback)(event); });
-  }
+  create_timer(const Duration& d, void (Class::*callback)(const TimerCallback::Event&), Class* instance);
 
+  /**
+   * @brief Creates a ServiceClient for the given service.
+   * @param service The name of the service.
+   * @return A shared pointer to the created ServiceClient.
+   */
   template <typename TRequest, typename TResponse>
-  std::shared_ptr<ServiceClient> create_service_client(const std::string& service);
+  std::shared_ptr<ServiceClient> create_service_client(const std::string& service, Protocol protocol = Protocol::TCP);
 
-  // Legacy API with explicit template parameters (for backward compatibility)
+  /**
+   * @brief Creates a Service for the given service with the specified callback.
+   * @param service The name of the service.
+   * @param callback The callback function to be invoked on service requests.
+   * @param endpoint The endpoint for the service.
+   * @return A shared pointer to the created Service.
+   */
   template <typename TRequest, typename TResponse>
   std::shared_ptr<Service> create_service(const std::string& service,
                                           Service::Callback<TRequest, TResponse> callback,
-                                          const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0));
+                                          const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
+                                          Protocol protocol = Protocol::TCP);
 
-  // New API with automatic type deduction from callback
+  /**
+   * @brief Creates a Service for the given service with the specified callback.
+   * @param service The name of the service.
+   * @param callback The callback function to be invoked on service requests.
+   * @param endpoint The endpoint for the service.
+   *
+   * @details This allows the deduction of the request and response types from the callback function.
+   *
+   * @return A shared pointer to the created Service.
+   */
   template <typename Callback>
-  auto
-  create_service(const std::string& service, Callback&& callback, const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0))
+  auto create_service(const std::string& service,
+                      Callback&& callback,
+                      const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
+                      Protocol protocol = Protocol::TCP)
       -> std::enable_if_t<
           !std::is_same<std::decay_t<Callback>,
                         Service::Callback<typename ServiceCallbackTraits<std::decay_t<Callback>>::RequestType,
                                           typename ServiceCallbackTraits<std::decay_t<Callback>>::ResponseType>>::value,
-          std::shared_ptr<Service>> {
-    using TRequest = typename ServiceCallbackTraits<std::decay_t<Callback>>::RequestType;
-    using TResponse = typename ServiceCallbackTraits<std::decay_t<Callback>>::ResponseType;
-    return create_service<TRequest, TResponse>(service, std::forward<Callback>(callback), endpoint);
-  }
+          std::shared_ptr<Service>>;
 
-  // Member function pointer API - bind member function to object instance
+  /**
+   * @brief Creates a Service for the given service with the specified member function callback.
+   * @param service The name of the service.
+   * @param callback The member function callback to be invoked on service requests.
+   * @param instance The instance of the class containing the member function.
+   * @param endpoint The endpoint for the service.
+   *
+   * @details This is a convenience method to create services using class member functions as callbacks.
+   *
+   * @return A shared pointer to the created Service.
+   */
   template <typename TRequest, typename TResponse, typename Class>
   std::shared_ptr<Service> create_service(const std::string& service,
                                           void (Class::*callback)(const TRequest&, TResponse&),
                                           Class* instance,
-                                          const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0)) {
-    return create_service<TRequest, TResponse>(
-        service,
-        [instance, callback](const TRequest& req, TResponse& resp) { (instance->*callback)(req, resp); },
-        endpoint);
-  }
+                                          const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
+                                          Protocol protocol = Protocol::TCP);
 
+  /**
+   * @brief Creates an ActionClient for the given action with specified feedback and result callbacks.
+   * @param action The name of the action.
+   * @param feedback_callback The callback function to be invoked on feedback receipt.
+   * @param result_callback The callback function to be invoked on result receipt.
+   * @return A shared pointer to the created ActionClient.
+   */
   template <typename TGoal, typename TFeedback, typename TResult>
-  std::shared_ptr<ActionClient> create_action_client(const std::string& action);
+  std::shared_ptr<ActionClient> create_action_client(const std::string& action,
+                                                     ActionClient::FeedbackCallback<TFeedback> feedback_callback,
+                                                     ActionClient::ResultCallback<TResult> result_callback,
+                                                     Protocol protocol = Protocol::TCP);
 
+  /**
+   * @brief Creates an ActionClient for the given action with specified feedback and result callbacks.
+   * @param action The name of the action.
+   * @param feedback_callback The callback function to be invoked on feedback receipt.
+   * @param result_callback The callback function to be invoked on result receipt.
+   *
+   * @details This allows the deduction of the feedback and result types from the callback functions.
+   *
+   * @return A shared pointer to the created ActionClient.
+   */
+  template <typename TGoal, typename FeedbackCallback, typename ResultCallback>
+  auto create_action_client(const std::string& action,
+                            FeedbackCallback&& feedback_callback,
+                            ResultCallback&& result_callback,
+                            Protocol protocol = Protocol::TCP)
+      -> std::enable_if_t<!std::is_same<std::decay_t<FeedbackCallback>,
+                                        ActionClient::FeedbackCallback<typename ActionClientCallbackTraits<
+                                            std::decay_t<FeedbackCallback>>::FeedbackType>>::value &&
+                              !std::is_same<std::decay_t<ResultCallback>,
+                                            ActionClient::ResultCallback<typename ActionClientCallbackTraits<
+                                                std::decay_t<ResultCallback>>::ResultType>>::value,
+                          std::shared_ptr<ActionClient>>;
+
+  /**
+   * @brief Creates an ActionClient for the given action with specified member function callbacks.
+   * @param action The name of the action.
+   * @param feedback_callback The member function callback to be invoked on feedback receipt.
+   * @param result_callback The member function callback to be invoked on result receipt.
+   * @param instance The instance of the class containing the member functions.
+   *
+   * @details This is a convenience method to create action clients using class member functions as callbacks.
+   *
+   * @return A shared pointer to the created ActionClient.
+   */
+  template <typename TGoal, typename TFeedback, typename TResult, typename Class>
+  std::shared_ptr<ActionClient> create_action_client(const std::string& action,
+                                                     void (Class::*feedback_callback)(const TFeedback&),
+                                                     void (Class::*result_callback)(const TResult&),
+                                                     Class* instance,
+                                                     Protocol protocol = Protocol::TCP);
+
+  /**
+   * @brief Creates an Action for the given action with the specified callback.
+   * @param action The name of the action.
+   * @param callback The callback function to be invoked on action goals.
+   * @param endpoint The endpoint for the action.
+   * @return A shared pointer to the created Action.
+   */
   template <typename TGoal, typename TFeedback, typename TResult>
   std::shared_ptr<Action> create_action(const std::string& action,
                                         Action::Callback<TGoal, TFeedback, TResult> callback,
-                                        const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0));
+                                        const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
+                                        Protocol protocol = Protocol::TCP);
 
-  // New API with automatic type deduction from callback
+  /**
+   * @brief Creates an Action for the given action with the specified callback.
+   * @param action The name of the action.
+   * @param callback The callback function to be invoked on action goals.
+   * @param endpoint The endpoint for the action.
+   *
+   * @details This allows the deduction of the goal, feedback, and result types from the callback function.
+   *
+   * @return A shared pointer to the created Action.
+   */
+
   template <typename Callback>
-  auto create_action(const std::string& action, Callback&& callback, const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0))
+  auto create_action(const std::string& action,
+                     Callback&& callback,
+                     const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
+                     Protocol protocol = Protocol::TCP)
       -> std::enable_if_t<
           !std::is_same<std::decay_t<Callback>,
                         Action::Callback<typename ActionCallbackTraits<std::decay_t<Callback>>::GoalType,
                                          typename ActionCallbackTraits<std::decay_t<Callback>>::FeedbackType,
                                          typename ActionCallbackTraits<std::decay_t<Callback>>::ResultType>>::value,
-          std::shared_ptr<Action>> {
-    using TGoal = typename ActionCallbackTraits<std::decay_t<Callback>>::GoalType;
-    using TFeedback = typename ActionCallbackTraits<std::decay_t<Callback>>::FeedbackType;
-    using TResult = typename ActionCallbackTraits<std::decay_t<Callback>>::ResultType;
-    return create_action<TGoal, TFeedback, TResult>(action, std::forward<Callback>(callback), endpoint);
-  }
+          std::shared_ptr<Action>>;
 
-  // Member function pointer API - bind member function to object instance
+  /**
+   * @brief Creates an Action for the given action with the specified member function callback.
+   * @param action The name of the action.
+   * @param callback The member function callback to be invoked on action goals.
+   * @param instance The instance of the class containing the member function.
+   * @param endpoint The endpoint for the action.
+   *
+   * @details This is a convenience method to create actions using class member functions as callbacks.
+   *
+   * @return A shared pointer to the created Action.
+   */
+
   template <typename TGoal, typename TFeedback, typename TResult, typename Class>
   std::shared_ptr<Action> create_action(const std::string& action,
                                         bool (Class::*callback)(const TGoal&, TFeedback&, TResult&),
                                         Class* instance,
-                                        const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0)) {
-    return create_action<TGoal, TFeedback, TResult>(
-        action,
-        [instance, callback](const TGoal& goal, TFeedback& feedback, TResult& result) {
-          return (instance->*callback)(goal, feedback, result);
-        },
-        endpoint);
-  }
+                                        const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
+                                        Protocol protocol = Protocol::TCP);
 
-  template <typename TParam> bool set_parameter(const std::string& name, const TParam& parameter);
-  template <typename TParam> bool get_parameter(const std::string& name, TParam& parameter);
+  /**
+   * @brief Sets a parameter on the RIXHub parameter server.
+   * @param name The name of the parameter.
+   * @param parameter The parameter value to set.
+   * @return true if the parameter was set successfully, false otherwise.
+   */
+  bool set_parameter(const std::string& name, const Message& parameter) const;
 
+  /**
+   * @brief Gets a parameter from the RIXHub parameter server.
+   * @param name The name of the parameter.
+   * @param parameter The variable to store the retrieved parameter value.
+   * @return true if the parameter was retrieved successfully, false otherwise.
+   */
+  bool get_parameter(const std::string& name, Message& parameter) const;
+
+  /**
+   * @brief Retrieves system information from RIXHub.
+   * @param info The SystemInfo message to populate with system information.
+   * @return true if the system information was retrieved successfully, false otherwise.
+   */
   bool get_system_info(sys_msgs::SystemInfo& info);
 
-  void on_spin() override;
-
-  static inline void set_socket_factory(SocketFactory factory) { socket_factory_ = std::move(factory); }
+  /**
+   * @brief Sets the ID factory used for generating unique IDs.
+   * @param factory The ID factory function.
+   */
   static inline void set_id_factory(IDFactory factory) { id_factory_ = std::move(factory); }
+  static inline void set_component_factory(std::shared_ptr<ComponentFactory> factory) { factory_ = factory; }
 
+protected:
 private:
-  Endpoint rixhub_endpoint_;
-  sys_msgs::NodeInfo info_;
-  std::vector<std::shared_ptr<Spinner>> components_;
-  std::shared_ptr<GenericSocket> server_;
-  std::atomic<bool> registered_flag_;
-  static inline SocketFactory socket_factory_{create_socket};
-  static inline IDFactory id_factory_{default_id_generator};
+  static inline IDFactory id_factory_{default_id_generator}; ///< ID factory function.
+  static inline std::shared_ptr<ComponentFactory> factory_{
+      std::make_shared<detail::ComponentFactoryImpl>()}; ///< Component factory instance.
+  Endpoint rixhub_endpoint_;                             ///< The RIXHub endpoint.
+  sys_msgs::NodeInfo info_;                              ///< Node information.
+  std::shared_ptr<MediatorClient> mediator_client_;      ///< Client for communicating with the RIXHub mediator.
+  std::vector<std::shared_ptr<Spinner>> components_;     ///< All components created by the node.
 
-  std::shared_ptr<Publisher> create_publisher(const sys_msgs::TopicInfo& topic_info,
-                                              const Endpoint& rixhub_endpoint,
-                                              const Endpoint& endpoint);
-
-  std::shared_ptr<Subscriber> create_subscriber(const sys_msgs::TopicInfo& topic_info,
-                                                const Endpoint& rixhub_endpoint,
-                                                const Endpoint& endpoint);
-
-  std::shared_ptr<Service>
-  create_service(sys_msgs::SrvInfo& service_info, const Endpoint& rixhub_endpoint, const Endpoint& endpoint);
-
-  std::shared_ptr<ServiceClient> create_service_client(const sys_msgs::SrvRequest& service_request,
-                                                       const Endpoint& rixhub_endpoint);
-
-  std::shared_ptr<Action>
-  create_action(sys_msgs::ActInfo& action_info, const Endpoint& rixhub_endpoint, const Endpoint& endpoint);
-
-  std::shared_ptr<ActionClient> create_action_client(const sys_msgs::ActRequest& action_request,
-                                                     const Endpoint& rixhub_endpoint);
+  /**
+   * @brief Internal spin implementation for the Node.
+   */
+  void on_spin() override;
 };
 
 template <typename TMsg>
-std::shared_ptr<Publisher> Node::create_publisher(const std::string& topic, const Endpoint& endpoint) {
+std::shared_ptr<Publisher>
+Node::create_publisher(const std::string& topic, const Endpoint& endpoint, Protocol protocol) {
   static_assert(std::is_base_of<Message, TMsg>::value, "TMsg must be a subclass of Message.");
   if (!ok()) {
     Log::error << "Node is shutdown, cannot create publisher." << std::endl;
@@ -200,13 +353,27 @@ std::shared_ptr<Publisher> Node::create_publisher(const std::string& topic, cons
   topic_info.name = topic;
   topic_info.message_hash = TMsg().hash();
 
+  sys_msgs::PubInfo pub_info;
+  pub_info.id = id_factory_();
+  pub_info.node_id = info_.id;
+  pub_info.topic_info = topic_info;
+  pub_info.endpoint.address = endpoint.address;
+  pub_info.endpoint.port = endpoint.port;
+  pub_info.protocol = protocol;
+
   // Invoke private implementation
-  return create_publisher(topic_info, rixhub_endpoint_, endpoint);
+  auto pub = factory_->create_publisher(pub_info, rixhub_endpoint_);
+  if (pub) {
+    components_.push_back(pub);
+  }
+  return pub;
 }
 
 template <typename TMsg>
-std::shared_ptr<Subscriber>
-Node::create_subscriber(const std::string& topic, Subscriber::Callback<TMsg> callback, const Endpoint& endpoint) {
+std::shared_ptr<Subscriber> Node::create_subscriber(const std::string& topic,
+                                                    Subscriber::Callback<TMsg> callback,
+                                                    const Endpoint& endpoint,
+                                                    Protocol protocol) {
   static_assert(std::is_base_of<Message, TMsg>::value, "TMsg must be a subclass of Message.");
   if (!ok()) {
     Log::error << "Node is shutdown, cannot create subscriber." << std::endl;
@@ -218,30 +385,55 @@ Node::create_subscriber(const std::string& topic, Subscriber::Callback<TMsg> cal
   topic_info.name = topic;
   topic_info.message_hash = TMsg().hash();
 
-  // Invoke private implementation
-  auto sub = create_subscriber(topic_info, rixhub_endpoint_, endpoint);
+  sys_msgs::SubInfo sub_info;
+  sub_info.id = id_factory_();
+  sub_info.node_id = info_.id;
+  sub_info.topic_info = topic_info;
+  sub_info.endpoint.address = endpoint.address;
+  sub_info.endpoint.port = endpoint.port;
+  sub_info.protocol = protocol;
 
-  // Set callback (need template info to do this)
+  // Invoke private implementation
+  auto sub = factory_->create_subscriber(sub_info, rixhub_endpoint_);
   if (sub) {
     sub->set_callback(callback);
+    components_.push_back(sub);
   }
   return sub;
 }
 
-inline std::shared_ptr<TimerCallback> Node::create_timer(const Duration& d, const TimerCallback::Callback& callback) {
-  if (!ok()) {
-    Log::error << "Node is shutdown, cannot create timer." << std::endl;
-    return nullptr;
-  }
-  auto timer = std::make_shared<TimerCallback>(d, callback);
-  components_.push_back(timer);
-  return timer;
+template <typename Callback>
+auto Node::create_subscriber(const std::string& topic, Callback&& callback, const Endpoint& endpoint, Protocol protocol)
+    -> std::enable_if_t<
+        !std::is_same<
+            std::decay_t<Callback>,
+            Subscriber::Callback<typename SubscriberCallbackTraits<std::decay_t<Callback>>::MessageType>>::value,
+        std::shared_ptr<Subscriber>> {
+  using TMsg = typename SubscriberCallbackTraits<std::decay_t<Callback>>::MessageType;
+  return create_subscriber<TMsg>(topic, std::forward<Callback>(callback), endpoint, protocol);
+}
+
+template <typename TMsg, typename Class>
+std::shared_ptr<Subscriber> Node::create_subscriber(const std::string& topic,
+                                                    void (Class::*callback)(const TMsg&),
+                                                    Class* instance,
+                                                    const Endpoint& endpoint,
+                                                    Protocol protocol) {
+  return create_subscriber<TMsg>(
+      topic, [instance, callback](const TMsg& msg) { (instance->*callback)(msg); }, endpoint, protocol);
+}
+
+template <typename Class>
+std::shared_ptr<TimerCallback>
+Node::create_timer(const Duration& d, void (Class::*callback)(const TimerCallback::Event&), Class* instance) {
+  return create_timer(d, [instance, callback](const TimerCallback::Event& event) { (instance->*callback)(event); });
 }
 
 template <typename TRequest, typename TResponse>
 std::shared_ptr<Service> Node::create_service(const std::string& service,
                                               Service::Callback<TRequest, TResponse> callback,
-                                              const Endpoint& endpoint) {
+                                              const Endpoint& endpoint,
+                                              Protocol protocol) {
   static_assert(std::is_base_of<Message, TRequest>::value, "TRequest must be a subclass of Message.");
   static_assert(std::is_base_of<Message, TResponse>::value, "TResponse must be a subclass of Message.");
 
@@ -254,18 +446,50 @@ std::shared_ptr<Service> Node::create_service(const std::string& service,
   service_info.name = service;
   service_info.request_hash = TRequest().hash();
   service_info.response_hash = TResponse().hash();
+  service_info.id = id_factory_();
+  service_info.node_id = info_.id;
+  service_info.endpoint.address = endpoint.address;
+  service_info.endpoint.port = endpoint.port;
+  service_info.protocol = protocol;
 
-  auto srv = create_service(service_info, rixhub_endpoint_, endpoint);
+  auto srv = factory_->create_service(service_info, rixhub_endpoint_);
   if (srv) {
     srv->set_callback(callback);
+    components_.push_back(srv);
   }
   return srv;
+}
+
+template <typename Callback>
+auto Node::create_service(const std::string& service, Callback&& callback, const Endpoint& endpoint, Protocol protocol)
+    -> std::enable_if_t<
+        !std::is_same<std::decay_t<Callback>,
+                      Service::Callback<typename ServiceCallbackTraits<std::decay_t<Callback>>::RequestType,
+                                        typename ServiceCallbackTraits<std::decay_t<Callback>>::ResponseType>>::value,
+        std::shared_ptr<Service>> {
+  using TRequest = typename ServiceCallbackTraits<std::decay_t<Callback>>::RequestType;
+  using TResponse = typename ServiceCallbackTraits<std::decay_t<Callback>>::ResponseType;
+  return create_service<TRequest, TResponse>(service, std::forward<Callback>(callback), endpoint, protocol);
+}
+
+template <typename TRequest, typename TResponse, typename Class>
+std::shared_ptr<Service> Node::create_service(const std::string& service,
+                                              void (Class::*callback)(const TRequest&, TResponse&),
+                                              Class* instance,
+                                              const Endpoint& endpoint,
+                                              Protocol protocol) {
+  return create_service<TRequest, TResponse>(
+      service,
+      [instance, callback](const TRequest& req, TResponse& resp) { (instance->*callback)(req, resp); },
+      endpoint,
+      protocol);
 }
 
 template <typename TGoal, typename TFeedback, typename TResult>
 std::shared_ptr<Action> Node::create_action(const std::string& action,
                                             Action::Callback<TGoal, TFeedback, TResult> callback,
-                                            const Endpoint& endpoint) {
+                                            const Endpoint& endpoint,
+                                            Protocol protocol) {
   static_assert(std::is_base_of<Message, TGoal>::value, "TGoal must be a subclass of Message.");
   static_assert(std::is_base_of<Message, TFeedback>::value, "TFeedback must be a subclass of Message.");
   static_assert(std::is_base_of<Message, TResult>::value, "TResult must be a subclass of Message.");
@@ -280,16 +504,51 @@ std::shared_ptr<Action> Node::create_action(const std::string& action,
   action_info.goal_hash = TGoal().hash();
   action_info.feedback_hash = TFeedback().hash();
   action_info.result_hash = TResult().hash();
+  action_info.id = id_factory_();
+  action_info.node_id = info_.id;
+  action_info.endpoint.address = endpoint.address;
+  action_info.endpoint.port = endpoint.port;
+  action_info.protocol = protocol;
 
-  auto act = create_action(action_info, rixhub_endpoint_, endpoint);
+  auto act = factory_->create_action(action_info, rixhub_endpoint_);
   if (act) {
     act->set_callback(callback);
+    components_.push_back(act);
   }
   return act;
 }
 
+template <typename Callback>
+auto Node::create_action(const std::string& action, Callback&& callback, const Endpoint& endpoint, Protocol protocol)
+    -> std::enable_if_t<
+        !std::is_same<std::decay_t<Callback>,
+                      Action::Callback<typename ActionCallbackTraits<std::decay_t<Callback>>::GoalType,
+                                       typename ActionCallbackTraits<std::decay_t<Callback>>::FeedbackType,
+                                       typename ActionCallbackTraits<std::decay_t<Callback>>::ResultType>>::value,
+        std::shared_ptr<Action>> {
+  using TGoal = typename ActionCallbackTraits<std::decay_t<Callback>>::GoalType;
+  using TFeedback = typename ActionCallbackTraits<std::decay_t<Callback>>::FeedbackType;
+  using TResult = typename ActionCallbackTraits<std::decay_t<Callback>>::ResultType;
+  return create_action<TGoal, TFeedback, TResult>(action, std::forward<Callback>(callback), endpoint, protocol);
+}
+
+template <typename TGoal, typename TFeedback, typename TResult, typename Class>
+std::shared_ptr<Action> Node::create_action(const std::string& action,
+                                            bool (Class::*callback)(const TGoal&, TFeedback&, TResult&),
+                                            Class* instance,
+                                            const Endpoint& endpoint,
+                                            Protocol protocol) {
+  return create_action<TGoal, TFeedback, TResult>(
+      action,
+      [instance, callback](const TGoal& goal, TFeedback& feedback, TResult& result) {
+        return (instance->*callback)(goal, feedback, result);
+      },
+      endpoint,
+      protocol);
+}
+
 template <typename TRequest, typename TResponse>
-std::shared_ptr<ServiceClient> Node::create_service_client(const std::string& service) {
+std::shared_ptr<ServiceClient> Node::create_service_client(const std::string& service, Protocol protocol) {
   static_assert(std::is_base_of<Message, TRequest>::value, "TRequest must be a subclass of Message.");
   static_assert(std::is_base_of<Message, TResponse>::value, "TResponse must be a subclass of Message.");
 
@@ -300,15 +559,21 @@ std::shared_ptr<ServiceClient> Node::create_service_client(const std::string& se
 
   sys_msgs::SrvRequest service_request;
   service_request.name = service;
-  service_request.node_id = info_.id;
   service_request.request_hash = TRequest().hash();
   service_request.response_hash = TResponse().hash();
-
-  return create_service_client(service_request, rixhub_endpoint_);
+  service_request.node_id = info_.id;
+  auto srv_cli = factory_->create_service_client(service_request, rixhub_endpoint_);
+  if (srv_cli) {
+    components_.push_back(srv_cli);
+  }
+  return srv_cli;
 }
 
 template <typename TGoal, typename TFeedback, typename TResult>
-std::shared_ptr<ActionClient> Node::create_action_client(const std::string& action) {
+std::shared_ptr<ActionClient> Node::create_action_client(const std::string& action,
+                                                         ActionClient::FeedbackCallback<TFeedback> feedback_callback,
+                                                         ActionClient::ResultCallback<TResult> result_callback,
+                                                         Protocol protocol) {
   static_assert(std::is_base_of<Message, TGoal>::value, "TGoal must be a subclass of Message.");
   static_assert(std::is_base_of<Message, TFeedback>::value, "TFeedback must be a subclass of Message.");
   static_assert(std::is_base_of<Message, TResult>::value, "TResult must be a subclass of Message.");
@@ -318,78 +583,51 @@ std::shared_ptr<ActionClient> Node::create_action_client(const std::string& acti
   }
   sys_msgs::ActRequest action_request;
   action_request.name = action;
-  action_request.node_id = info_.id;
   action_request.goal_hash = TGoal().hash();
   action_request.feedback_hash = TFeedback().hash();
   action_request.result_hash = TResult().hash();
-  return create_action_client(action_request, rixhub_endpoint_);
+  action_request.node_id = info_.id;
+  auto act_cli = factory_->create_action_client(action_request, rixhub_endpoint_);
+  if (act_cli) {
+    act_cli->set_feedback_callback(feedback_callback);
+    act_cli->set_result_callback(result_callback);
+    components_.push_back(act_cli);
+  }
+  return act_cli;
 }
 
-template <typename TParam> bool Node::set_parameter(const std::string& name, const TParam& parameter) {
-  static_assert(std::is_base_of<Message, TParam>::value, "TParam must be a subclass of Message.");
-  if (!ok()) {
-    Log::error << "Node is shutdown, cannot set parameter." << std::endl;
-    return false;
-  }
-
-  sys_msgs::ParamInfo info;
-  info.id = info_.id;
-  info.name = name;
-  info.message_hash = parameter.hash();
-  info.data.resize(parameter.size());
-  size_t offset = 0;
-  parameter.serialize(info.data.data(), offset);
-
-  auto client = socket_factory_();
-  if (!client->connect(rixhub_endpoint_)) {
-    return false;
-  }
-  if (!client->send_message(OPCODE::PARAM_SET_REQUEST, info)) {
-    return false;
-  }
-
-  sys_msgs::Operation operation;
-  sys_msgs::Status status;
-  if (!client->recv_message(operation, status)) {
-    return false;
-  }
-
-  if (operation.opcode != OPCODE::STATUS_RESPONSE) {
-    return false;
-  }
-
-  return status.error == 0;
+template <typename TGoal, typename FeedbackCallback, typename ResultCallback>
+auto Node::create_action_client(const std::string& action,
+                                FeedbackCallback&& feedback_callback,
+                                ResultCallback&& result_callback,
+                                Protocol protocol)
+    -> std::enable_if_t<
+        !std::is_same<std::decay_t<FeedbackCallback>,
+                      ActionClient::FeedbackCallback<
+                          typename ActionClientCallbackTraits<std::decay_t<FeedbackCallback>>::FeedbackType>>::value &&
+            !std::is_same<std::decay_t<ResultCallback>,
+                          ActionClient::ResultCallback<
+                              typename ActionClientCallbackTraits<std::decay_t<ResultCallback>>::ResultType>>::value,
+        std::shared_ptr<ActionClient>> {
+  using TFeedback = typename ActionClientCallbackTraits<std::decay_t<FeedbackCallback>>::FeedbackType;
+  using TResult = typename ActionClientCallbackTraits<std::decay_t<ResultCallback>>::ResultType;
+  return create_action_client<TGoal, TFeedback, TResult>(action,
+                                                         std::forward<FeedbackCallback>(feedback_callback),
+                                                         std::forward<ResultCallback>(result_callback),
+                                                         protocol);
 }
 
-template <typename TParam> bool Node::get_parameter(const std::string& name, TParam& parameter) {
-  static_assert(std::is_base_of<Message, TParam>::value, "TParam must be a subclass of Message.");
-  if (!ok()) {
-    Log::error << "Node is shutdown, cannot get parameter." << std::endl;
-    return false;
-  }
-
-  sys_msgs::ParamInfo info;
-  info.id = info_.id;
-  info.name = name;
-  info.message_hash = parameter.hash();
-  sys_msgs::ParamInfo info_received;
-
-  auto client = socket_factory_();
-  if (!client->connect(rixhub_endpoint_)) {
-    return false;
-  }
-  if (!client->send_message(OPCODE::PARAM_GET_REQUEST, info)) {
-    return false;
-  }
-  sys_msgs::Operation operation;
-  if (!client->recv_message(operation, info_received)) {
-    return false;
-  }
-  if (operation.opcode != OPCODE::PARAM_GET_RESPONSE) {
-    return false;
-  }
-  size_t offset = 0;
-  return parameter.deserialize(info_received.data.data(), info_received.data.size(), offset);
+template <typename TGoal, typename TFeedback, typename TResult, typename Class>
+std::shared_ptr<ActionClient> Node::create_action_client(const std::string& action,
+                                                         void (Class::*feedback_callback)(const TFeedback&),
+                                                         void (Class::*result_callback)(const TResult&),
+                                                         Class* instance,
+                                                         Protocol protocol) {
+  return create_action_client<TGoal, TFeedback, TResult>(
+      action,
+      [instance, feedback_callback](const TFeedback& feedback) { (instance->*feedback_callback)(feedback); },
+      [instance, result_callback](const TResult& result) { (instance->*result_callback)(result); },
+      protocol);
 }
 
 } // namespace rix

@@ -10,92 +10,152 @@
 
 namespace rix {
 
-class Node; // Forward declaration
-
-class Action final : public Spinner {
-  friend class Node;
-
+class Action : public Spinner {
 public:
   template <typename TGoal, typename TFeedback, typename TResult>
   using Callback = std::function<bool(const TGoal&, TFeedback&, TResult&)>;
+  virtual ~Action() = default;
 
-  Action(const Action&) = delete;
-  Action& operator=(const Action&) = delete;
-  Action(Action&&) = delete;
-  Action& operator=(Action&&) = delete;
-  ~Action() override;
+  virtual void set_goal_callback(std::function<void()> callback) = 0;
 
-  void set_goal_callback(std::function<void()> callback);
-  void set_preempt_callback(std::function<void()> callback);
+  virtual void set_preempt_callback(std::function<void()> callback) = 0;
 
   template <typename TGoal, typename TFeedback, typename TResult>
   void set_callback(Callback<TGoal, TFeedback, TResult> callback);
 
-private:
+protected:
   using CallbackUntyped = std::function<bool(const Message&, Message&, Message&)>;
-  CallbackUntyped callback_{};
-  std::function<void()> goal_callback_{};
-  std::function<void()> preempt_callback_{};
-  sys_msgs::ActInfo info_{};
-  SocketFactory socket_factory_{};
-  std::shared_ptr<GenericSocket> server_{};
-  std::shared_ptr<GenericSocket> connection_{};
-  mutable std::mutex mutex_{};
-  Endpoint rixhub_endpoint_{};
-  std::atomic<bool> registered_flag_{};
-  std::shared_ptr<Message> goal_instance_{};
-  std::shared_ptr<Message> feedback_instance_{};
-  std::shared_ptr<Message> result_instance_{};
-  std::thread spin_thread_{};
 
-  // Internal class to handle accepting new connections from rixhub
+private:
+  virtual void set_callback(CallbackUntyped callback,
+                            std::shared_ptr<Message> goal_instance,
+                            std::shared_ptr<Message> feedback_instance,
+                            std::shared_ptr<Message> result_instance) = 0;
+};
+
+namespace detail {
+
+class ActionImpl final : public Action {
+public:
+  /**
+   * @brief Callback type definition for action goals.
+   * @tparam TGoal The goal message type.
+   * @tparam TFeedback The feedback message type.
+   * @tparam TResult The result message type.
+   */
+  template <typename TGoal, typename TFeedback, typename TResult>
+  using Callback = std::function<bool(const TGoal&, TFeedback&, TResult&)>;
+
+  /**
+   * @brief Constructs an ActionImpl with the given ActInfo, socket factory, and RIXHub endpoint.
+   * @param info The ActInfo message containing action details.
+   * @param socket_factory The socket factory function.
+   * @param rixhub_endpoint The RIXHub endpoint.
+   */
+  ActionImpl(const sys_msgs::ActInfo& info, const Endpoint& rixhub_endpoint);
+
+  // Disable copy and move semantics
+  ActionImpl(const ActionImpl&) = delete;
+  ActionImpl& operator=(const ActionImpl&) = delete;
+  ActionImpl(ActionImpl&&) = delete;
+  ActionImpl& operator=(ActionImpl&&) = delete;
+
+  /**
+   * @brief Destructor. Deregisters the action from rixhub.
+   */
+  ~ActionImpl() override;
+
+  /**
+   * @brief Sets the callback to be invoked when a new goal is received.
+   * @param callback The goal callback function.
+   */
+  void set_goal_callback(std::function<void()> callback) override;
+
+  /**
+   * @brief Sets the callback to be invoked when a preempt request is received.
+   * @param callback The preempt callback function.
+   */
+  void set_preempt_callback(std::function<void()> callback) override;
+
+private:
+  /**
+   * @brief Callback type definition for untyped action goals.
+   */
+  using CallbackUntyped = std::function<bool(const Message&, Message&, Message&)>;
+
+  CallbackUntyped callback_{};                   ///< Untyped action callback.
+  std::function<void()> goal_callback_{};        ///< Goal callback.
+  std::function<void()> preempt_callback_{};     ///< Preempt callback.
+  sys_msgs::ActInfo info_{};                     ///< ActionImpl information.
+  TransportFactory factory_{};                   ///< Socket factory function.
+  std::shared_ptr<Acceptor> server_{};           ///< Server socket.
+  std::shared_ptr<Stream> connection_{};         ///< Active connection socket.
+  mutable std::mutex mutex_{};                   ///< Mutex for protecting shared data.
+  Endpoint rixhub_endpoint_{};                   ///< RIXHub endpoint
+  std::atomic<bool> registered_flag_{};          ///< Flag indicating if the action is registered.
+  std::shared_ptr<Message> goal_instance_{};     ///< Prototype goal message.
+  std::shared_ptr<Message> feedback_instance_{}; ///< Prototype feedback message.
+  std::shared_ptr<Message> result_instance_{};   ///< Prototype result message.
+  std::thread spin_thread_{};                    ///< Thread running the spin loop.
+
+  /**
+   * @brief Internal class to accept new action goal notifications.
+   */
   class ActAcceptor : public Spinner {
   public:
-    explicit ActAcceptor(Action& parent);
+    /**
+     * @brief Constructs a ActAcceptor with the given parent ActionImpl.
+     * @param parent The parent ActionImpl.
+     */
+    explicit ActAcceptor(ActionImpl& parent);
     ~ActAcceptor() override = default;
 
+    // Disable copy and move semantics
     ActAcceptor(const ActAcceptor&) = delete;
     ActAcceptor& operator=(const ActAcceptor&) = delete;
     ActAcceptor(ActAcceptor&&) = delete;
     ActAcceptor& operator=(ActAcceptor&&) = delete;
 
-    void on_spin() override;
+    ActionImpl& parent;        ///< Reference to the parent ActionImpl.
+    std::thread spin_thread{}; ///< Thread running the spin loop.
 
-    Action& parent;
-    std::thread spin_thread{};
+  private:
+    void on_spin() override;
   };
 
   ActAcceptor acceptor_{*this};
 
-  Action(const sys_msgs::ActInfo& info, SocketFactory socket_factory, const Endpoint& rixhub_endpoint);
-
+  // Disable public spin methods (only Node can spin the ActionImpl)
   using Spinner::spin;
   using Spinner::spin_once;
+
+  void set_callback(CallbackUntyped callback,
+                    std::shared_ptr<Message> goal_instance,
+                    std::shared_ptr<Message> feedback_instance,
+                    std::shared_ptr<Message> result_instance) override;
+
+  /**
+   * @brief Internal spin implementation for the ActionImpl.
+   */
   void on_spin() override;
 };
 
+} // namespace detail
+
 template <typename TGoal, typename TFeedback, typename TResult>
 void Action::set_callback(Callback<TGoal, TFeedback, TResult> callback) {
-  static_assert(std::is_base_of_v<Message, TGoal>, "TGoal must be a subclass of Message.");
-  static_assert(std::is_base_of_v<Message, TFeedback>, "TFeedback must be a subclass of Message.");
-  static_assert(std::is_base_of_v<Message, TResult>, "TResult must be a subclass of Message.");
-
-  std::lock_guard<std::mutex> guard(mutex_);
-  if (TGoal().hash() != info_.goal_hash || TFeedback().hash() != info_.feedback_hash ||
-      TResult().hash() != info_.result_hash) {
-    Log::warn << "Message type mismatch in Action::set_callback." << std::endl;
-    return;
-  }
-  goal_instance_ = std::make_shared<TGoal>();
-  feedback_instance_ = std::make_shared<TFeedback>();
-  result_instance_ = std::make_shared<TResult>();
-  callback_ = [callback](const Message& goal, Message& feedback, Message& result) -> bool {
+  auto goal_instance = std::make_shared<TGoal>();
+  auto feedback_instance = std::make_shared<TFeedback>();
+  auto result_instance = std::make_shared<TResult>();
+  auto untyped = [callback](const Message& goal, Message& feedback, Message& result) -> bool {
     // Safe to static cast because we checked the hash above
     const auto& typed_goal = static_cast<const TGoal&>(goal);
     auto& typed_feedback = static_cast<TFeedback&>(feedback);
     auto& typed_result = static_cast<TResult&>(result);
     return callback(typed_goal, typed_feedback, typed_result);
   };
+
+  set_callback(untyped, goal_instance, feedback_instance, result_instance);
 }
 
 } // namespace rix

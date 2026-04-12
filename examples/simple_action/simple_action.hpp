@@ -1,7 +1,7 @@
+#include "rix/rix.hpp"
 #include "rix/std_msgs/Double.hpp"
 #include "rix/std_msgs/Float.hpp"
 #include "rix/std_msgs/UInt32.hpp"
-#include "rix/rix.hpp"
 #include <cmath>
 
 using namespace rix;
@@ -13,9 +13,7 @@ public:
   SimpleAction(int max_iters, int port);
 
 private:
-  bool callback(const rix::std_msgs::Double& goal,
-                rix::std_msgs::Float& feedback,
-                rix::std_msgs::Double& result);
+  bool callback(const rix::std_msgs::Double& goal, rix::std_msgs::Float& feedback, rix::std_msgs::Double& result);
   int i_;
   int max_iters_;
   double value_;

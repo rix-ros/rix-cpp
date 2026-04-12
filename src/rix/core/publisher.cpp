@@ -2,25 +2,13 @@
 #include "rix/sys_msgs/Status.hpp"
 
 namespace rix {
+namespace detail {
 
-Publisher::Publisher(const sys_msgs::PubInfo& info, SocketFactory factory, Endpoint rixhub_endpoint)
-    : info_(info), socket_factory_(factory), rixhub_endpoint_(rixhub_endpoint), registered_flag_(false) {
-
-  server_ = socket_factory_();
+PublisherImpl::PublisherImpl(const sys_msgs::PubInfo& info, Endpoint rixhub_endpoint)
+    : info_(info), factory_(get_transport_factory(static_cast<Protocol>(info.protocol))),
+      rixhub_endpoint_(rixhub_endpoint), registered_flag_(false) {
+  server_ = factory_.create_acceptor(Endpoint(info_.endpoint.address, info_.endpoint.port));
   if (!server_) {
-    shutdown();
-    return;
-  }
-
-  if (!server_->set_reuse_address(true)) {
-    shutdown();
-    return;
-  }
-  if (!server_->bind(Endpoint(info_.endpoint.address, info_.endpoint.port))) {
-    shutdown();
-    return;
-  }
-  if (!server_->listen(MAX_CONN)) {
     shutdown();
     return;
   }
@@ -37,8 +25,8 @@ Publisher::Publisher(const sys_msgs::PubInfo& info, SocketFactory factory, Endpo
   info_.endpoint.port = server_endpoint.port;
 
   // Register publisher with rixhub
-  auto client = socket_factory_();
-  if (!client->connect(rixhub_endpoint_)) {
+  auto client = factory_.create_stream(rixhub_endpoint_, true);
+  if (!client) {
     shutdown();
     return;
   }
@@ -60,25 +48,23 @@ Publisher::Publisher(const sys_msgs::PubInfo& info, SocketFactory factory, Endpo
 
   registered_flag_ = true;
 
-  Log::debug << "Publisher created on topic \"" << info_.topic_info.name << "\"." << std::endl;
+  Log::debug << "PublisherImpl created on topic \"" << info_.topic_info.name << "\"." << std::endl;
 
   if (MULTITHREADED) {
     spin_thread_ = std::thread([this]() { this->spin(); });
   }
 }
 
-Publisher::~Publisher() {
+PublisherImpl::~PublisherImpl() {
   // Deregister publisher with rixhub
   if (registered_flag_) {
-    auto client = socket_factory_();
+    auto client = factory_.create_stream(rixhub_endpoint_, true);
     if (!client) {
       return;
     }
-    if (client->connect(rixhub_endpoint_)) {
-      client->send_message(OPCODE::PUB_DEREGISTER, info_);
-    }
+    client->send_message(OPCODE::PUB_DEREGISTER, info_);
   }
-  Log::debug << "Publisher on topic \"" << info_.topic_info.name << "\" destroyed." << std::endl;
+  Log::debug << "PublisherImpl on topic \"" << info_.topic_info.name << "\" destroyed." << std::endl;
 
   if (MULTITHREADED) {
     shutdown();
@@ -88,7 +74,7 @@ Publisher::~Publisher() {
   }
 }
 
-void Publisher::publish(const Message& msg) {
+void PublisherImpl::publish(const Message& msg) {
   if (!ok()) {
     return;
   }
@@ -104,28 +90,25 @@ void Publisher::publish(const Message& msg) {
     return;
   }
 
-  std::vector<std::shared_ptr<GenericSocket>> sockets(connections_.begin(), connections_.end());
-  std::vector<std::shared_ptr<GenericSocket>> writable;
-
-  if (GenericSocket::get_poller()) {
-    std::vector<std::shared_ptr<GenericSocket>> exceptional;
-    GenericSocket::poll(sockets, Duration(0.0), PollFlag::WRITE, writable, exceptional);
-
-    // Remove any clients that have exceptions
-    for (const auto& conn : exceptional) {
-      connections_.erase(conn);
-      Log::debug << "Removed exceptional subscriber from topic \"" << info_.topic_info.name << "\"." << std::endl;
-    }
+  std::vector<std::shared_ptr<Stream>> writable;
+  std::vector<std::shared_ptr<Stream>> exceptional;
+  if (Pollable::get_poller()) {
+    std::vector<std::shared_ptr<Stream>> connections_vector(connections_.begin(), connections_.end());
+    Pollable::poll(connections_vector, Duration(0.0), PollFlag::WRITE, writable, exceptional);
   } else {
     // Fallback if poller is not available
-    for (const auto& sock : sockets) {
-      if (sock->is_writable()) {
-        writable.push_back(sock);
+    for (const auto& conn : connections_) {
+      if (conn->is_writable()) {
+        writable.push_back(conn);
       } else {
-        connections_.erase(sock);
-        Log::debug << "Removed exceptional subscriber from topic \"" << info_.topic_info.name << "\"." << std::endl;
+        exceptional.push_back(conn);
       }
     }
+  }
+  // Remove any clients that have exceptions
+  for (const auto& conn : exceptional) {
+    connections_.erase(conn);
+    Log::debug << "Removed exceptional subscriber from topic \"" << info_.topic_info.name << "\"." << std::endl;
   }
 
   // Send the message to each current connection
@@ -145,14 +128,16 @@ void Publisher::publish(const Message& msg) {
   Log::debugv << "Published message on topic \"" << info_.topic_info.name << "\"." << std::endl;
 }
 
-size_t Publisher::get_subscriber_count() const {
+size_t PublisherImpl::get_subscriber_count() const {
   std::lock_guard<std::mutex> guard(connections_mutex_);
   return connections_.size();
 }
 
-void Publisher::on_spin() {
+void PublisherImpl::on_spin() {
+  Duration timeout(MULTITHREADED ? 1.0 : 0.0);
+
   // Check to see if a subscriber has made a connection
-  if (!server_->wait_readable(Duration(1.0))) {
+  if (!server_->wait_readable(timeout)) {
     return;
   }
 
@@ -170,4 +155,5 @@ void Publisher::on_spin() {
   connections_.insert(conn);
 }
 
+} // namespace detail
 } // namespace rix

@@ -27,7 +27,6 @@ bool TransformBuffer::empty() const { return buffer_.empty(); }
 
 void TransformBuffer::clear() { buffer_.clear(); }
 
-/*< TODO: Implement the insert method. */
 void TransformBuffer::insert(const Time& time, const geometry_msgs::Transform& transform) {
   // Insert new entry with binary search
   auto it = std::lower_bound(
@@ -48,7 +47,6 @@ void TransformBuffer::insert(const Time& time, const geometry_msgs::Transform& t
   }
 }
 
-/*< TODO: Implement the get method. */
 bool TransformBuffer::get(const Time& time, geometry_msgs::Transform& transform) const {
   if (buffer_.empty()) {
     return false;

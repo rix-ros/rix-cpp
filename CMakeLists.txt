@@ -24,8 +24,12 @@ add_library(rix SHARED
     src/rix/core/service.cpp
     src/rix/core/subscriber.cpp
     src/rix/core/timer_callback.cpp
+    src/rix/core/component_factory.cpp
+    src/rix/core/mediator_client.cpp
     src/rix/ipc/endpoint.cpp
-    src/rix/ipc/posix_socket.cpp
+    src/rix/ipc/stream.cpp
+    src/rix/ipc/tcp_acceptor.cpp
+    src/rix/ipc/tcp_stream.cpp
     src/rix/ipc/posix_signal.cpp
     src/rix/ipc/poll.cpp
     src/rix/util/argument_parser.cpp
@@ -68,27 +72,24 @@ target_link_libraries(rixhub rix)
 if(BUILD_TESTS)
     find_package(GTest REQUIRED)
     message(STATUS "Building unit tests")
-    enable_testing()
+
     add_executable(node_test
-        test/node_test.cpp
+        tests/node_test.cpp
     )
     target_link_libraries(node_test GTest::gtest_main GTest::gmock rix)
+
     add_executable(mediator_test
-        test/mediator_test.cpp
+        tests/mediator_test.cpp
     )
     target_link_libraries(mediator_test GTest::gtest_main GTest::gmock rix)
-    add_executable(message_test
-        test/message_test.cpp
-    )
-    target_link_libraries(message_test GTest::gtest_main GTest::gmock rix)
 
     add_executable(tf_tests
-        test/tf/frame_graph.cpp
-        test/tf/joint.cpp
-        test/tf/robot_model_rx200.cpp
-        test/tf/robot_model_simple_bot.cpp
-        test/tf/kinematics_solver.cpp
-        test/tf/transform_buffer.cpp)
+        tests/tf/frame_graph.cpp
+        tests/tf/joint.cpp
+        tests/tf/robot_model_rx200.cpp
+        tests/tf/robot_model_simple_bot.cpp
+        tests/tf/kinematics_solver.cpp
+        tests/tf/transform_buffer.cpp)
     target_link_libraries(tf_tests GTest::Main tf rix)
 endif()
 

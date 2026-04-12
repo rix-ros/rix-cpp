@@ -1,5 +1,5 @@
-#include "rix/std_msgs/Header.hpp"
 #include "rix/rix.hpp"
+#include "rix/std_msgs/Header.hpp"
 
 #include <sstream>
 
@@ -9,7 +9,6 @@ const std::string NAME = "simple_subscriber";
 
 class SimpleSubscriber final : public Node {
 public:
-  // Initialize the Node with a name and the RixHub endpoint
   SimpleSubscriber(int port);
 
 private:

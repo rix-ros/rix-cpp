@@ -10,36 +10,68 @@
 
 namespace rix {
 
-class Node; // Forward declaration
-
-class Publisher final : public Spinner {
-  friend class Node;
-
+class Publisher : public Spinner {
 public:
-  Publisher(const Publisher&) = delete;
-  Publisher& operator=(const Publisher&) = delete;
-  Publisher(Publisher&&) = delete;
-  Publisher& operator=(Publisher&&) = delete;
-  ~Publisher() override;
+  virtual ~Publisher() = default;
+  virtual void publish(const Message& msg) = 0;
+  virtual size_t get_subscriber_count() const = 0;
+};
 
-  void publish(const Message& msg);
-  size_t get_subscriber_count() const;
+// TODO: Move PublisherImpl to a separate source file and hide it from the public interface
+namespace detail {
+
+class PublisherImpl final : public Publisher {
+public:
+  /**
+   * @brief Constructs a PublisherImpl with the given PubInfo, socket factory, and RIXHub endpoint.
+   * @param info The PubInfo message containing publisher details.
+   * @param factory The socket factory to create sockets.
+   * @param rixhub_endpoint The RIXHub endpoint.
+   */
+  PublisherImpl(const sys_msgs::PubInfo& info, Endpoint rixhub_endpoint);
+
+  // Disable copy and move semantics
+  PublisherImpl(const PublisherImpl&) = delete;
+  PublisherImpl& operator=(const PublisherImpl&) = delete;
+  PublisherImpl(PublisherImpl&&) = delete;
+  PublisherImpl& operator=(PublisherImpl&&) = delete;
+
+  /**
+   * @brief Destructor. Deregisters the publisher from rixhub.
+   */
+  ~PublisherImpl() override;
+
+  /**
+   * @brief Publishes a message to all connected subscribers.
+   * @param msg The message to publish.
+   */
+  void publish(const Message& msg) override;
+
+  /**
+   * @brief Returns the number of connected subscribers.
+   * @return The number of connected subscribers.
+   */
+  size_t get_subscriber_count() const override;
 
 private:
-  sys_msgs::PubInfo info_;
-  SocketFactory socket_factory_;
-  std::shared_ptr<GenericSocket> server_;
-  std::set<std::shared_ptr<GenericSocket>> connections_;
-  mutable std::mutex connections_mutex_;
-  Endpoint rixhub_endpoint_;
-  std::atomic<bool> registered_flag_;
-  std::thread spin_thread_{};
+  sys_msgs::PubInfo info_;                        ///< The publisher information.
+  TransportFactory factory_;                      ///< The socket factory function.
+  std::shared_ptr<Acceptor> server_;              ///< The server socket for incoming connections.
+  std::set<std::shared_ptr<Stream>> connections_; ///< The set of connected subscriber sockets.
+  mutable std::mutex connections_mutex_;          ///< Mutex for protecting the connections set.
+  Endpoint rixhub_endpoint_;                      ///< The RIXHub endpoint.
+  std::atomic<bool> registered_flag_;             ///< Flag indicating if the publisher is registered.
+  std::thread spin_thread_{};                     ///< The thread running the spin loop.
 
-  Publisher(const sys_msgs::PubInfo& info, SocketFactory factory, Endpoint rixhub_endpoint);
-
+  // Disable public spin methods (only Node can spin the PublisherImpl)
   using Spinner::spin;
   using Spinner::spin_once;
+
+  /**
+   * @brief Internal spin implementation for the PublisherImpl.
+   */
   void on_spin() override;
 };
 
+} // namespace detail
 } // namespace rix

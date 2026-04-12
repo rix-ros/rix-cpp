@@ -3,24 +3,13 @@
 #include "rix/sys_msgs/SubNotify.hpp"
 
 namespace rix {
+namespace detail {
 
-Subscriber::Subscriber(const sys_msgs::SubInfo& info, SocketFactory socket_factory, const Endpoint& rixhub_endpoint)
-    : info_(info), socket_factory_(socket_factory), callback_(nullptr), rixhub_endpoint_(rixhub_endpoint),
-      registered_flag_(false) {
+SubscriberImpl::SubscriberImpl(const sys_msgs::SubInfo& info, const Endpoint& rixhub_endpoint)
+    : info_(info), factory_(get_transport_factory(static_cast<Protocol>(info.protocol))), callback_(nullptr),
+      rixhub_endpoint_(rixhub_endpoint), registered_flag_(false) {
 
-  server_ = socket_factory_();
-  if (!server_->set_reuse_address(true)) {
-    shutdown();
-    return;
-  }
-  if (!server_->bind(Endpoint(info_.endpoint.address, info_.endpoint.port))) {
-    shutdown();
-    return;
-  }
-  if (!server_->listen(MAX_CONN)) {
-    shutdown();
-    return;
-  }
+  server_ = factory_.create_acceptor(Endpoint(info_.endpoint.address, info_.endpoint.port));
 
   // Ensure server was intitialized properly
   if (server_->is_exception()) {
@@ -34,8 +23,8 @@ Subscriber::Subscriber(const sys_msgs::SubInfo& info, SocketFactory socket_facto
   info_.endpoint.port = server_endpoint.port;
 
   // Register subscriber with rixhub
-  auto client = socket_factory_();
-  if (!client->connect(rixhub_endpoint_)) {
+  auto client = factory_.create_stream(rixhub_endpoint_, true);
+  if (!client) {
     shutdown();
     return;
   }
@@ -57,7 +46,7 @@ Subscriber::Subscriber(const sys_msgs::SubInfo& info, SocketFactory socket_facto
 
   registered_flag_ = true;
 
-  Log::debug << "Subscriber created on topic \"" << info_.topic_info.name << "\"." << std::endl;
+  Log::debug << "SubscriberImpl created on topic \"" << info_.topic_info.name << "\"." << std::endl;
 
   if (MULTITHREADED) {
     sub_notify_acceptor_.spin_thread = std::thread([this]() { this->sub_notify_acceptor_.spin(); });
@@ -65,17 +54,15 @@ Subscriber::Subscriber(const sys_msgs::SubInfo& info, SocketFactory socket_facto
   }
 }
 
-Subscriber::~Subscriber() {
+SubscriberImpl::~SubscriberImpl() {
   if (registered_flag_) {
-    auto client = socket_factory_();
+    auto client = factory_.create_stream(rixhub_endpoint_, true);
     if (!client) {
       return;
     }
-    if (client->connect(rixhub_endpoint_)) {
-      client->send_message(OPCODE::SUB_DEREGISTER, info_);
-    }
+    client->send_message(OPCODE::SUB_DEREGISTER, info_);
   }
-  Log::debug << "Subscriber on topic \"" << info_.topic_info.name << "\" destroyed." << std::endl;
+  Log::debug << "SubscriberImpl on topic \"" << info_.topic_info.name << "\" destroyed." << std::endl;
 
   if (MULTITHREADED) {
     sub_notify_acceptor_.shutdown();
@@ -89,13 +76,12 @@ Subscriber::~Subscriber() {
   }
 }
 
-size_t Subscriber::get_publisher_count() const {
+size_t SubscriberImpl::get_publisher_count() const {
   std::lock_guard<std::mutex> guard(callback_mutex_);
   return clients_.size();
 }
 
-/**< TODO: Implement the spin_once method */
-void Subscriber::on_spin() {
+void SubscriberImpl::on_spin() {
 
   if (!MULTITHREADED) {
     // In single-threaded mode, we need to also spin the acceptor
@@ -106,30 +92,27 @@ void Subscriber::on_spin() {
   if (clients_.empty() || !callback_) {
     return;
   }
-  std::vector<std::shared_ptr<GenericSocket>> sockets(clients_.begin(), clients_.end());
-  std::vector<std::shared_ptr<GenericSocket>> readable;
-
-  if (GenericSocket::get_poller()) {
-    std::vector<std::shared_ptr<GenericSocket>> exceptional;
-
+  std::vector<std::shared_ptr<Stream>> readable;
+  std::vector<std::shared_ptr<Stream>> exceptional;
+  if (Pollable::get_poller()) {
     Duration timeout(MULTITHREADED ? 1.0 : 0.0);
-
-    GenericSocket::poll(sockets, timeout, PollFlag::READ, readable, exceptional);
-
-    // Remove any clients that have exceptions
-    for (const auto& conn : exceptional) {
-      clients_.erase(conn);
-      Log::debug << "Removed exceptional publisher from topic \"" << info_.topic_info.name << "\"." << std::endl;
-    }
-    exceptional.clear();
-
+    std::vector<std::shared_ptr<Stream>> clients_vector(clients_.begin(), clients_.end());
+    Pollable::poll(clients_vector, timeout, PollFlag::READ, readable, exceptional);
   } else {
     // Fallback if poller is not available
-    for (const auto& sock : sockets) {
-      if (sock->is_readable()) {
-        readable.push_back(sock);
+    for (const auto& client : clients_) {
+      if (client->is_readable()) {
+        readable.push_back(client);
+      } else if (client->is_exception()) {
+        exceptional.push_back(client);
       }
     }
+  }
+
+  // Remove any clients that have exceptions
+  for (const auto& client : exceptional) {
+    clients_.erase(client);
+    Log::debug << "Removed exceptional publisher from topic \"" << info_.topic_info.name << "\"." << std::endl;
   }
 
   auto it = readable.begin();
@@ -160,9 +143,9 @@ void Subscriber::on_spin() {
   readable.clear();
 }
 
-Subscriber::SubNotifyAcceptor::SubNotifyAcceptor(Subscriber& parent) : parent(parent) {}
+SubscriberImpl::SubNotifyAcceptor::SubNotifyAcceptor(SubscriberImpl& parent) : parent(parent) {}
 
-void Subscriber::SubNotifyAcceptor::on_spin() {
+void SubscriberImpl::SubNotifyAcceptor::on_spin() {
   Duration timeout(MULTITHREADED ? 1.0 : 0.0);
 
   // Check to see if rixhub has made a connection
@@ -189,12 +172,10 @@ void Subscriber::SubNotifyAcceptor::on_spin() {
   std::lock_guard<std::mutex> guard(parent.callback_mutex_);
   // Connect to the specified publishers (non-blocking)
   for (const auto& pub : sub_notify.publishers) {
-    auto client = parent.socket_factory_();
+    auto client = parent.factory_.create_stream(Endpoint(pub.endpoint.address, pub.endpoint.port), false);
     if (!client) {
       continue;
     }
-    client->set_blocking(false);
-    client->connect(Endpoint(pub.endpoint.address, pub.endpoint.port));
     client->set_blocking(true);
     parent.clients_.insert(client);
     Log::debug << "Connected to publisher at \"" << pub.endpoint.address << ":" << pub.endpoint.port << "\" on topic \""
@@ -202,4 +183,15 @@ void Subscriber::SubNotifyAcceptor::on_spin() {
   }
 }
 
+void SubscriberImpl::set_callback(CallbackUntyped callback, std::shared_ptr<Message> message) {
+  if (message->hash() != info_.topic_info.message_hash) {
+    Log::warn << "Message type mismatch in set_callback." << std::endl;
+    return;
+  }
+  std::lock_guard<std::mutex> guard(callback_mutex_);
+  callback_ = std::move(callback);
+  msg_instance_ = std::move(message);
+}
+
+} // namespace detail
 } // namespace rix
