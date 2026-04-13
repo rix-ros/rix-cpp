@@ -8,25 +8,30 @@
 namespace rix {
 
 // Type deduction helper for extracting message type from callback signature
-template <typename T, typename = void> struct SubscriberCallbackTraits;
+template <typename T, typename = void>
+struct SubscriberCallbackTraits;
 
 // Specialization for function pointers
-template <typename TMsg> struct SubscriberCallbackTraits<void (*)(const TMsg&), void> {
+template <typename TMsg>
+struct SubscriberCallbackTraits<void (*)(const TMsg&), void> {
   using MessageType = TMsg;
 };
 
 // Specialization for std::function
-template <typename TMsg> struct SubscriberCallbackTraits<std::function<void(const TMsg&)>, void> {
+template <typename TMsg>
+struct SubscriberCallbackTraits<std::function<void(const TMsg&)>, void> {
   using MessageType = TMsg;
 };
 
 // Specialization for const member function (lambda/functor)
-template <typename Class, typename TMsg> struct SubscriberCallbackTraits<void (Class::*)(const TMsg&) const, void> {
+template <typename Class, typename TMsg>
+struct SubscriberCallbackTraits<void (Class::*)(const TMsg&) const, void> {
   using MessageType = TMsg;
 };
 
 // Specialization for non-const member function
-template <typename Class, typename TMsg> struct SubscriberCallbackTraits<void (Class::*)(const TMsg&), void> {
+template <typename Class, typename TMsg>
+struct SubscriberCallbackTraits<void (Class::*)(const TMsg&), void> {
   using MessageType = TMsg;
 };
 
@@ -36,7 +41,8 @@ struct SubscriberCallbackTraits<Functor, std::void_t<decltype(&Functor::operator
     : SubscriberCallbackTraits<decltype(&Functor::operator())> {};
 
 // Type deduction helper for service callbacks
-template <typename T, typename = void> struct ServiceCallbackTraits;
+template <typename T, typename = void>
+struct ServiceCallbackTraits;
 
 // Specialization for function pointers
 template <typename TRequest, typename TResponse>
@@ -72,7 +78,8 @@ struct ServiceCallbackTraits<Functor, std::void_t<decltype(&Functor::operator())
     : ServiceCallbackTraits<decltype(&Functor::operator())> {};
 
 // Type deduction helper for service callbacks
-template <typename T, typename = void> struct ActionCallbackTraits;
+template <typename T, typename = void>
+struct ActionCallbackTraits;
 
 // Specialization for function pointers
 template <typename TGoal, typename TFeedback, typename TResult>
@@ -112,17 +119,20 @@ struct ActionCallbackTraits<Functor, std::void_t<decltype(&Functor::operator())>
     : ActionCallbackTraits<decltype(&Functor::operator())> {};
 
 // Action Client Callback Traits (for feedback callbacks)
-template <typename T, typename = void> struct ActionClientCallbackTraits;
+template <typename T, typename = void>
+struct ActionClientCallbackTraits;
 
 // Specialization for function pointers
-template <typename TFeedback> struct ActionClientCallbackTraits<void (*)(const TFeedback&), void> {
+template <typename TFeedback>
+struct ActionClientCallbackTraits<void (*)(const TFeedback&), void> {
   using FeedbackType = TFeedback;
   using ResultType = void;
   using GoalType = void;
 };
 
 // Specialization for std::function
-template <typename TFeedback> struct ActionClientCallbackTraits<std::function<void(const TFeedback&)>, void> {
+template <typename TFeedback>
+struct ActionClientCallbackTraits<std::function<void(const TFeedback&)>, void> {
   using FeedbackType = TFeedback;
   using ResultType = void;
   using GoalType = void;
@@ -150,17 +160,20 @@ struct ActionClientCallbackTraits<Functor, std::void_t<decltype(&Functor::operat
     : ActionClientCallbackTraits<decltype(&Functor::operator())> {};
 
 // Action Client Result Callback Traits
-template <typename T, typename = void> struct ActionClientResultCallbackTraits;
+template <typename T, typename = void>
+struct ActionClientResultCallbackTraits;
 
 // Specialization for function pointers
-template <typename TResult> struct ActionClientResultCallbackTraits<void (*)(const TResult&), void> {
+template <typename TResult>
+struct ActionClientResultCallbackTraits<void (*)(const TResult&), void> {
   using ResultType = TResult;
   using FeedbackType = void;
   using GoalType = void;
 };
 
 // Specialization for std::function
-template <typename TResult> struct ActionClientResultCallbackTraits<std::function<void(const TResult&)>, void> {
+template <typename TResult>
+struct ActionClientResultCallbackTraits<std::function<void(const TResult&)>, void> {
   using ResultType = TResult;
   using FeedbackType = void;
   using GoalType = void;

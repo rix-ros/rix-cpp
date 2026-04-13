@@ -1,0 +1,160 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format-check:
+    name: Format Check
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install clang-format
+        run: pip install clang-format==22.1.0
+
+      - name: Check formatting
+        run: |
+          find include src tests -type f \( -name '*.cpp' -o -name '*.hpp' -o -name '*.h' \) \
+            | xargs clang-format --dry-run --Werror --style=file
+
+  build-and-test:
+    name: Build & Test (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: "Linux / GCC 13"
+            os: ubuntu-24.04
+            cc: gcc-13
+            cxx: g++-13
+            extra_apt: "gcc-13 g++-13"
+
+          - name: "Linux / GCC 14"
+            os: ubuntu-24.04
+            cc: gcc-14
+            cxx: g++-14
+            extra_apt: ""          # gcc-14 is the default on ubuntu-24.04
+
+          - name: "Linux / Clang 18"
+            os: ubuntu-24.04
+            cc: clang-18
+            cxx: clang++-18
+            extra_apt: "clang-18"
+
+          - name: "macOS / AppleClang"
+            os: macos-15
+            cc: clang
+            cxx: clang++
+            extra_apt: ""
+
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set RIX install directory
+        run: echo "RIX_INSTALL_DIR=$HOME/.rix" >> $GITHUB_ENV
+
+      - name: Cache dependencies
+        id: cache-deps
+        uses: actions/cache@v4
+        with:
+          path: ~/.rix
+          key: deps-${{ matrix.os }}-${{ hashFiles('install.bash') }}
+
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build \
+            libgtest-dev libgmock-dev \
+            ${{ matrix.extra_apt }}
+
+      - name: Install system dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install cmake ninja googletest
+
+      - name: Install Eigen
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz -o eigen-3.4.0.tar.gz
+          tar -xzf eigen-3.4.0.tar.gz
+          cmake -S eigen-3.4.0 -B eigen-3.4.0/build -DCMAKE_INSTALL_PREFIX="$HOME/.rix"
+          cmake --install eigen-3.4.0/build
+          rm -rf eigen-3.4.0 eigen-3.4.0.tar.gz
+      
+      - name: Install nlohmann/json
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.tar.gz -o v3.11.3.tar.gz
+          tar -xzf v3.11.3.tar.gz
+          cmake -S json-3.11.3 -B json-3.11.3/build -DJSON_BuildTests=OFF -DCMAKE_INSTALL_PREFIX="$HOME/.rix"
+          cmake --install json-3.11.3/build
+          rm -rf json-3.11.3 v3.11.3.tar.gz
+
+      - name: Install rix-msg
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth=1 https://github.com/rix-ros/rix-msg.git
+          cd rix-msg
+          bash install.bash || true
+          cd ..
+          rm -rf rix-msg
+          test -d "$HOME/.rix/include/rix/sys_msgs" || \
+            { echo "ERROR: rix/sys_msgs headers not found after rix-msg install"; exit 1; }
+
+      - name: Configure CMake
+        run: |
+          cmake -S . -B build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="${{ env.RIX_INSTALL_DIR }}" \
+            -DCMAKE_INSTALL_PREFIX="${{ env.RIX_INSTALL_DIR }}" \
+            -DBUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Install
+        run: cmake --install build
+
+      - name: Run node_test (multithreaded on)
+        working-directory: build
+        run: RIX_MULTITHREADED=1 ./node_test
+
+      - name: Run node_test (multithreaded off)
+        working-directory: build
+        run: RIX_MULTITHREADED=0 ./node_test
+
+      - name: Run mediator_test (multithreaded on)
+        working-directory: build
+        run: RIX_MULTITHREADED=1 ./mediator_test
+
+      - name: Run mediator_test (multithreaded off)
+        working-directory: build
+        run: RIX_MULTITHREADED=0 ./mediator_test
+
+      - name: Run tf_tests (multithreaded on)
+        working-directory: build
+        run: RIX_MULTITHREADED=1 ./tf_tests
+
+      - name: Run tf_tests (multithreaded off)
+        working-directory: build
+        run: RIX_MULTITHREADED=0 ./tf_tests

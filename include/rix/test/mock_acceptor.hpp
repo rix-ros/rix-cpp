@@ -3,8 +3,9 @@
 #include <condition_variable>
 #include <mutex>
 
-#include "rix/ipc/acceptor.hpp"
 #include <gmock/gmock.h>
+
+#include "rix/ipc/acceptor.hpp"
 
 namespace rix {
 

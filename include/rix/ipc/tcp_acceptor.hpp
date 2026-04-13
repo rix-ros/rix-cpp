@@ -1,10 +1,8 @@
 #pragma once
 
-#include "rix/ipc/acceptor.hpp"
-#include "rix/ipc/stream.hpp"
+#include <cstring>
 
 #include <arpa/inet.h>
-#include <cstring>
 #include <fcntl.h>
 #include <signal.h>
 #include <sys/poll.h>
@@ -12,6 +10,9 @@
 #include <sys/uio.h>
 #include <sys/un.h>
 #include <unistd.h>
+
+#include "rix/ipc/acceptor.hpp"
+#include "rix/ipc/stream.hpp"
 
 namespace rix {
 

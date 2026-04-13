@@ -1,7 +1,8 @@
 #pragma once
 
-#include "rix/ipc/generic_signal.hpp"
 #include <functional>
+
+#include "rix/ipc/generic_signal.hpp"
 
 namespace rix {
 

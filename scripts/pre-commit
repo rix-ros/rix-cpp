@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Pre-commit hook: auto-format staged C/C++ files with clang-format.
+#
+# Install by running:  bash scripts/install-hooks.bash
+#
+# Behavior:
+#   - Collects all staged .cpp, .hpp, .h, .cc, .cxx files.
+#   - Runs clang-format --dry-run to check if any need formatting.
+#   - If reformatting is needed, applies clang-format in-place and re-stages
+#     the files, then prints a notice so the developer can review the diff.
+#   - The commit proceeds with the now-formatted files.
+
+set -euo pipefail
+
+# Locate clang-format (prefer versioned binaries if the plain one is absent)
+find_clang_format() {
+  for candidate in clang-format clang-format-18 clang-format-17 clang-format-16 clang-format-15; do
+    if command -v "$candidate" &>/dev/null; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
+CLANG_FORMAT=$(find_clang_format) || {
+  echo "WARNING: clang-format not found — skipping format check." >&2
+  exit 0
+}
+
+# Collect staged C/C++ source files (against HEAD, or empty tree on first commit)
+if git rev-parse --verify HEAD &>/dev/null; then
+  AGAINST=HEAD
+else
+  # Initial commit: compare against the empty tree object
+  AGAINST=$(git hash-object -t tree /dev/null)
+fi
+
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM "$AGAINST" \
+  | grep -E '\.(cpp|hpp|h|cc|cxx)$' || true)
+
+if [[ -z "$STAGED_FILES" ]]; then
+  exit 0
+fi
+
+NEEDS_FORMAT=()
+while IFS= read -r file; do
+  if [[ ! -f "$file" ]]; then
+    continue
+  fi
+  if ! "$CLANG_FORMAT" --dry-run --Werror --style=file "$file" &>/dev/null 2>&1; then
+    NEEDS_FORMAT+=("$file")
+  fi
+done <<< "$STAGED_FILES"
+
+if [[ ${#NEEDS_FORMAT[@]} -eq 0 ]]; then
+  exit 0
+fi
+
+echo ""
+echo "clang-format: auto-formatting ${#NEEDS_FORMAT[@]} file(s) and re-staging them:"
+for file in "${NEEDS_FORMAT[@]}"; do
+  echo "  $file"
+  "$CLANG_FORMAT" --style=file -i "$file"
+  git add "$file"
+done
+echo ""
+echo "Reformatted files have been staged. Please review the diff before pushing."
+echo "  git diff HEAD"
+echo ""
+
+exit 0

@@ -17,10 +17,12 @@ namespace rix {
 
 class Subscriber : public Spinner {
 public:
-  template <typename TMsg> using Callback = std::function<void(const TMsg&)>;
+  template <typename TMsg>
+  using Callback = std::function<void(const TMsg&)>;
   virtual ~Subscriber() = default;
   virtual size_t get_publisher_count() const = 0;
-  template <typename TMsg> void set_callback(Callback<TMsg> callback);
+  template <typename TMsg>
+  void set_callback(Callback<TMsg> callback);
 
 protected:
   using CallbackUntyped = std::function<void(const Message&)>;
@@ -116,7 +118,8 @@ private:
 };
 } // namespace detail
 
-template <typename TMsg> void Subscriber::set_callback(Callback<TMsg> callback) {
+template <typename TMsg>
+void Subscriber::set_callback(Callback<TMsg> callback) {
   static_assert(std::is_base_of_v<Message, TMsg>, "TMsg must be a subclass of Message.");
 
   auto msg_instance = std::make_shared<TMsg>();

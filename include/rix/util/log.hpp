@@ -118,9 +118,11 @@ private:
    *
    * @tparam level
    */
-  template <Level level> class LogStream {
+  template <Level level>
+  class LogStream {
   public:
-    template <typename T> std::ostream& operator<<(const T& val);
+    template <typename T>
+    std::ostream& operator<<(const T& val);
 
     inline static std::ostream null_stream{&Log::null_buffer};
     inline static std::ostream tee_stream{&Log::tee_buffer};
@@ -159,7 +161,9 @@ private:
   inline static std::string get_level_string(Level level);
 };
 
-template <Log::Level level> template <typename T> inline std::ostream& Log::LogStream<level>::operator<<(const T& val) {
+template <Log::Level level>
+template <typename T>
+inline std::ostream& Log::LogStream<level>::operator<<(const T& val) {
   if (level < level_) {
     return null_stream;
   }
@@ -169,7 +173,8 @@ template <Log::Level level> template <typename T> inline std::ostream& Log::LogS
   return tee_stream << header << val;
 }
 
-template <Log::Level level> inline std::string Log::LogStream<level>::create_header(const Time& t) {
+template <Log::Level level>
+inline std::string Log::LogStream<level>::create_header(const Time& t) {
   std::stringstream ss;
 
   // Date field
@@ -188,7 +193,8 @@ template <Log::Level level> inline std::string Log::LogStream<level>::create_hea
   return ss.str();
 }
 
-template <Log::Level level> inline std::string Log::LogStream<level>::create_plain_header(const Time& t) {
+template <Log::Level level>
+inline std::string Log::LogStream<level>::create_plain_header(const Time& t) {
   std::stringstream ss;
 
   // Date field

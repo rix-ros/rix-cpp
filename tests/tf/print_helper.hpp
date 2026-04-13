@@ -1,8 +1,9 @@
 #pragma once
 
+#include <iostream>
+
 #include "rix/geometry_msgs/TransformStamped.hpp"
 #include "rix/sensor_msgs/JointState.hpp"
-#include <iostream>
 
 static inline void print_transform(const rix::geometry_msgs::TransformStamped& t) {
   std::cout << t.header.frame_id << " -> " << t.child_frame_id << "\n";

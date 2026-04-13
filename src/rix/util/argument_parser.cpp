@@ -1,10 +1,10 @@
+#include "rix/util/argument_parser.hpp"
+
 #include <algorithm>
 #include <cstdint>
 #include <iomanip>
 #include <sstream>
 #include <utility>
-
-#include "rix/util/argument_parser.hpp"
 
 namespace rix {
 

@@ -14,8 +14,10 @@ namespace rix {
 
 class ActionClient : public Spinner {
 public:
-  template <typename TFeedback> using FeedbackCallback = std::function<void(const TFeedback&)>;
-  template <typename TResult> using ResultCallback = std::function<void(const TResult&)>;
+  template <typename TFeedback>
+  using FeedbackCallback = std::function<void(const TFeedback&)>;
+  template <typename TResult>
+  using ResultCallback = std::function<void(const TResult&)>;
 
   virtual ~ActionClient() = default;
 
@@ -23,8 +25,10 @@ public:
   virtual bool cancel() = 0;
   virtual bool wait_for_result(const Duration& timeout) = 0;
 
-  template <typename TFeedback> void set_feedback_callback(FeedbackCallback<TFeedback> callback);
-  template <typename TResult> void set_result_callback(ResultCallback<TResult> callback);
+  template <typename TFeedback>
+  void set_feedback_callback(FeedbackCallback<TFeedback> callback);
+  template <typename TResult>
+  void set_result_callback(ResultCallback<TResult> callback);
 
 protected:
   using CallbackUntyped = std::function<void(const Message&)>;
@@ -106,7 +110,8 @@ private:
 
 } // namespace detail
 
-template <typename TFeedback> void ActionClient::set_feedback_callback(FeedbackCallback<TFeedback> callback) {
+template <typename TFeedback>
+void ActionClient::set_feedback_callback(FeedbackCallback<TFeedback> callback) {
   static_assert(std::is_base_of_v<Message, TFeedback>, "TFeedback must be a subclass of Message.");
   auto feedback_instance = std::make_shared<TFeedback>();
   auto untyped = [callback](const Message& msg) {
@@ -117,7 +122,8 @@ template <typename TFeedback> void ActionClient::set_feedback_callback(FeedbackC
   set_feedback_callback(untyped, feedback_instance);
 }
 
-template <typename TResult> void ActionClient::set_result_callback(ResultCallback<TResult> callback) {
+template <typename TResult>
+void ActionClient::set_result_callback(ResultCallback<TResult> callback) {
   static_assert(std::is_base_of_v<Message, TResult>, "TResult must be a subclass of Message.");
   auto result_instance = std::make_shared<TResult>();
   auto untyped = [callback](const Message& msg) {

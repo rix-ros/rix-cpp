@@ -5,11 +5,11 @@
 #include <mutex>
 #include <random>
 #include <string>
+#include <thread>
 
 #include "rix/ipc/transport_factory.hpp"
 #include "rix/util/environment.hpp"
 #include "rix/util/log.hpp"
-#include <thread>
 
 namespace rix {
 

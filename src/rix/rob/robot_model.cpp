@@ -1,11 +1,12 @@
 #include "rix/rob/robot_model.hpp"
 
-#include "rix/util/environment.hpp"
-#include <eigen3/Eigen/Geometry>
-#include <nlohmann/json.hpp>
 #include <stack>
 
+#include <eigen3/Eigen/Geometry>
+#include <nlohmann/json.hpp>
+
 #include "rix/rob/eigen_util.hpp"
+#include "rix/util/environment.hpp"
 
 using Json = nlohmann::json;
 

@@ -1,7 +1,10 @@
 #include "rix/tf/frame_graph.hpp"
-#include "rix/rob/msg_util.hpp"
+
+#include <algorithm>
 
 #include <gtest/gtest.h>
+
+#include "rix/rob/msg_util.hpp"
 
 using namespace rix;
 

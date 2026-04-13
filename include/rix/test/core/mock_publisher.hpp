@@ -1,10 +1,10 @@
 #pragma once
 
-#include "rix/core/publisher.hpp"
-
 #include <functional>
 #include <string>
 #include <vector>
+
+#include "rix/core/publisher.hpp"
 
 namespace rix {
 namespace test {

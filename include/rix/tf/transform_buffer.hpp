@@ -3,7 +3,6 @@
 #include <deque>
 
 #include "rix/geometry_msgs/Transform.hpp"
-
 #include "rix/util/time.hpp"
 
 namespace rix {

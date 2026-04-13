@@ -34,7 +34,8 @@ public:
   /**
    * @brief Program the stream to expect a send_message call with the given opcode and message.
    */
-  template <typename TMsg> StreamBuilder& send_message(uint8_t opcode, const TMsg& msg) {
+  template <typename TMsg>
+  StreamBuilder& send_message(uint8_t opcode, const TMsg& msg) {
     static_assert(std::is_base_of_v<Message, TMsg>, "TMsg must be derived from Message");
 
     if (*expected_send_count_ == 0) {
@@ -74,7 +75,8 @@ public:
   /**
    * @brief Program the stream to return a message on recv_message (raw form: no operation header).
    */
-  template <typename TMsg> StreamBuilder& recv_message(const TMsg& msg, size_t len) {
+  template <typename TMsg>
+  StreamBuilder& recv_message(const TMsg& msg, size_t len) {
     static_assert(std::is_base_of_v<Message, TMsg>, "TMsg must be derived from Message");
 
     if (*expected_recv_count_ == 0) {
@@ -115,7 +117,8 @@ public:
    *        This is the typical recv pattern: first the Operation (opcode + length),
    *        then the actual message.
    */
-  template <typename TMsg> StreamBuilder& recv_message(uint8_t opcode, const TMsg& msg) {
+  template <typename TMsg>
+  StreamBuilder& recv_message(uint8_t opcode, const TMsg& msg) {
     static_assert(std::is_base_of_v<Message, TMsg>, "TMsg must be derived from Message");
 
     if (*expected_recv_count_ == 0) {

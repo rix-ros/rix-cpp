@@ -1,8 +1,8 @@
 #pragma once
 
-#include "rix/core/service.hpp"
-
 #include <string>
+
+#include "rix/core/service.hpp"
 
 namespace rix {
 namespace test {

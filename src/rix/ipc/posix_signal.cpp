@@ -1,9 +1,9 @@
 #include "rix/ipc/posix_signal.hpp"
 
 #include <csignal>
-#include <unistd.h>
-
 #include <iostream>
+
+#include <unistd.h>
 
 namespace rix {
 

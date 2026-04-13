@@ -3,6 +3,7 @@
 #include <atomic>
 #include <csignal>
 #include <memory>
+#include <mutex>
 #include <utility>
 
 #include "rix/ipc/signal.hpp"

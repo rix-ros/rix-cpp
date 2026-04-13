@@ -1,4 +1,5 @@
 #include "rix/core/action_client.hpp"
+
 #include "rix/std_msgs/Void.hpp"
 #include "rix/sys_msgs/ActResponse.hpp"
 #include "rix/sys_msgs/Status.hpp"
@@ -155,10 +156,11 @@ void ActionClientImpl::on_spin() {
       }
       // Action is complete, close the client
       client_ = nullptr;
-      result_received_ = true;
-      result_condition_.notify_all();
       guard.unlock();
       result_callback_(*result_instance_);
+      guard.lock();
+      result_received_ = true;
+      result_condition_.notify_all();
       return;
     }
     default:

@@ -1,6 +1,7 @@
 #include "rix/tf/transform_buffer.hpp"
 
 #include <algorithm>
+
 #include <eigen3/Eigen/Geometry>
 
 #include "rix/rob/eigen_util.hpp"

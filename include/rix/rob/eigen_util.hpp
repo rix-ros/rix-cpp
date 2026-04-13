@@ -1,9 +1,10 @@
 #pragma once
 
+#include <eigen3/Eigen/Geometry>
+
 #include "rix/geometry_msgs/Point.hpp"
 #include "rix/geometry_msgs/Transform.hpp"
 #include "rix/geometry_msgs/Vector3.hpp"
-#include <eigen3/Eigen/Geometry>
 
 namespace rix {
 

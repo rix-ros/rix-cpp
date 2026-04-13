@@ -1,6 +1,6 @@
-#include <thread>
-
 #include "rix/core/timer_callback.hpp"
+
+#include <thread>
 
 namespace rix {
 namespace detail {

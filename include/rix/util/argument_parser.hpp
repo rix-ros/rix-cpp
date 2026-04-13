@@ -11,8 +11,10 @@
 namespace rix {
 
 namespace detail {
-template <typename> struct is_std_vector : std::false_type {};
-template <typename T, typename A> struct is_std_vector<std::vector<T, A>> : std::true_type {};
+template <typename>
+struct is_std_vector : std::false_type {};
+template <typename T, typename A>
+struct is_std_vector<std::vector<T, A>> : std::true_type {};
 bool isalnum(const std::string& str);
 } // namespace detail
 
@@ -51,8 +53,10 @@ public:
    */
   ArgumentParser(std::string name, std::string description, bool disable_help = false);
 
-  template <typename T> void add(const std::string& name, const std::string& description);
-  template <typename T> void add(const std::string& name, const std::string& description, const T& default_value);
+  template <typename T>
+  void add(const std::string& name, const std::string& description);
+  template <typename T>
+  void add(const std::string& name, const std::string& description, const T& default_value);
   template <typename T>
   void add(const std::string& name, const std::string& description, char short_name, const T& default_value);
 
@@ -68,7 +72,8 @@ public:
    * @param name The name of the option.
    * @return The value of the option.
    */
-  template <typename T> bool get(const std::string& name, T& value);
+  template <typename T>
+  bool get(const std::string& name, T& value);
 
   /**
    * @brief Gets the help message.
@@ -76,7 +81,8 @@ public:
    */
   std::string help();
 
-  template <typename T> void add_parser(const ParserFunction& parser);
+  template <typename T>
+  void add_parser(const ParserFunction& parser);
 
 private:
   ///< The name of the program.
@@ -97,7 +103,8 @@ private:
   void detect_help_column_widths(int& name_width, int& short_width, int& desc_width, int& default_width) const;
 };
 
-template <typename T> bool ArgumentParser::get(const std::string& name, T& value) {
+template <typename T>
+bool ArgumentParser::get(const std::string& name, T& value) {
   auto arg = args_.find(name);
   if (arg == args_.end()) {
     return false;
@@ -130,7 +137,8 @@ template <typename T> bool ArgumentParser::get(const std::string& name, T& value
   return true;
 }
 
-template <typename T> void ArgumentParser::add(const std::string& name, const std::string& description) {
+template <typename T>
+void ArgumentParser::add(const std::string& name, const std::string& description) {
   add(Arg(name, description, '\0', T(), true));
 }
 
@@ -156,7 +164,8 @@ bool parse_vector(const ArgumentParser::ParserFunction& parser, const std::strin
 
 } // namespace detail
 
-template <typename T> void ArgumentParser::add_parser(const ParserFunction& parser) {
+template <typename T>
+void ArgumentParser::add_parser(const ParserFunction& parser) {
   if (const auto it = parsers_.find(typeid(T)); it != parsers_.end()) {
     throw std::invalid_argument("Parser for type already exists.");
   }

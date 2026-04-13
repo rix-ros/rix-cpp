@@ -1,16 +1,16 @@
 #pragma once
 
-#include "rix/core/node.hpp"
-#include "rix/test/core/mock_component_factory.hpp"
-#include "rix/test/mock_clock.hpp"
-#include "rix/util/time.hpp"
-
 #include <deque>
 #include <functional>
 #include <memory>
 #include <string>
 #include <type_traits>
 #include <vector>
+
+#include "rix/core/node.hpp"
+#include "rix/test/core/mock_component_factory.hpp"
+#include "rix/test/mock_clock.hpp"
+#include "rix/util/time.hpp"
 
 namespace rix {
 namespace test {
@@ -19,7 +19,8 @@ namespace test {
  * @brief Returned by expect_publisher().
  *        Automatically captures every message the publisher sends.
  */
-template <typename TMsg> class PublisherCapture {
+template <typename TMsg>
+class PublisherCapture {
 public:
   size_t message_count() const { return messages_.size(); }
   const TMsg& message(size_t i) const { return messages_.at(i); }
@@ -36,7 +37,8 @@ private:
  *        Call inject() to push messages into the subscriber's queue; they are
  *        delivered on the next spin cycle.
  */
-template <typename TMsg> class SubscriberInjector {
+template <typename TMsg>
+class SubscriberInjector {
 public:
   void inject(const TMsg& msg) {
     if (auto sub = sub_.lock()) {
@@ -59,7 +61,8 @@ private:
  *        Call call() to exercise the service callback; request and response are
  *        recorded and retrievable afterwards.
  */
-template <typename TReq, typename TRes> class ServiceCapture {
+template <typename TReq, typename TRes>
+class ServiceCapture {
 public:
   size_t call_count() const { return requests_.size(); }
   const TReq& request(size_t i) const { return requests_.at(i); }
@@ -87,7 +90,8 @@ private:
  * @brief Returned by expect_service_client().
  *        Queue responses the mock will return and inspect captured requests.
  */
-template <typename TReq, typename TRes> class ServiceClientCapture {
+template <typename TReq, typename TRes>
+class ServiceClientCapture {
 public:
   /** Pre-load a response to be returned on the next call(). */
   void queue_response(const TRes& res) { queued_.push_back(res); }
@@ -108,7 +112,8 @@ private:
  *        Call call() to exercise the action callback; goal, feedback, and
  *        result are all recorded.
  */
-template <typename TGoal, typename TFeedback, typename TResult> class ActionCapture {
+template <typename TGoal, typename TFeedback, typename TResult>
+class ActionCapture {
 public:
   size_t call_count() const { return feedbacks_.size() + results_.size(); }
   const TGoal& goal(size_t i) const { return goals_.at(i); }
@@ -167,7 +172,8 @@ private:
  * @brief Returned by expect_action_client().
  *        Queue feedback/results to inject and inspect dispatched goals.
  */
-template <typename TGoal, typename TFeedback, typename TResult> class ActionClientCapture {
+template <typename TGoal, typename TFeedback, typename TResult>
+class ActionClientCapture {
 public:
   size_t dispatch_count() const { return goals_.size(); }
   const TGoal& goal(size_t i) const { return goals_.at(i); }
@@ -269,7 +275,8 @@ public:
    *
    * @return An injector handle; call inject() before/during spin to push messages.
    */
-  template <typename TMsg> SubscriberInjector<TMsg>& expect_subscriber(const std::string& topic) {
+  template <typename TMsg>
+  SubscriberInjector<TMsg>& expect_subscriber(const std::string& topic) {
     auto inj = std::make_shared<SubscriberInjector<TMsg>>();
     capture_handles_.push_back(inj);
 
@@ -287,7 +294,8 @@ public:
    *
    * @return A capture handle; call capture.call(req) to invoke the service callback.
    */
-  template <typename TReq, typename TRes> ServiceCapture<TReq, TRes>& expect_service(const std::string& name) {
+  template <typename TReq, typename TRes>
+  ServiceCapture<TReq, TRes>& expect_service(const std::string& name) {
     auto cap = std::make_shared<ServiceCapture<TReq, TRes>>();
     capture_handles_.push_back(cap);
 
@@ -398,7 +406,8 @@ public:
    * @param args    Forwarded to TNode's constructor.
    * @return Reference to the constructed node.
    */
-  template <typename TNode, typename... Args> TNode& create(Args&&... args) {
+  template <typename TNode, typename... Args>
+  TNode& create(Args&&... args) {
     static_assert(std::is_base_of_v<Node, TNode>, "TNode must derive from rix::NodeBase (use Node as base)");
 
     auto node = std::make_unique<TNode>(std::forward<Args>(args)...);

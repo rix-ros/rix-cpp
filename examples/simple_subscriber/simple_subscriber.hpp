@@ -1,7 +1,7 @@
+#include <sstream>
+
 #include "rix/rix.hpp"
 #include "rix/std_msgs/Header.hpp"
-
-#include <sstream>
 
 using namespace rix;
 

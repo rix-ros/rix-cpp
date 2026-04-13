@@ -1,4 +1,5 @@
 #include "rix/core/service.hpp"
+
 #include "rix/sys_msgs/Status.hpp"
 
 namespace rix {

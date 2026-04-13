@@ -7,6 +7,12 @@
  * and MockStream instead of the deleted GenericSocket/MockSocket.
  */
 
+#include <condition_variable>
+#include <mutex>
+#include <thread>
+
+#include <gtest/gtest.h>
+
 #include "rix/core/spinner.hpp"
 #include "rix/std_msgs/Header.hpp"
 #include "rix/std_msgs/String.hpp"
@@ -15,10 +21,6 @@
 #include "rix/sys_msgs/SubNotify.hpp"
 #include "rix/sys_msgs/SystemInfo.hpp"
 #include "rix/test/test_fixture.hpp"
-#include <condition_variable>
-#include <gtest/gtest.h>
-#include <mutex>
-#include <thread>
 
 using namespace rix;
 
@@ -1127,6 +1129,13 @@ TEST(NodeTestNew, PublisherAcceptConnectionsAndPublish) {
           // Wait for all 3 connections to be accepted (with timeout)
           EXPECT_TRUE(acceptors[0]->wait_for_operations(3, std::chrono::milliseconds(5000)));
           EXPECT_TRUE(pub->ok());
+          // TODO: The acceptor notification fires inside accept(), before on_spin() stores the connection.
+          //       We must poll until the publisher has finished inserting all accepted connections. Need to improve
+          //       this in the future to avoid the race condition.
+          auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(5000);
+          while (pub->get_subscriber_count() < 3 && std::chrono::steady_clock::now() < deadline) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+          }
           EXPECT_EQ(pub->get_subscriber_count(), 3);
         }
 
@@ -1967,6 +1976,9 @@ TEST(NodeTestNew, ActionClientDispatchPreempt) {
         std_msgs::UInt32 goal;
         std::vector<std_msgs::UInt32> feedback;
         std_msgs::Time result;
+        std::mutex result_mutex;
+        std::condition_variable result_cv;
+        bool result_received = false;
         std::shared_ptr<ActionClient> actcli =
             node.create_action_client<std_msgs::UInt32, std_msgs::UInt32, std_msgs::Time>(
                 "test_action",
@@ -1982,7 +1994,12 @@ TEST(NodeTestNew, ActionClientDispatchPreempt) {
                     EXPECT_TRUE(send_result);
                   }
                 },
-                [&result](const std_msgs::Time& res) { result = res; });
+                [&result, &result_mutex, &result_cv, &result_received](const std_msgs::Time& res) {
+                  std::lock_guard<std::mutex> lock(result_mutex);
+                  result = res;
+                  result_received = true;
+                  result_cv.notify_one();
+                });
         EXPECT_NE(actcli, nullptr);
         EXPECT_TRUE(actcli->ok());
 
@@ -1993,7 +2010,11 @@ TEST(NodeTestNew, ActionClientDispatchPreempt) {
         bool send_result = actcli->dispatch(goal);
         EXPECT_TRUE(send_result);
 
-        EXPECT_TRUE(actcli->wait_for_result(Duration(5.0)));
+        {
+          std::unique_lock<std::mutex> lock(result_mutex);
+          EXPECT_TRUE(
+              result_cv.wait_for(lock, std::chrono::seconds(5), [&result_received]() { return result_received; }));
+        }
         EXPECT_EQ(feedback.size(), 4);
         EXPECT_EQ(feedback[0].data, 11); // From first goal
         EXPECT_EQ(feedback[1].data, 21); // From preempted goal
