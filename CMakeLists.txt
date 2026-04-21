@@ -83,6 +83,11 @@ if(BUILD_TESTS)
     )
     target_link_libraries(mediator_test GTest::gtest_main GTest::gmock rix)
 
+    add_executable(transport_test
+        tests/transport_test.cpp
+    )
+    target_link_libraries(transport_test GTest::gtest_main rix)
+
     add_executable(tf_tests
         tests/tf/frame_graph.cpp
         tests/tf/joint.cpp
