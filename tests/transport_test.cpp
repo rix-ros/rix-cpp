@@ -45,10 +45,12 @@ struct TransportParams {
 class TransportTest : public ::testing::TestWithParam<TransportParams> {
 protected:
   void connect_client(const Endpoint& endpoint, std::function<void(std::shared_ptr<Stream>)> callback) {
-    client_thread_ = std::thread([this, endpoint, callback]() {
-      auto stream = GetParam().stream_factory(endpoint, true);
+    auto stream_factory = GetParam().stream_factory;
+    client_thread_ = std::thread([stream_factory, endpoint, callback]() {
+      auto stream = stream_factory(endpoint, true);
       EXPECT_NE(stream, nullptr);
-      callback(stream);
+      if (stream)
+        callback(stream);
     });
   }
 
