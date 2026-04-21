@@ -8,8 +8,8 @@ namespace detail {
 
 SubscriberImpl::SubscriberImpl(const sys_msgs::SubInfo& info, const Endpoint& rixhub_endpoint)
     : info_(info), factory_(get_transport_factory(static_cast<Protocol>(info.protocol))),
-      tcp_factory_(get_transport_factory(Protocol::TCP)), callback_(nullptr),
-      rixhub_endpoint_(rixhub_endpoint), registered_flag_(false) {
+      tcp_factory_(get_transport_factory(Protocol::TCP)), callback_(nullptr), rixhub_endpoint_(rixhub_endpoint),
+      registered_flag_(false) {
 
   // The mediator always connects via TCP to send SUB_NOTIFY, so the server_
   // acceptor must always be TCP regardless of the component data protocol.

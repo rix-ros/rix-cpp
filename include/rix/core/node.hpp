@@ -34,7 +34,8 @@ public:
    * @param endpoint The endpoint of the node.
    * @param rixhub_endpoint The endpoint of the RIXHub mediator to connect to.
    */
-  explicit Node(const std::string& name, const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
+  explicit Node(const std::string& name,
+                const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
                 const Endpoint& rixhub_endpoint = Endpoint(RIXHUB_IP, RIXHUB_PORT));
 
   virtual ~Node();
@@ -133,8 +134,7 @@ public:
    * @return A shared pointer to the created ServiceClient.
    */
   template <typename TRequest, typename TResponse>
-  std::shared_ptr<ServiceClient> create_service_client(const std::string& service,
-                                                       TransportOptions options = {});
+  std::shared_ptr<ServiceClient> create_service_client(const std::string& service, TransportOptions options = {});
 
   /**
    * @brief Creates a Service for the given service with the specified callback.
@@ -404,7 +404,9 @@ std::shared_ptr<Subscriber> Node::create_subscriber(const std::string& topic,
 }
 
 template <typename Callback>
-auto Node::create_subscriber(const std::string& topic, Callback&& callback, const Endpoint& endpoint,
+auto Node::create_subscriber(const std::string& topic,
+                             Callback&& callback,
+                             const Endpoint& endpoint,
                              TransportOptions options)
     -> std::enable_if_t<
         !std::is_same<
@@ -464,7 +466,9 @@ std::shared_ptr<Service> Node::create_service(const std::string& service,
 }
 
 template <typename Callback>
-auto Node::create_service(const std::string& service, Callback&& callback, const Endpoint& endpoint,
+auto Node::create_service(const std::string& service,
+                          Callback&& callback,
+                          const Endpoint& endpoint,
                           TransportOptions options)
     -> std::enable_if_t<
         !std::is_same<std::decay_t<Callback>,
@@ -524,7 +528,9 @@ std::shared_ptr<Action> Node::create_action(const std::string& action,
 }
 
 template <typename Callback>
-auto Node::create_action(const std::string& action, Callback&& callback, const Endpoint& endpoint,
+auto Node::create_action(const std::string& action,
+                         Callback&& callback,
+                         const Endpoint& endpoint,
                          TransportOptions options)
     -> std::enable_if_t<
         !std::is_same<std::decay_t<Callback>,

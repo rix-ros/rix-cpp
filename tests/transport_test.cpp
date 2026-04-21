@@ -145,9 +145,7 @@ TEST_P(TransportTest, WaitReadableReturnsTrueOnConnect) {
   // Spawn the client on a raw thread — do not use connect_client() here
   // because ShmStream's constructor blocks until accept() completes the
   // handshake, which would deadlock if we waited for client_ready first.
-  std::thread client_thread([&]() {
-    auto stream = params.stream_factory(acceptor->local_endpoint(), true);
-  });
+  std::thread client_thread([&]() { auto stream = params.stream_factory(acceptor->local_endpoint(), true); });
 
   // wait_readable fires as soon as the client calls ::connect, before
   // accept() is called, so the handshake has not started yet.
@@ -285,10 +283,10 @@ TEST_P(TransportTest, StreamWaitExceptionHealthy) {
   std::promise<void> done;
   connect_client(acceptor->local_endpoint(), [&](auto stream) {
     result.set_value(stream->wait_exception(Duration(0, 50'000'000))); // 50ms
-    done.get_future().get();  // keep connection alive until assertion is read
+    done.get_future().get();                                           // keep connection alive until assertion is read
   });
 
-  auto server_stream = acceptor->accept();  // keep alive so no POLLHUP fires
+  auto server_stream = acceptor->accept(); // keep alive so no POLLHUP fires
   EXPECT_FALSE(result.get_future().get());
   done.set_value();
 }

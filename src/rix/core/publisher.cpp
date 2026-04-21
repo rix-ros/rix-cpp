@@ -7,8 +7,7 @@ namespace detail {
 
 PublisherImpl::PublisherImpl(const sys_msgs::PubInfo& info, Endpoint rixhub_endpoint)
     : info_(info), factory_(get_transport_factory(static_cast<Protocol>(info.protocol))),
-      tcp_factory_(get_transport_factory(Protocol::TCP)),
-      rixhub_endpoint_(rixhub_endpoint), registered_flag_(false) {
+      tcp_factory_(get_transport_factory(Protocol::TCP)), rixhub_endpoint_(rixhub_endpoint), registered_flag_(false) {
   server_ = factory_.create_acceptor(Endpoint(info_.endpoint.address, info_.endpoint.port));
   if (!server_) {
     shutdown();

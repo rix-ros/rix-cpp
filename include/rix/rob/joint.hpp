@@ -12,14 +12,14 @@ namespace rix {
 
 class JointDynamics {
 public:
-  JointDynamics() {};
+  JointDynamics(){};
   double damping{};
   double friction{};
 };
 
 class JointLimits {
 public:
-  JointLimits() {};
+  JointLimits(){};
   double lower{};
   double upper{};
   double effort{};
@@ -30,7 +30,7 @@ class Joint; // Forward declaration
 
 class JointMimic {
 public:
-  JointMimic() {};
+  JointMimic(){};
   double offset{};
   double multiplier{};
   std::string name{};

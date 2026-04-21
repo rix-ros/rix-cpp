@@ -35,20 +35,21 @@ private:
   bool is_server_;
   Endpoint local_ep_;
   Endpoint remote_ep_;
-  int data_efd_;   // eventfd: peer signals this when it has written data for us to read
-  int space_efd_;  // eventfd: peer signals this when it has consumed data, freeing space
+  int data_rfd_;   // read end of pipe: poll this when waiting for incoming data
+  int signal_wfd_; // write end of pipe: write a byte to wake the peer
 
   // Server-side constructor: called by ShmAcceptor::accept().
-  ShmStream(int fd, void* shm_addr, size_t shm_size, const std::string& shm_name, bool is_server,
-            const Endpoint& local_ep, const Endpoint& remote_ep);
+  ShmStream(int fd,
+            void* shm_addr,
+            size_t shm_size,
+            const std::string& shm_name,
+            bool is_server,
+            const Endpoint& local_ep,
+            const Endpoint& remote_ep);
 
   // writev/readv not implemented - fall back to send/recv in Stream::send_all / recv_all.
-  bool writev(const ConstMessageSegment* segments, size_t segment_count, ssize_t& ret) const override {
-    return false;
-  }
-  bool readv(MessageSegment* segments, size_t segment_count, ssize_t& ret) const override {
-    return false;
-  }
+  bool writev(const ConstMessageSegment* segments, size_t segment_count, ssize_t& ret) const override { return false; }
+  bool readv(MessageSegment* segments, size_t segment_count, ssize_t& ret) const override { return false; }
 
   ssize_t send(const uint8_t* buf, size_t len, int flags) const override;
   ssize_t recv(uint8_t* buf, size_t len, int flags) const override;

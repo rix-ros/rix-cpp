@@ -23,16 +23,18 @@ struct TransportFactory {
 };
 
 namespace detail {
-inline std::array<TransportFactory, 2> default_transport_factories = {{
-    {[](const Endpoint& endpoint) -> std::shared_ptr<Acceptor> { return std::make_shared<TCPAcceptor>(endpoint); },
+inline std::array<TransportFactory, 2> default_transport_factories = {
+    {
+     {[](const Endpoint& endpoint) -> std::shared_ptr<Acceptor> { return std::make_shared<TCPAcceptor>(endpoint); },
      [](const Endpoint& endpoint, bool blocking) -> std::shared_ptr<Stream> {
-       return std::make_shared<TCPStream>(endpoint, blocking);
+     return std::make_shared<TCPStream>(endpoint, blocking);
      }},
-    {[](const Endpoint& endpoint) -> std::shared_ptr<Acceptor> { return std::make_shared<ShmAcceptor>(endpoint); },
+     {[](const Endpoint& endpoint) -> std::shared_ptr<Acceptor> { return std::make_shared<ShmAcceptor>(endpoint); },
      [](const Endpoint& endpoint, bool blocking) -> std::shared_ptr<Stream> {
-       return std::make_shared<ShmStream>(endpoint, blocking);
+     return std::make_shared<ShmStream>(endpoint, blocking);
      }},
-}};
+     }
+};
 
 inline std::array<TransportFactory*, 2> transport_overrides = {nullptr, nullptr};
 } // namespace detail
@@ -71,7 +73,7 @@ inline const std::array<TransportFactory, 2>& transport_factories = detail::defa
  */
 struct TransportOptions {
   Protocol protocol = Protocol::TCP;
-  size_t shm_buffer_size = 4 * 1024 * 1024;  ///< Used only when protocol == SHM.
+  size_t shm_buffer_size = 4 * 1024 * 1024; ///< Used only when protocol == SHM.
 
   static TransportOptions tcp() { return {Protocol::TCP}; }
   static TransportOptions shm(size_t buffer_size = 4 * 1024 * 1024) { return {Protocol::SHM, buffer_size}; }
@@ -100,8 +102,7 @@ struct TransportOptions {
  */
 struct ScopedTransportOverride {
   ScopedTransportOverride(Protocol protocol, TransportFactory factory)
-      : protocol_(protocol), owned_(std::move(factory)),
-        previous_(detail::transport_overrides[protocol]) {
+      : protocol_(protocol), owned_(std::move(factory)), previous_(detail::transport_overrides[protocol]) {
     set_transport_factory(protocol_, &owned_);
   }
   // Restore the previous override (not just null) so outer overrides survive.
