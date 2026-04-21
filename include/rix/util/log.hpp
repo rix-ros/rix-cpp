@@ -104,6 +104,7 @@ private:
    * "write" to when the RIX_UTIL_LOG_LEVEL < level.
    *
    */
+  inline static std::ios_base::Init ios_init_{};
   inline static detail::NullBuffer null_buffer{};
   inline static std::ofstream logFile{};
   inline static detail::TeeBuffer tee_buffer{std::vector<std::streambuf*>{std::cout.rdbuf()}};

@@ -9,6 +9,7 @@
 #include <sys/mman.h>
 #include <sys/poll.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/un.h>
 #include <unistd.h>
 
@@ -202,7 +203,15 @@ ShmStream::ShmStream(const Endpoint& endpoint, bool blocking)
     return;
   }
 
-  shm_size_ = lseek(shm_fd, 0, SEEK_END);
+  struct stat shm_stat{};
+  if (fstat(shm_fd, &shm_stat) < 0) {
+    std::cout << "ShmStream: failed to stat shm: " << strerror(errno) << std::endl;
+    ::close(shm_fd);
+    ::close(fd_);
+    fd_ = -1;
+    return;
+  }
+  shm_size_ = static_cast<size_t>(shm_stat.st_size);
   shm_addr_ = mmap(nullptr, shm_size_, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
   ::close(shm_fd);
 
