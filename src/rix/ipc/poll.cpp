@@ -46,7 +46,7 @@ bool SelectPoller::poll(const std::vector<std::shared_ptr<Pollable>>& pollables,
 
   // Poll fd-based pollables if any exist
   if (max_fd >= 0) {
-    struct timeval tv {};
+    struct timeval tv{};
     const int64_t ns = duration.to_nanoseconds();
     tv.tv_sec = static_cast<int>(ns / 1'000'000'000);
     tv.tv_usec = static_cast<int>(ns % 1'000'000'000 / 1'000);

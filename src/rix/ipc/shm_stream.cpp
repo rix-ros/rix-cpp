@@ -71,13 +71,11 @@ static inline uint8_t* data_ptr(ShmHalfHeader* hdr) { return reinterpret_cast<ui
 
 static bool send_fds(int sock, const int* fds, int count) {
   char buf[1] = {0};
-  struct iovec iov {
-    buf, 1
-  };
+  struct iovec iov{buf, 1};
   size_t cmsg_size = CMSG_SPACE(count * sizeof(int));
   std::vector<char> cmsg_buf(cmsg_size, 0);
 
-  struct msghdr msg {};
+  struct msghdr msg{};
   msg.msg_iov = &iov;
   msg.msg_iovlen = 1;
   msg.msg_control = cmsg_buf.data();
@@ -94,13 +92,11 @@ static bool send_fds(int sock, const int* fds, int count) {
 
 static bool recv_fds(int sock, int* fds, int count) {
   char buf[1];
-  struct iovec iov {
-    buf, 1
-  };
+  struct iovec iov{buf, 1};
   size_t cmsg_size = CMSG_SPACE(count * sizeof(int));
   std::vector<char> cmsg_buf(cmsg_size, 0);
 
-  struct msghdr msg {};
+  struct msghdr msg{};
   msg.msg_iov = &iov;
   msg.msg_iovlen = 1;
   msg.msg_control = cmsg_buf.data();
@@ -171,7 +167,7 @@ ShmStream::ShmStream(const Endpoint& endpoint, bool blocking)
   }
 
   std::string path = "/tmp/rix_shm_" + std::to_string(endpoint.port);
-  struct sockaddr_un addr {};
+  struct sockaddr_un addr{};
   addr.sun_family = AF_UNIX;
   strncpy(addr.sun_path, path.c_str(), sizeof(addr.sun_path) - 1);
 
@@ -295,7 +291,7 @@ bool ShmStream::wait_readable(const Duration& timeout) const {
   // with 0ms would give a false positive and cause recv() to block forever.
   if (timeout.to_milliseconds() == 0)
     return false;
-  struct pollfd pfd {};
+  struct pollfd pfd{};
   pfd.fd = data_rfd_;
   pfd.events = POLLIN;
   int timeout_ms = static_cast<int>(timeout.to_milliseconds());
@@ -313,7 +309,7 @@ bool ShmStream::wait_writable(const Duration& timeout) const {
   if (get_writable_bytes() > 0)
     return true;
   // No backpressure signaling yet - just check the ring buffer
-  struct pollfd pfd {};
+  struct pollfd pfd{};
   pfd.fd = data_rfd_;
   pfd.events = POLLIN;
   int timeout_ms = static_cast<int>(timeout.to_milliseconds());
@@ -322,7 +318,7 @@ bool ShmStream::wait_writable(const Duration& timeout) const {
 }
 
 bool ShmStream::wait_exception(const Duration& timeout) const {
-  struct pollfd pfd {};
+  struct pollfd pfd{};
   pfd.fd = fd_;
   pfd.events = 0;
   int timeout_ms = static_cast<int>(timeout.to_milliseconds());
@@ -409,7 +405,7 @@ ssize_t ShmStream::recv(uint8_t* buf, size_t len, int flags) const {
     size_t readable = wp - rp;
     if (readable == 0) {
       // Wait for peer to signal data is available
-      struct pollfd pfd {};
+      struct pollfd pfd{};
       pfd.fd = data_rfd_;
       pfd.events = POLLIN;
       if (::poll(&pfd, 1, -1) <= 0)

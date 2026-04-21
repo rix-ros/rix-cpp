@@ -22,7 +22,7 @@ TCPAcceptor::TCPAcceptor(const Endpoint& endpoint, int backlog) : fd_(::socket(A
     return;
   }
 
-  struct sockaddr_in addr {};
+  struct sockaddr_in addr{};
   addr.sin_family = AF_INET;
   addr.sin_port = htons(endpoint.port);
   inet_pton(AF_INET, endpoint.address.c_str(), &addr.sin_addr);
@@ -38,7 +38,7 @@ TCPAcceptor::~TCPAcceptor() { ::close(fd_); }
 
 // Socket state operations
 std::shared_ptr<Stream> TCPAcceptor::accept(Endpoint& remote_endpoint) const {
-  struct sockaddr_in addr {};
+  struct sockaddr_in addr{};
   socklen_t len = sizeof(addr);
   int sock_fd = ::accept(fd_, (struct sockaddr*)&addr, &len);
   if (sock_fd < 0) {
@@ -75,7 +75,7 @@ bool TCPAcceptor::get_blocking() const {
 
 // Endpoint retrieval
 Endpoint TCPAcceptor::local_endpoint() const {
-  struct sockaddr_in addr {};
+  struct sockaddr_in addr{};
   socklen_t addrlen = sizeof(addr);
   if (getsockname(fd_, (struct sockaddr*)&addr, &addrlen) < 0) {
     return {};
@@ -89,7 +89,7 @@ Endpoint TCPAcceptor::local_endpoint() const {
 }
 
 Endpoint TCPAcceptor::remote_endpoint() const {
-  struct sockaddr_in addr {};
+  struct sockaddr_in addr{};
   socklen_t addrlen = sizeof(addr);
   if (getpeername(fd_, reinterpret_cast<struct sockaddr*>(&addr), &addrlen) < 0) {
     return {};
@@ -104,7 +104,7 @@ Endpoint TCPAcceptor::remote_endpoint() const {
 
 bool TCPAcceptor::wait_readable(const Duration& timeout) const {
   // Implement with poll
-  struct pollfd pfd {};
+  struct pollfd pfd{};
   pfd.fd = fd_;
   pfd.events = POLLIN;
   int timeout_ms = static_cast<int>(timeout.to_milliseconds());
@@ -113,7 +113,7 @@ bool TCPAcceptor::wait_readable(const Duration& timeout) const {
 }
 
 bool TCPAcceptor::wait_writable(const Duration& timeout) const {
-  struct pollfd pfd {};
+  struct pollfd pfd{};
   pfd.fd = fd_;
   pfd.events = POLLOUT;
 
@@ -123,7 +123,7 @@ bool TCPAcceptor::wait_writable(const Duration& timeout) const {
 }
 
 bool TCPAcceptor::wait_exception(const Duration& timeout) const {
-  struct pollfd pfd {};
+  struct pollfd pfd{};
   pfd.fd = fd_;
   pfd.events = 0;
 

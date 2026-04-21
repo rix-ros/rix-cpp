@@ -40,7 +40,7 @@ ShmAcceptor::ShmAcceptor(const Endpoint& endpoint, int backlog, size_t shm_buffe
   {
     int probe = ::socket(AF_UNIX, SOCK_STREAM, 0);
     if (probe >= 0) {
-      struct sockaddr_un probe_addr {};
+      struct sockaddr_un probe_addr{};
       probe_addr.sun_family = AF_UNIX;
       strncpy(probe_addr.sun_path, shm_path_.c_str(), sizeof(probe_addr.sun_path) - 1);
       if (::connect(probe, (struct sockaddr*)&probe_addr, sizeof(probe_addr)) < 0) {
@@ -50,7 +50,7 @@ ShmAcceptor::ShmAcceptor(const Endpoint& endpoint, int backlog, size_t shm_buffe
     }
   }
 
-  struct sockaddr_un addr {};
+  struct sockaddr_un addr{};
   addr.sun_family = AF_UNIX;
   strncpy(addr.sun_path, shm_path_.c_str(), sizeof(addr.sun_path) - 1);
 
@@ -83,7 +83,7 @@ ShmAcceptor::~ShmAcceptor() {
 std::shared_ptr<Stream> ShmAcceptor::accept(Endpoint& remote_endpoint) const {
   std::lock_guard<std::mutex> lock(accept_mutex_);
 
-  struct sockaddr_un addr {};
+  struct sockaddr_un addr{};
   socklen_t len = sizeof(addr);
   int sock_fd = ::accept(posix_fd_, (struct sockaddr*)&addr, &len);
   if (sock_fd < 0) {
@@ -157,7 +157,7 @@ Endpoint ShmAcceptor::remote_endpoint() const {
 }
 
 bool ShmAcceptor::wait_readable(const Duration& timeout) const {
-  struct pollfd pfd {};
+  struct pollfd pfd{};
   pfd.fd = posix_fd_;
   pfd.events = POLLIN;
   int timeout_ms = static_cast<int>(timeout.to_milliseconds());
@@ -166,7 +166,7 @@ bool ShmAcceptor::wait_readable(const Duration& timeout) const {
 }
 
 bool ShmAcceptor::wait_writable(const Duration& timeout) const {
-  struct pollfd pfd {};
+  struct pollfd pfd{};
   pfd.fd = posix_fd_;
   pfd.events = POLLOUT;
   int timeout_ms = static_cast<int>(timeout.to_milliseconds());
@@ -175,7 +175,7 @@ bool ShmAcceptor::wait_writable(const Duration& timeout) const {
 }
 
 bool ShmAcceptor::wait_exception(const Duration& timeout) const {
-  struct pollfd pfd {};
+  struct pollfd pfd{};
   pfd.fd = posix_fd_;
   pfd.events = 0;
   int timeout_ms = static_cast<int>(timeout.to_milliseconds());

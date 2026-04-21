@@ -58,7 +58,7 @@ bool POSIXSignal::wait(const Duration& d) const {
   fd_set read_fds;
   FD_ZERO(&read_fds);
   FD_SET(notifier[signum_ - 1].pipe[0], &read_fds);
-  struct timeval timeout {};
+  struct timeval timeout{};
   timeout.tv_sec = d.to_nanoseconds() / 1'000'000'000;
   timeout.tv_usec = static_cast<int>((d.to_nanoseconds() % 1'000'000'000) / 1'000);
   select(notifier[signum_ - 1].pipe[0] + 1, &read_fds, nullptr, nullptr, &timeout);

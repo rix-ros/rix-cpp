@@ -26,13 +26,13 @@ namespace detail {
 inline std::array<TransportFactory, 2> default_transport_factories = {
     {
      {[](const Endpoint& endpoint) -> std::shared_ptr<Acceptor> { return std::make_shared<TCPAcceptor>(endpoint); },
-     [](const Endpoint& endpoint, bool blocking) -> std::shared_ptr<Stream> {
-     return std::make_shared<TCPStream>(endpoint, blocking);
-     }},
+         [](const Endpoint& endpoint, bool blocking) -> std::shared_ptr<Stream> {
+           return std::make_shared<TCPStream>(endpoint, blocking);
+         }},
      {[](const Endpoint& endpoint) -> std::shared_ptr<Acceptor> { return std::make_shared<ShmAcceptor>(endpoint); },
-     [](const Endpoint& endpoint, bool blocking) -> std::shared_ptr<Stream> {
-     return std::make_shared<ShmStream>(endpoint, blocking);
-     }},
+         [](const Endpoint& endpoint, bool blocking) -> std::shared_ptr<Stream> {
+           return std::make_shared<ShmStream>(endpoint, blocking);
+         }},
      }
 };
 

@@ -26,7 +26,7 @@ TCPStream::TCPStream(const Endpoint& endpoint, bool blocking) : fd_(::socket(AF_
     set_blocking(true);
   }
 
-  struct sockaddr_in addr {};
+  struct sockaddr_in addr{};
   addr.sin_family = AF_INET;
   addr.sin_port = htons(endpoint.port);
   inet_pton(AF_INET, endpoint.address.c_str(), &addr.sin_addr);
@@ -59,7 +59,7 @@ bool TCPStream::get_blocking() const {
 
 // Endpoint retrieval
 Endpoint TCPStream::local_endpoint() const {
-  struct sockaddr_in addr {};
+  struct sockaddr_in addr{};
   socklen_t addrlen = sizeof(addr);
   if (getsockname(fd_, (struct sockaddr*)&addr, &addrlen) < 0) {
     return {};
@@ -73,7 +73,7 @@ Endpoint TCPStream::local_endpoint() const {
 }
 
 Endpoint TCPStream::remote_endpoint() const {
-  struct sockaddr_in addr {};
+  struct sockaddr_in addr{};
   socklen_t addrlen = sizeof(addr);
   if (getpeername(fd_, reinterpret_cast<struct sockaddr*>(&addr), &addrlen) < 0) {
     return {};
@@ -88,7 +88,7 @@ Endpoint TCPStream::remote_endpoint() const {
 
 bool TCPStream::wait_readable(const Duration& timeout) const {
   // Implement with poll
-  struct pollfd pfd {};
+  struct pollfd pfd{};
   pfd.fd = fd_;
   pfd.events = POLLIN;
   int timeout_ms = static_cast<int>(timeout.to_milliseconds());
@@ -97,7 +97,7 @@ bool TCPStream::wait_readable(const Duration& timeout) const {
 }
 
 bool TCPStream::wait_writable(const Duration& timeout) const {
-  struct pollfd pfd {};
+  struct pollfd pfd{};
   pfd.fd = fd_;
   pfd.events = POLLOUT;
 
@@ -107,7 +107,7 @@ bool TCPStream::wait_writable(const Duration& timeout) const {
 }
 
 bool TCPStream::wait_exception(const Duration& timeout) const {
-  struct pollfd pfd {};
+  struct pollfd pfd{};
   pfd.fd = fd_;
   pfd.events = 0;
 

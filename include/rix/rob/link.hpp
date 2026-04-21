@@ -42,7 +42,7 @@ public:
 
 class Material {
 public:
-  Material(){};
+  Material() {};
   std::string name{};
   std::string texture_filename{};
   std_msgs::Color color{};
@@ -50,7 +50,7 @@ public:
 
 class Inertial {
 public:
-  Inertial(){};
+  Inertial() {};
   geometry_msgs::Transform origin{};
   double mass{};
   double ixx{}, ixy{}, ixz{}, iyy{}, iyz{}, izz{};
@@ -58,7 +58,7 @@ public:
 
 class Visual {
 public:
-  Visual(){};
+  Visual() {};
   geometry_msgs::Transform origin{};
   std::shared_ptr<Geometry> geometry{};
   Material material{};
@@ -66,7 +66,7 @@ public:
 
 class Collision {
 public:
-  Collision(){};
+  Collision() {};
   geometry_msgs::Transform origin{};
   std::shared_ptr<Geometry> geometry{};
 };

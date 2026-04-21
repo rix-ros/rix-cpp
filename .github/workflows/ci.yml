@@ -158,3 +158,23 @@ jobs:
       - name: Run tf_tests (multithreaded off)
         working-directory: build
         run: RIX_MULTITHREADED=0 ./tf_tests
+
+      - name: Run transport_test
+        working-directory: build
+        run: ./transport_test
+
+      - name: Run e2e_test (multithreaded on)
+        working-directory: build
+        run: RIX_MULTITHREADED=1 ./e2e_test
+
+      - name: Run e2e_test (multithreaded off)
+        working-directory: build
+        run: RIX_MULTITHREADED=0 ./e2e_test
+
+      - name: Run hybrid_transport_e2e (multithreaded on)
+        working-directory: build
+        run: RIX_MULTITHREADED=1 ./hybrid_transport_e2e
+
+      - name: Run hybrid_transport_e2e (multithreaded off)
+        working-directory: build
+        run: RIX_MULTITHREADED=0 ./hybrid_transport_e2e
