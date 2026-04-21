@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstring>
+#include <mutex>
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -19,7 +20,7 @@ namespace rix {
 class ShmAcceptor final : public Acceptor {
 public:
   // Constructor and Destructor
-  ShmAcceptor(const Endpoint& endpoint, int backlog = 64);
+  ShmAcceptor(const Endpoint& endpoint, int backlog = 64, size_t shm_buffer_size = 4 * 1024 * 1024);
   ~ShmAcceptor();
   // Socket state operations
   std::shared_ptr<Stream> accept(Endpoint& remote_endpoint) const override;
@@ -38,10 +39,10 @@ public:
 
 private:
   std::string shm_path_;
-  int posix_fd_;
   size_t shm_buffer_size_;
-  // Need mutex to support concurrency in shm
-  std::mutex accept_mutex_;
+  int posix_fd_;
+  Endpoint local_endpoint_;
+  mutable std::mutex accept_mutex_;
 };
 
 } // namespace rix

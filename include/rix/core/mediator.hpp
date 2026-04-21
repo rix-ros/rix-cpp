@@ -35,6 +35,8 @@ public:
   size_t get_service_count() const { return services_.size(); }
   size_t get_action_count() const { return actions_.size(); }
 
+  Endpoint local_endpoint() const { return server_ ? server_->local_endpoint() : Endpoint{}; }
+
 private:
   std::shared_ptr<Acceptor> server_{};
   TransportFactory socket_factory_{};

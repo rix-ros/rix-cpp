@@ -7,6 +7,7 @@ namespace detail {
 
 PublisherImpl::PublisherImpl(const sys_msgs::PubInfo& info, Endpoint rixhub_endpoint)
     : info_(info), factory_(get_transport_factory(static_cast<Protocol>(info.protocol))),
+      tcp_factory_(get_transport_factory(Protocol::TCP)),
       rixhub_endpoint_(rixhub_endpoint), registered_flag_(false) {
   server_ = factory_.create_acceptor(Endpoint(info_.endpoint.address, info_.endpoint.port));
   if (!server_) {
@@ -25,8 +26,8 @@ PublisherImpl::PublisherImpl(const sys_msgs::PubInfo& info, Endpoint rixhub_endp
   info_.endpoint.address = server_endpoint.address;
   info_.endpoint.port = server_endpoint.port;
 
-  // Register publisher with rixhub
-  auto client = factory_.create_stream(rixhub_endpoint_, true);
+  // Register publisher with rixhub (always TCP - rixhub only speaks TCP)
+  auto client = tcp_factory_.create_stream(rixhub_endpoint_, true);
   if (!client) {
     shutdown();
     return;
@@ -59,7 +60,7 @@ PublisherImpl::PublisherImpl(const sys_msgs::PubInfo& info, Endpoint rixhub_endp
 PublisherImpl::~PublisherImpl() {
   // Deregister publisher with rixhub
   if (registered_flag_) {
-    auto client = factory_.create_stream(rixhub_endpoint_, true);
+    auto client = get_transport_factory(Protocol::TCP).create_stream(rixhub_endpoint_, true);
     if (!client) {
       return;
     }

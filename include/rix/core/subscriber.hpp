@@ -64,6 +64,7 @@ private:
   sys_msgs::SubInfo info_;                    ///< The subscriber information.
   std::shared_ptr<Acceptor> server_;          ///< The server socket for incoming connections.
   TransportFactory factory_;                  ///< The socket factory function.
+  TransportFactory tcp_factory_;              ///< TCP factory captured at construction for rixhub comms.
   CallbackUntyped callback_;                  ///< The message callback function.
   mutable std::mutex callback_mutex_;         ///< Mutex for protecting the callback.
   std::set<std::shared_ptr<Stream>> clients_; ///< The set of connected publisher sockets.

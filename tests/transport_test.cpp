@@ -18,6 +18,8 @@
 #include <gtest/gtest.h>
 
 #include "rix/core/common.hpp"
+#include "rix/ipc/shm_acceptor.hpp"
+#include "rix/ipc/shm_stream.hpp"
 #include "rix/ipc/tcp_acceptor.hpp"
 #include "rix/ipc/tcp_stream.hpp"
 #include "rix/std_msgs/String.hpp"
@@ -140,14 +142,20 @@ TEST_P(TransportTest, WaitReadableReturnsTrueOnConnect) {
   auto acceptor = params.acceptor_factory(params.test_endpoint);
   ASSERT_NE(acceptor, nullptr);
 
-  std::promise<void> client_ready;
-  connect_client(acceptor->local_endpoint(), [&](auto stream) { client_ready.set_value(); });
+  // Spawn the client on a raw thread — do not use connect_client() here
+  // because ShmStream's constructor blocks until accept() completes the
+  // handshake, which would deadlock if we waited for client_ready first.
+  std::thread client_thread([&]() {
+    auto stream = params.stream_factory(acceptor->local_endpoint(), true);
+  });
 
-  client_ready.get_future().get();
+  // wait_readable fires as soon as the client calls ::connect, before
+  // accept() is called, so the handshake has not started yet.
   EXPECT_TRUE(acceptor->wait_readable(Duration(1, 0)));
 
-  // consume the pending connection so TearDown doesn't leave a dangling thread
+  // Now accept completes the handshake and unblocks the client constructor.
   acceptor->accept();
+  client_thread.join();
 }
 
 TEST_P(TransportTest, WaitExceptionHealthySocket) {
@@ -174,17 +182,20 @@ TEST_P(TransportTest, MultipleSequentialAccepts) {
   }
 
   std::vector<std::shared_ptr<Stream>> server_streams;
-  std::set<int> remote_ports;
   for (int i = 0; i < count; i++) {
     Endpoint remote;
     auto stream = acceptor->accept(remote);
     EXPECT_NE(stream, nullptr);
-    EXPECT_NE(remote.port, 0);
-    remote_ports.insert(remote.port);
     server_streams.push_back(stream);
   }
 
-  EXPECT_EQ(static_cast<int>(remote_ports.size()), count);
+  // Verify all streams are distinct objects
+  EXPECT_EQ(static_cast<int>(server_streams.size()), count);
+  for (int i = 0; i < count; i++) {
+    for (int j = i + 1; j < count; j++) {
+      EXPECT_NE(server_streams[i].get(), server_streams[j].get());
+    }
+  }
 
   for (auto& t : clients)
     t.join();
@@ -271,12 +282,15 @@ TEST_P(TransportTest, StreamWaitExceptionHealthy) {
   auto acceptor = params.acceptor_factory(params.test_endpoint);
 
   std::promise<bool> result;
+  std::promise<void> done;
   connect_client(acceptor->local_endpoint(), [&](auto stream) {
     result.set_value(stream->wait_exception(Duration(0, 50'000'000))); // 50ms
+    done.get_future().get();  // keep connection alive until assertion is read
   });
 
-  acceptor->accept();
+  auto server_stream = acceptor->accept();  // keep alive so no POLLHUP fires
   EXPECT_FALSE(result.get_future().get());
+  done.set_value();
 }
 
 TEST_P(TransportTest, RoundTripMessage) {
@@ -397,4 +411,16 @@ INSTANTIATE_TEST_SUITE_P(TCP,
                              .stream_factory = [](const Endpoint& ep,
                                                   bool blocking) { return std::make_shared<TCPStream>(ep, blocking); },
                              .test_endpoint = Endpoint("127.0.0.1", 0)}),
+                         [](const auto& info) { return info.param.name; });
+
+// SHM uses a port number to derive a unique Unix socket path ("/rix_shm_<port>").
+// A fixed non-zero port is used since the OS does not assign one for Unix sockets.
+INSTANTIATE_TEST_SUITE_P(SHM,
+                         TransportTest,
+                         ::testing::Values(TransportParams{
+                             .name = "SHM",
+                             .acceptor_factory = [](const Endpoint& ep) { return std::make_shared<ShmAcceptor>(ep); },
+                             .stream_factory = [](const Endpoint& ep,
+                                                  bool blocking) { return std::make_shared<ShmStream>(ep, blocking); },
+                             .test_endpoint = Endpoint("127.0.0.1", 9100)}),
                          [](const auto& info) { return info.param.name; });

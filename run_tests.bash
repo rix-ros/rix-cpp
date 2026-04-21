@@ -4,13 +4,15 @@ set -e
 
 mkdir -p build
 cd build
-cmake -DMULTITHREADED=OFF -DBUILD_TESTS=ON ..
+cmake -DCMAKE_INSTALL_PREFIX=$HOME/.rix -DMULTITHREADED=OFF -DBUILD_TESTS=ON ..
 make -j install
 
 echo "Running tests (multithreaded off)..."
 ./node_test
 ./mediator_test
-./message_test
+./transport_test
+./e2e_test
+./hybrid_transport_e2e
 
 echo "Running example tests (multithreaded off)..."
 cd ../examples/simple_publisher
@@ -49,13 +51,15 @@ make -j
 ./simple_action_test
 
 cd ../../../build
-cmake -DMULTITHREADED=ON -DBUILD_TESTS=ON ..
+cmake -DCMAKE_INSTALL_PREFIX=$HOME/.rix -DMULTITHREADED=ON -DBUILD_TESTS=ON ..
 make -j install
 
 echo "Running tests (multithreaded on)..."
 ./node_test
 ./mediator_test
-./message_test
+./transport_test
+./e2e_test
+./hybrid_transport_e2e
 
 echo "Running example tests (multithreaded on)..."
 cd ../examples/simple_publisher

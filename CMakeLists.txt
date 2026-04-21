@@ -30,6 +30,8 @@ add_library(rix SHARED
     src/rix/ipc/stream.cpp
     src/rix/ipc/tcp_acceptor.cpp
     src/rix/ipc/tcp_stream.cpp
+    src/rix/ipc/shm_acceptor.cpp
+    src/rix/ipc/shm_stream.cpp
     src/rix/ipc/posix_signal.cpp
     src/rix/ipc/poll.cpp
     src/rix/util/argument_parser.cpp
@@ -87,6 +89,16 @@ if(BUILD_TESTS)
         tests/transport_test.cpp
     )
     target_link_libraries(transport_test GTest::gtest_main rix)
+
+    add_executable(e2e_test
+        tests/e2e_test.cpp
+    )
+    target_link_libraries(e2e_test GTest::gtest_main rix)
+
+    add_executable(hybrid_transport_e2e
+        tests/hybrid_transport_e2e.cpp
+    )
+    target_link_libraries(hybrid_transport_e2e GTest::gtest_main rix)
 
     add_executable(tf_tests
         tests/tf/frame_graph.cpp
