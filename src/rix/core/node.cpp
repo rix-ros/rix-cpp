@@ -6,7 +6,8 @@
 
 namespace rix {
 
-Node::Node(const std::string& name, const Endpoint& endpoint) : rixhub_endpoint_(Endpoint(RIXHUB_IP, RIXHUB_PORT)) {
+Node::Node(const std::string& name, const Endpoint& endpoint, const Endpoint& rixhub_endpoint)
+    : rixhub_endpoint_(rixhub_endpoint) {
   if (factory_ == nullptr) {
     shutdown();
     return;

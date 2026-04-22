@@ -7,10 +7,14 @@ namespace rix {
 namespace detail {
 
 SubscriberImpl::SubscriberImpl(const sys_msgs::SubInfo& info, const Endpoint& rixhub_endpoint)
-    : info_(info), factory_(get_transport_factory(static_cast<Protocol>(info.protocol))), callback_(nullptr),
-      rixhub_endpoint_(rixhub_endpoint), registered_flag_(false) {
+    : info_(info), factory_(get_transport_factory(static_cast<Protocol>(info.protocol))),
+      tcp_factory_(get_transport_factory(Protocol::TCP)), callback_(nullptr), rixhub_endpoint_(rixhub_endpoint),
+      registered_flag_(false) {
 
-  server_ = factory_.create_acceptor(Endpoint(info_.endpoint.address, info_.endpoint.port));
+  // The mediator always connects via TCP to send SUB_NOTIFY, so the server_
+  // acceptor must always be TCP regardless of the component data protocol.
+  auto& tcp_factory = tcp_factory_;
+  server_ = tcp_factory.create_acceptor(Endpoint(info_.endpoint.address, info_.endpoint.port));
 
   // Ensure server was intitialized properly
   if (server_->is_exception()) {
@@ -23,8 +27,8 @@ SubscriberImpl::SubscriberImpl(const sys_msgs::SubInfo& info, const Endpoint& ri
   info_.endpoint.address = server_endpoint.address;
   info_.endpoint.port = server_endpoint.port;
 
-  // Register subscriber with rixhub
-  auto client = factory_.create_stream(rixhub_endpoint_, true);
+  // Register subscriber with rixhub (always TCP - rixhub only speaks TCP)
+  auto client = tcp_factory.create_stream(rixhub_endpoint_, true);
   if (!client) {
     shutdown();
     return;
@@ -57,7 +61,7 @@ SubscriberImpl::SubscriberImpl(const sys_msgs::SubInfo& info, const Endpoint& ri
 
 SubscriberImpl::~SubscriberImpl() {
   if (registered_flag_) {
-    auto client = factory_.create_stream(rixhub_endpoint_, true);
+    auto client = tcp_factory_.create_stream(rixhub_endpoint_, true);
     if (!client) {
       return;
     }

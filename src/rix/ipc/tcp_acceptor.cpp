@@ -46,6 +46,7 @@ std::shared_ptr<Stream> TCPAcceptor::accept(Endpoint& remote_endpoint) const {
   }
   remote_endpoint.address.resize(INET_ADDRSTRLEN);
   inet_ntop(AF_INET, &addr.sin_addr, &remote_endpoint.address[0], INET_ADDRSTRLEN);
+  remote_endpoint.address.resize(strlen(remote_endpoint.address.c_str()));
   remote_endpoint.port = ntohs(addr.sin_port);
   return std::shared_ptr<TCPStream>(new TCPStream(sock_fd));
 }

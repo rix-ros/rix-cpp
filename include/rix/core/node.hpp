@@ -32,8 +32,11 @@ public:
    * @brief Constructs a Node with the given name and endpoint.
    * @param name The name of the node.
    * @param endpoint The endpoint of the node.
+   * @param rixhub_endpoint The endpoint of the RIXHub mediator to connect to.
    */
-  explicit Node(const std::string& name, const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0));
+  explicit Node(const std::string& name,
+                const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
+                const Endpoint& rixhub_endpoint = Endpoint(RIXHUB_IP, RIXHUB_PORT));
 
   virtual ~Node();
 
@@ -49,7 +52,7 @@ public:
   template <typename TMsg>
   std::shared_ptr<Publisher> create_publisher(const std::string& topic,
                                               const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
-                                              Protocol protocol = Protocol::TCP);
+                                              TransportOptions options = {});
 
   /**
    * @brief Creates a Subscriber for the given topic with the specified callback.
@@ -62,7 +65,7 @@ public:
   std::shared_ptr<Subscriber> create_subscriber(const std::string& topic,
                                                 Subscriber::Callback<TMsg> callback,
                                                 const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
-                                                Protocol protocol = Protocol::TCP);
+                                                TransportOptions options = {});
 
   /**
    * @brief Creates a Subscriber for the given topic with the specified callback.
@@ -78,7 +81,7 @@ public:
   auto create_subscriber(const std::string& topic,
                          Callback&& callback,
                          const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
-                         Protocol protocol = Protocol::TCP)
+                         TransportOptions options = {})
       -> std::enable_if_t<
           !std::is_same<
               std::decay_t<Callback>,
@@ -101,7 +104,7 @@ public:
                                                 void (Class::*callback)(const TMsg&),
                                                 Class* instance,
                                                 const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
-                                                Protocol protocol = Protocol::TCP);
+                                                TransportOptions options = {});
 
   /**
    * @brief Creates a TimerCallback with the specified duration and callback function.
@@ -131,7 +134,7 @@ public:
    * @return A shared pointer to the created ServiceClient.
    */
   template <typename TRequest, typename TResponse>
-  std::shared_ptr<ServiceClient> create_service_client(const std::string& service, Protocol protocol = Protocol::TCP);
+  std::shared_ptr<ServiceClient> create_service_client(const std::string& service, TransportOptions options = {});
 
   /**
    * @brief Creates a Service for the given service with the specified callback.
@@ -144,7 +147,7 @@ public:
   std::shared_ptr<Service> create_service(const std::string& service,
                                           Service::Callback<TRequest, TResponse> callback,
                                           const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
-                                          Protocol protocol = Protocol::TCP);
+                                          TransportOptions options = {});
 
   /**
    * @brief Creates a Service for the given service with the specified callback.
@@ -160,7 +163,7 @@ public:
   auto create_service(const std::string& service,
                       Callback&& callback,
                       const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
-                      Protocol protocol = Protocol::TCP)
+                      TransportOptions options = {})
       -> std::enable_if_t<
           !std::is_same<std::decay_t<Callback>,
                         Service::Callback<typename ServiceCallbackTraits<std::decay_t<Callback>>::RequestType,
@@ -183,7 +186,7 @@ public:
                                           void (Class::*callback)(const TRequest&, TResponse&),
                                           Class* instance,
                                           const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
-                                          Protocol protocol = Protocol::TCP);
+                                          TransportOptions options = {});
 
   /**
    * @brief Creates an ActionClient for the given action with specified feedback and result callbacks.
@@ -196,7 +199,7 @@ public:
   std::shared_ptr<ActionClient> create_action_client(const std::string& action,
                                                      ActionClient::FeedbackCallback<TFeedback> feedback_callback,
                                                      ActionClient::ResultCallback<TResult> result_callback,
-                                                     Protocol protocol = Protocol::TCP);
+                                                     TransportOptions options = {});
 
   /**
    * @brief Creates an ActionClient for the given action with specified feedback and result callbacks.
@@ -212,7 +215,7 @@ public:
   auto create_action_client(const std::string& action,
                             FeedbackCallback&& feedback_callback,
                             ResultCallback&& result_callback,
-                            Protocol protocol = Protocol::TCP)
+                            TransportOptions options = {})
       -> std::enable_if_t<!std::is_same<std::decay_t<FeedbackCallback>,
                                         ActionClient::FeedbackCallback<typename ActionClientCallbackTraits<
                                             std::decay_t<FeedbackCallback>>::FeedbackType>>::value &&
@@ -237,7 +240,7 @@ public:
                                                      void (Class::*feedback_callback)(const TFeedback&),
                                                      void (Class::*result_callback)(const TResult&),
                                                      Class* instance,
-                                                     Protocol protocol = Protocol::TCP);
+                                                     TransportOptions options = {});
 
   /**
    * @brief Creates an Action for the given action with the specified callback.
@@ -250,7 +253,7 @@ public:
   std::shared_ptr<Action> create_action(const std::string& action,
                                         Action::Callback<TGoal, TFeedback, TResult> callback,
                                         const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
-                                        Protocol protocol = Protocol::TCP);
+                                        TransportOptions options = {});
 
   /**
    * @brief Creates an Action for the given action with the specified callback.
@@ -267,7 +270,7 @@ public:
   auto create_action(const std::string& action,
                      Callback&& callback,
                      const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
-                     Protocol protocol = Protocol::TCP)
+                     TransportOptions options = {})
       -> std::enable_if_t<
           !std::is_same<std::decay_t<Callback>,
                         Action::Callback<typename ActionCallbackTraits<std::decay_t<Callback>>::GoalType,
@@ -292,7 +295,7 @@ public:
                                         bool (Class::*callback)(const TGoal&, TFeedback&, TResult&),
                                         Class* instance,
                                         const Endpoint& endpoint = Endpoint(DEFAULT_IP, 0),
-                                        Protocol protocol = Protocol::TCP);
+                                        TransportOptions options = {});
 
   /**
    * @brief Sets a parameter on the RIXHub parameter server.
@@ -342,13 +345,12 @@ private:
 
 template <typename TMsg>
 std::shared_ptr<Publisher>
-Node::create_publisher(const std::string& topic, const Endpoint& endpoint, Protocol protocol) {
+Node::create_publisher(const std::string& topic, const Endpoint& endpoint, TransportOptions options) {
   static_assert(std::is_base_of<Message, TMsg>::value, "TMsg must be a subclass of Message.");
   if (!ok()) {
     Log::error << "Node is shutdown, cannot create publisher." << std::endl;
     return nullptr;
   }
-  // Get topic information
   sys_msgs::TopicInfo topic_info;
   topic_info.name = topic;
   topic_info.message_hash = TMsg().hash();
@@ -359,9 +361,9 @@ Node::create_publisher(const std::string& topic, const Endpoint& endpoint, Proto
   pub_info.topic_info = topic_info;
   pub_info.endpoint.address = endpoint.address;
   pub_info.endpoint.port = endpoint.port;
-  pub_info.protocol = protocol;
+  pub_info.protocol = options.protocol;
 
-  // Invoke private implementation
+  ScopedTransportOverride guard(options.protocol, options.build_factory());
   auto pub = factory_->create_publisher(pub_info, rixhub_endpoint_);
   if (pub) {
     components_.push_back(pub);
@@ -373,14 +375,13 @@ template <typename TMsg>
 std::shared_ptr<Subscriber> Node::create_subscriber(const std::string& topic,
                                                     Subscriber::Callback<TMsg> callback,
                                                     const Endpoint& endpoint,
-                                                    Protocol protocol) {
+                                                    TransportOptions options) {
   static_assert(std::is_base_of<Message, TMsg>::value, "TMsg must be a subclass of Message.");
   if (!ok()) {
     Log::error << "Node is shutdown, cannot create subscriber." << std::endl;
     return nullptr;
   }
 
-  // Get topic information
   sys_msgs::TopicInfo topic_info;
   topic_info.name = topic;
   topic_info.message_hash = TMsg().hash();
@@ -391,9 +392,9 @@ std::shared_ptr<Subscriber> Node::create_subscriber(const std::string& topic,
   sub_info.topic_info = topic_info;
   sub_info.endpoint.address = endpoint.address;
   sub_info.endpoint.port = endpoint.port;
-  sub_info.protocol = protocol;
+  sub_info.protocol = options.protocol;
 
-  // Invoke private implementation
+  ScopedTransportOverride guard(options.protocol, options.build_factory());
   auto sub = factory_->create_subscriber(sub_info, rixhub_endpoint_);
   if (sub) {
     sub->set_callback(callback);
@@ -403,14 +404,17 @@ std::shared_ptr<Subscriber> Node::create_subscriber(const std::string& topic,
 }
 
 template <typename Callback>
-auto Node::create_subscriber(const std::string& topic, Callback&& callback, const Endpoint& endpoint, Protocol protocol)
+auto Node::create_subscriber(const std::string& topic,
+                             Callback&& callback,
+                             const Endpoint& endpoint,
+                             TransportOptions options)
     -> std::enable_if_t<
         !std::is_same<
             std::decay_t<Callback>,
             Subscriber::Callback<typename SubscriberCallbackTraits<std::decay_t<Callback>>::MessageType>>::value,
         std::shared_ptr<Subscriber>> {
   using TMsg = typename SubscriberCallbackTraits<std::decay_t<Callback>>::MessageType;
-  return create_subscriber<TMsg>(topic, std::forward<Callback>(callback), endpoint, protocol);
+  return create_subscriber<TMsg>(topic, std::forward<Callback>(callback), endpoint, options);
 }
 
 template <typename TMsg, typename Class>
@@ -418,9 +422,9 @@ std::shared_ptr<Subscriber> Node::create_subscriber(const std::string& topic,
                                                     void (Class::*callback)(const TMsg&),
                                                     Class* instance,
                                                     const Endpoint& endpoint,
-                                                    Protocol protocol) {
+                                                    TransportOptions options) {
   return create_subscriber<TMsg>(
-      topic, [instance, callback](const TMsg& msg) { (instance->*callback)(msg); }, endpoint, protocol);
+      topic, [instance, callback](const TMsg& msg) { (instance->*callback)(msg); }, endpoint, options);
 }
 
 template <typename Class>
@@ -433,7 +437,7 @@ template <typename TRequest, typename TResponse>
 std::shared_ptr<Service> Node::create_service(const std::string& service,
                                               Service::Callback<TRequest, TResponse> callback,
                                               const Endpoint& endpoint,
-                                              Protocol protocol) {
+                                              TransportOptions options) {
   static_assert(std::is_base_of<Message, TRequest>::value, "TRequest must be a subclass of Message.");
   static_assert(std::is_base_of<Message, TResponse>::value, "TResponse must be a subclass of Message.");
 
@@ -450,8 +454,9 @@ std::shared_ptr<Service> Node::create_service(const std::string& service,
   service_info.node_id = info_.id;
   service_info.endpoint.address = endpoint.address;
   service_info.endpoint.port = endpoint.port;
-  service_info.protocol = protocol;
+  service_info.protocol = options.protocol;
 
+  ScopedTransportOverride guard(options.protocol, options.build_factory());
   auto srv = factory_->create_service(service_info, rixhub_endpoint_);
   if (srv) {
     srv->set_callback(callback);
@@ -461,7 +466,10 @@ std::shared_ptr<Service> Node::create_service(const std::string& service,
 }
 
 template <typename Callback>
-auto Node::create_service(const std::string& service, Callback&& callback, const Endpoint& endpoint, Protocol protocol)
+auto Node::create_service(const std::string& service,
+                          Callback&& callback,
+                          const Endpoint& endpoint,
+                          TransportOptions options)
     -> std::enable_if_t<
         !std::is_same<std::decay_t<Callback>,
                       Service::Callback<typename ServiceCallbackTraits<std::decay_t<Callback>>::RequestType,
@@ -469,7 +477,7 @@ auto Node::create_service(const std::string& service, Callback&& callback, const
         std::shared_ptr<Service>> {
   using TRequest = typename ServiceCallbackTraits<std::decay_t<Callback>>::RequestType;
   using TResponse = typename ServiceCallbackTraits<std::decay_t<Callback>>::ResponseType;
-  return create_service<TRequest, TResponse>(service, std::forward<Callback>(callback), endpoint, protocol);
+  return create_service<TRequest, TResponse>(service, std::forward<Callback>(callback), endpoint, options);
 }
 
 template <typename TRequest, typename TResponse, typename Class>
@@ -477,19 +485,19 @@ std::shared_ptr<Service> Node::create_service(const std::string& service,
                                               void (Class::*callback)(const TRequest&, TResponse&),
                                               Class* instance,
                                               const Endpoint& endpoint,
-                                              Protocol protocol) {
+                                              TransportOptions options) {
   return create_service<TRequest, TResponse>(
       service,
       [instance, callback](const TRequest& req, TResponse& resp) { (instance->*callback)(req, resp); },
       endpoint,
-      protocol);
+      options);
 }
 
 template <typename TGoal, typename TFeedback, typename TResult>
 std::shared_ptr<Action> Node::create_action(const std::string& action,
                                             Action::Callback<TGoal, TFeedback, TResult> callback,
                                             const Endpoint& endpoint,
-                                            Protocol protocol) {
+                                            TransportOptions options) {
   static_assert(std::is_base_of<Message, TGoal>::value, "TGoal must be a subclass of Message.");
   static_assert(std::is_base_of<Message, TFeedback>::value, "TFeedback must be a subclass of Message.");
   static_assert(std::is_base_of<Message, TResult>::value, "TResult must be a subclass of Message.");
@@ -508,8 +516,9 @@ std::shared_ptr<Action> Node::create_action(const std::string& action,
   action_info.node_id = info_.id;
   action_info.endpoint.address = endpoint.address;
   action_info.endpoint.port = endpoint.port;
-  action_info.protocol = protocol;
+  action_info.protocol = options.protocol;
 
+  ScopedTransportOverride guard(options.protocol, options.build_factory());
   auto act = factory_->create_action(action_info, rixhub_endpoint_);
   if (act) {
     act->set_callback(callback);
@@ -519,7 +528,10 @@ std::shared_ptr<Action> Node::create_action(const std::string& action,
 }
 
 template <typename Callback>
-auto Node::create_action(const std::string& action, Callback&& callback, const Endpoint& endpoint, Protocol protocol)
+auto Node::create_action(const std::string& action,
+                         Callback&& callback,
+                         const Endpoint& endpoint,
+                         TransportOptions options)
     -> std::enable_if_t<
         !std::is_same<std::decay_t<Callback>,
                       Action::Callback<typename ActionCallbackTraits<std::decay_t<Callback>>::GoalType,
@@ -529,7 +541,7 @@ auto Node::create_action(const std::string& action, Callback&& callback, const E
   using TGoal = typename ActionCallbackTraits<std::decay_t<Callback>>::GoalType;
   using TFeedback = typename ActionCallbackTraits<std::decay_t<Callback>>::FeedbackType;
   using TResult = typename ActionCallbackTraits<std::decay_t<Callback>>::ResultType;
-  return create_action<TGoal, TFeedback, TResult>(action, std::forward<Callback>(callback), endpoint, protocol);
+  return create_action<TGoal, TFeedback, TResult>(action, std::forward<Callback>(callback), endpoint, options);
 }
 
 template <typename TGoal, typename TFeedback, typename TResult, typename Class>
@@ -537,18 +549,18 @@ std::shared_ptr<Action> Node::create_action(const std::string& action,
                                             bool (Class::*callback)(const TGoal&, TFeedback&, TResult&),
                                             Class* instance,
                                             const Endpoint& endpoint,
-                                            Protocol protocol) {
+                                            TransportOptions options) {
   return create_action<TGoal, TFeedback, TResult>(
       action,
       [instance, callback](const TGoal& goal, TFeedback& feedback, TResult& result) {
         return (instance->*callback)(goal, feedback, result);
       },
       endpoint,
-      protocol);
+      options);
 }
 
 template <typename TRequest, typename TResponse>
-std::shared_ptr<ServiceClient> Node::create_service_client(const std::string& service, Protocol protocol) {
+std::shared_ptr<ServiceClient> Node::create_service_client(const std::string& service, TransportOptions options) {
   static_assert(std::is_base_of<Message, TRequest>::value, "TRequest must be a subclass of Message.");
   static_assert(std::is_base_of<Message, TResponse>::value, "TResponse must be a subclass of Message.");
 
@@ -562,6 +574,7 @@ std::shared_ptr<ServiceClient> Node::create_service_client(const std::string& se
   service_request.request_hash = TRequest().hash();
   service_request.response_hash = TResponse().hash();
   service_request.node_id = info_.id;
+  ScopedTransportOverride guard(options.protocol, options.build_factory());
   auto srv_cli = factory_->create_service_client(service_request, rixhub_endpoint_);
   if (srv_cli) {
     components_.push_back(srv_cli);
@@ -573,7 +586,7 @@ template <typename TGoal, typename TFeedback, typename TResult>
 std::shared_ptr<ActionClient> Node::create_action_client(const std::string& action,
                                                          ActionClient::FeedbackCallback<TFeedback> feedback_callback,
                                                          ActionClient::ResultCallback<TResult> result_callback,
-                                                         Protocol protocol) {
+                                                         TransportOptions options) {
   static_assert(std::is_base_of<Message, TGoal>::value, "TGoal must be a subclass of Message.");
   static_assert(std::is_base_of<Message, TFeedback>::value, "TFeedback must be a subclass of Message.");
   static_assert(std::is_base_of<Message, TResult>::value, "TResult must be a subclass of Message.");
@@ -587,6 +600,7 @@ std::shared_ptr<ActionClient> Node::create_action_client(const std::string& acti
   action_request.feedback_hash = TFeedback().hash();
   action_request.result_hash = TResult().hash();
   action_request.node_id = info_.id;
+  ScopedTransportOverride guard(options.protocol, options.build_factory());
   auto act_cli = factory_->create_action_client(action_request, rixhub_endpoint_);
   if (act_cli) {
     act_cli->set_feedback_callback(feedback_callback);
@@ -600,7 +614,7 @@ template <typename TGoal, typename FeedbackCallback, typename ResultCallback>
 auto Node::create_action_client(const std::string& action,
                                 FeedbackCallback&& feedback_callback,
                                 ResultCallback&& result_callback,
-                                Protocol protocol)
+                                TransportOptions options)
     -> std::enable_if_t<
         !std::is_same<std::decay_t<FeedbackCallback>,
                       ActionClient::FeedbackCallback<
@@ -614,7 +628,7 @@ auto Node::create_action_client(const std::string& action,
   return create_action_client<TGoal, TFeedback, TResult>(action,
                                                          std::forward<FeedbackCallback>(feedback_callback),
                                                          std::forward<ResultCallback>(result_callback),
-                                                         protocol);
+                                                         options);
 }
 
 template <typename TGoal, typename TFeedback, typename TResult, typename Class>
@@ -622,12 +636,12 @@ std::shared_ptr<ActionClient> Node::create_action_client(const std::string& acti
                                                          void (Class::*feedback_callback)(const TFeedback&),
                                                          void (Class::*result_callback)(const TResult&),
                                                          Class* instance,
-                                                         Protocol protocol) {
+                                                         TransportOptions options) {
   return create_action_client<TGoal, TFeedback, TResult>(
       action,
       [instance, feedback_callback](const TFeedback& feedback) { (instance->*feedback_callback)(feedback); },
       [instance, result_callback](const TResult& result) { (instance->*result_callback)(result); },
-      protocol);
+      options);
 }
 
 } // namespace rix

@@ -184,7 +184,7 @@ void Mediator::handle_pub_register(const sys_msgs::Operation& operation, std::sh
   // same topic
   std::vector<sys_msgs::SubInfo> subs_to_notify;
   for (const auto& [id, sub_info] : subscribers_) {
-    if (sub_info.topic_info.name == info.topic_info.name) {
+    if (sub_info.topic_info.name == info.topic_info.name && sub_info.protocol == info.protocol) {
       subs_to_notify.push_back(sub_info);
     }
   }
@@ -232,7 +232,7 @@ void Mediator::handle_sub_register(const sys_msgs::Operation& operation, std::sh
   // same topic
   std::vector<sys_msgs::PubInfo> pubs_on_topic;
   for (const auto& [id, pub_info] : publishers_) {
-    if (pub_info.topic_info.name == info.topic_info.name) {
+    if (pub_info.topic_info.name == info.topic_info.name && pub_info.protocol == info.protocol) {
       pubs_on_topic.push_back(pub_info);
     }
   }
