@@ -5,13 +5,17 @@ bazel_dep(name = "rules_cc", version = "0.2.18")
 bazel_dep(name = "rules_python", version = "2.0.0")
 
 # External dependencies
+bazel_dep(name = "googletest", version = "1.17.0.bcr.2")
+
+# Rix dependencies
+local_eigen_repository = use_repo_rule("//:third_party/eigen.bzl", "local_eigen_repository")
+local_eigen_repository(name = "eigen")
+
 local_rix_repository = use_repo_rule("//:rix.bzl", "local_rix_repository")
 local_rix_repository(
     name = "rix",
 )
 
-local_eigen_repository = use_repo_rule("//:third_party/eigen.bzl", "local_eigen_repository")
-local_eigen_repository(name = "eigen")
 
 # https://github.com/hedronvision/bazel-compile-commands-extractor
 bazel_dep(name = "hedron_compile_commands", dev_dependency = True)
