@@ -1,0 +1,21 @@
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
+cc_library(
+    name = "simple_subscriber",
+    srcs = ["simple_subscriber.cpp"],
+    hdrs = ["simple_subscriber.hpp"],
+    deps = [
+        "@rix",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_binary(
+    name = "test",
+    srcs = ["main.cpp"],
+    deps = [
+        ":simple_subscriber",
+        "@rix",
+    ],
+)

@@ -1,0 +1,39 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_import")
+
+_RIX_SHLIBS = glob([
+    "lib/librix*.so",  "lib/libtf*.so"
+], allow_empty = False)
+
+cc_library(
+    name = "_rix_headers",
+    hdrs = glob(["include/rix/**"], allow_empty = False),
+    strip_include_prefix = "include",
+)
+
+[
+    cc_import(
+        name = "_imported{}".format(shlib),
+        # Use the filename returned by the glob directly. In BUILD files, a plain
+        # filename like "librix.so" refers to that file in the package.
+        shared_library = shlib,
+    )
+    for shlib in _RIX_SHLIBS
+]
+
+cc_library(
+    name = "rix_shared_library",
+    deps = [
+        ":_rix_headers",
+        "@eigen"
+    ] + [
+        ":_imported{}".format(shlib)
+        for shlib in _RIX_SHLIBS
+    ],
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "rix",
+    actual = ":rix_shared_library",
+    visibility = ["//visibility:public"],
+)

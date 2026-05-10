@@ -1,0 +1,23 @@
+module(name = "rix_cpp_examples_bazel_external")
+
+# Bazel dependencies
+bazel_dep(name = "rules_cc", version = "0.2.18")
+bazel_dep(name = "rules_python", version = "2.0.0")
+
+# External dependencies
+local_rix_repository = use_repo_rule("//:rix.bzl", "local_rix_repository")
+local_rix_repository(
+    name = "rix",
+)
+
+local_eigen_repository = use_repo_rule("//:third_party/eigen.bzl", "local_eigen_repository")
+local_eigen_repository(name = "eigen")
+
+# https://github.com/hedronvision/bazel-compile-commands-extractor
+bazel_dep(name = "hedron_compile_commands", dev_dependency = True)
+git_override(
+    module_name = "hedron_compile_commands",
+    commit = "7fe1eab26d2b8eeb5e1c6a2f38bddb001e3f9696",
+    remote = "https://github.com/hedronvision/bazel-compile-commands-extractor.git",
+    # Note: this is a side branch compatible with Bazel 9 with the changes to rules_python
+)
