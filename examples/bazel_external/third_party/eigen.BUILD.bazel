@@ -4,8 +4,8 @@ cc_library(
     name = "eigen",
     hdrs = glob(
         [
-            "include/Eigen/**",
-            "include/unsupported/Eigen/**",
+            "include/eigen3/Eigen/**",
+            "include/eigen3/unsupported/Eigen/**",
         ],
         allow_empty = False,
     ),
