@@ -2,7 +2,7 @@ load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 
 cc_library(
-    name = "simple_subscriber",
+    name = "simple_subscriber_lib",
     srcs = ["simple_subscriber.cpp"],
     hdrs = ["simple_subscriber.hpp"],
     deps = [
@@ -12,10 +12,10 @@ cc_library(
 )
 
 cc_binary(
-    name = "test",
+    name = "simple_subscriber",
     srcs = ["main.cpp"],
     deps = [
-        ":simple_subscriber",
+        ":simple_subscriber_lib",
         "@rix",
     ],
 )
