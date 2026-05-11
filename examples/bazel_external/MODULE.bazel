@@ -16,7 +16,8 @@ local_rix_repository(
     name = "rix",
 )
 
-
+# A dev dependency for extracting compile commands from Bazel targets.
+# Used to generate compile_commands.json for use with clangd.
 # https://github.com/hedronvision/bazel-compile-commands-extractor
 bazel_dep(name = "hedron_compile_commands", dev_dependency = True)
 git_override(

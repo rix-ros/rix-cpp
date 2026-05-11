@@ -1,4 +1,5 @@
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_binary", "cc_test")
+load("@hedron_compile_commands//:refresh_compile_commands.bzl", "refresh_compile_commands")
 
 cc_library(
     name = "simple_subscriber_lib",
@@ -26,5 +27,13 @@ cc_test(
         ":simple_subscriber_lib",
         "@rix",
         "@googletest//:gtest_main",
+    ],
+)
+
+# Refresh compile commands for all targets in the repository
+refresh_compile_commands(
+    name = "refresh_cc",
+    targets = [
+      "//..."
     ],
 )
