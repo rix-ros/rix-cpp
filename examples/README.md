@@ -22,6 +22,9 @@ This directory contains example programs demonstrating the usage of the `rix-cpp
 - **system_info.cpp**  
   Retrieves and displays RIX runtime system information.
 
+- **bazel_external/**  
+  Demonstrates how to use `rix-cpp` with Bazel as an external dependency.
+
 ## How to Build
 
 From the root of the repository, run:

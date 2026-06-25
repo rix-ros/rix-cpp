@@ -1,0 +1,7 @@
+# Ignore Bazel outputs/symlinks created when running Bazel from this example
+/bazel-*
+user.bazelrc
+/MODULE.bazel.lock
+/.cache
+
+compile_commands.json
